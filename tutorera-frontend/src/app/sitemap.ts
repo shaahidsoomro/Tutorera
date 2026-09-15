@@ -107,7 +107,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...directories,
     ...countryHubResults.filter((page): page is NonNullable<typeof page> => page !== null),
     ...homeTutorResults.filter((page): page is NonNullable<typeof page> => page !== null),
-    ...localResults.filter((page): page is NonNullable<typeof.page> => page !== null),
+    ...localResults.filter((page): page is NonNullable<typeof page> => page !== null),
     ...research,
     ...profiles,
     ...tuitionRequestDemandPages,
