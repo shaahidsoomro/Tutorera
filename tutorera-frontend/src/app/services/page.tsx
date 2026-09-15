@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import s from "../compliance-pages.module.css";
 
 export const metadata: Metadata = {
-  title: "Tutoring Services & Curricula | TUTORERA",
+  title: "Tutoring Services & Curricula",
   description: "Explore tutoring categories across national and international curricula (Cambridge O/A Levels, GCSE, IB, Matric, FSc, Test Prep). Transparent multi-currency pricing with authorized platform checkout.",
   alternates: { canonical: "/services" },
 };
