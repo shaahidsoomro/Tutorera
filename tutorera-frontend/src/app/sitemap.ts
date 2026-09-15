@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/site";
+import { MARKETS } from "@/lib/markets";
 import { CITIES, LEVELS, LOCAL_SUBJECT_SLUGS, PRIMARY_CITY_SLUGS, SUBJECTS, fetchTutors, tutorProfileSlug } from "@/lib/tutor-directory";
-
 
 const routes = [
   "", "online-tutors", "about", "become-a-tutor", "blog", "business-model", "contact", "coverage", "first-session-guarantee", "team",
@@ -14,7 +14,6 @@ const routes = [
   "blog/what-to-look-for-before-hiring-a-tutor-pakistan",
 ];
 
-const TARGET_COUNTRIES = ["pk", "ae", "gb"] as const;
 const HOME_TUTOR_CITY_SLUGS = ["lahore", "islamabad", "karachi"] as const;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -25,6 +24,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     changeFrequency: route === "" || route === "tutors" || route === "online-tutors" ? "daily" : "monthly",
     priority: route === "" ? 1 : route === "tutors" || route === "online-tutors" ? 0.9 : 0.7,
   }));
+
   const directories: MetadataRoute.Sitemap = [
     ...Object.keys(SUBJECTS).map((slug) => `/tutors/subject/${slug}`),
     ...Object.keys(CITIES).map((slug) => `/tutors/city/${slug}`),
@@ -46,27 +46,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         const subject = SUBJECTS[subjectSlug];
         const { total } = await fetchTutors({ city, subject }, 1);
         return total > 0
-          ? {
-              url: `${SITE_URL}/tutors/city/${citySlug}/${subjectSlug}`,
-              lastModified,
-              changeFrequency: "daily" as const,
-              priority: 0.85,
-            }
+          ? { url: `${SITE_URL}/tutors/city/${citySlug}/${subjectSlug}`, lastModified, changeFrequency: "daily" as const, priority: 0.85 }
           : null;
       })
     )
   );
 
+  // Public market URLs use canonical human-facing routes (/uk), while API and
+  // inventory filters continue to use ISO country codes (GB).
   const countryHubResults = await Promise.all(
-    TARGET_COUNTRIES.map(async (code) => {
-      const { total } = await fetchTutors({ countryCode: code.toUpperCase() }, 1);
-      // Always include PK as primary base, and include others if active tutor inventory exists
-      return code === "pk" || total > 0
+    Object.values(MARKETS).map(async (market) => {
+      const { total } = await fetchTutors({ countryCode: market.isoCountryCode }, 1);
+      return market.route === "pk" || total > 0
         ? {
-            url: `${SITE_URL}/${code}/tutors`,
+            url: `${SITE_URL}/${market.route}/tutors`,
             lastModified,
             changeFrequency: "daily" as const,
             priority: 0.85,
+            alternates: {
+              languages: {
+                [market.locale]: `${SITE_URL}/${market.route}/tutors`,
+                "x-default": `${SITE_URL}/tutors`,
+              },
+            },
           }
         : null;
     })
@@ -77,23 +79,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       const city = CITIES[citySlug];
       const { total } = await fetchTutors({ countryCode: "PK", city, teachingMode: "in-person" }, 1);
       return total > 0
-        ? {
-            url: `${SITE_URL}/pk/home-tutors/${citySlug}`,
-            lastModified,
-            changeFrequency: "daily" as const,
-            priority: 0.9,
-          }
+        ? { url: `${SITE_URL}/pk/home-tutors/${citySlug}`, lastModified, changeFrequency: "daily" as const, priority: 0.9 }
         : null;
     })
   );
 
-  const research: MetadataRoute.Sitemap =
-    tutors.length >= 10
-      ? [
-          { url: `${SITE_URL}/research/pakistan-tutoring-rates`, lastModified, changeFrequency: "weekly", priority: 0.75 },
-          { url: `${SITE_URL}/research/tutoring-index`, lastModified, changeFrequency: "weekly", priority: 0.75 },
-        ]
-      : [];
+  const research: MetadataRoute.Sitemap = tutors.length >= 10
+    ? [
+        { url: `${SITE_URL}/research/pakistan-tutoring-rates`, lastModified, changeFrequency: "weekly", priority: 0.75 },
+        { url: `${SITE_URL}/research/tutoring-index`, lastModified, changeFrequency: "weekly", priority: 0.75 },
+      ]
+    : [];
 
   const TARGET_DEMAND_SLUGS = PRIMARY_CITY_SLUGS.flatMap((citySlug) =>
     LOCAL_SUBJECT_SLUGS.map((subjectSlug) => ({ citySlug, subjectSlug }))
@@ -111,7 +107,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...directories,
     ...countryHubResults.filter((page): page is NonNullable<typeof page> => page !== null),
     ...homeTutorResults.filter((page): page is NonNullable<typeof page> => page !== null),
-    ...localResults.filter((page): page is NonNullable<typeof page> => page !== null),
+    ...localResults.filter((page): page is NonNullable<typeof.page> => page !== null),
     ...research,
     ...profiles,
     ...tuitionRequestDemandPages,
