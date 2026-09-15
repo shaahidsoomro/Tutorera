@@ -4,10 +4,7 @@ import {
   Users,
   Heart,
   ShieldAlert,
-  AlertTriangle,
-  CheckCircle2,
   XCircle,
-  MessageSquare,
   ArrowRight
 } from "lucide-react";
 import s from "../compliance-pages.module.css";
@@ -18,7 +15,7 @@ import {
 } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "Community Guidelines & Code of Conduct | TUTORERA",
+  title: "Community Guidelines & Code of Conduct",
   description:
     "Standards of mutual respect, professionalism, safety, and non-discrimination expected of all students, parents, and tutors on TUTORERA.",
   alternates: {
@@ -29,7 +26,6 @@ export const metadata: Metadata = {
 export default function CommunityGuidelinesPage() {
   return (
     <div className={s.wrapper}>
-      {/* Hero */}
       <section className={s.hero}>
         <div className={s.badge}>
           <Users size={16} /> Community & Conduct Standards
@@ -50,7 +46,6 @@ export default function CommunityGuidelinesPage() {
       </section>
 
       <div className={s.container}>
-        {/* Core Philosophy Box */}
         <div className={s.highlightBox}>
           <strong>A Safe, Inclusive, and Empowering Learning Sanctuary:</strong>
           <p style={{ margin: "0.5rem 0 0 0", fontSize: "0.95rem", lineHeight: "1.7" }}>
@@ -61,7 +56,6 @@ export default function CommunityGuidelinesPage() {
           </p>
         </div>
 
-        {/* Section 1: Expectations for All Members */}
         <section className={s.section}>
           <h2 className={s.sectionTitle}>
             <Heart size={22} color="#ec4899" /> 1. Core Principles of Conduct
@@ -103,7 +97,6 @@ export default function CommunityGuidelinesPage() {
           </div>
         </section>
 
-        {/* Section 2: Prohibited Conduct */}
         <section className={s.section}>
           <h2 className={s.sectionTitle}>
             <XCircle size={22} color="#dc2626" /> 2. Prohibited Behaviors
@@ -133,7 +126,6 @@ export default function CommunityGuidelinesPage() {
           </ul>
         </section>
 
-        {/* Section 3: Enforcement & Penalties */}
         <section className={s.section}>
           <h2 className={s.sectionTitle}>
             <ShieldAlert size={22} color="var(--primary, #0f172a)" /> 3. Violations & Disciplinary Matrix
