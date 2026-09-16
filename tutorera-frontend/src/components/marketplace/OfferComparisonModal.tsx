@@ -1,18 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { 
-  X, 
-  ShieldCheck, 
-  Star, 
-  Sparkles, 
-  Check, 
-  AlertCircle,
-  Clock,
-  DollarSign
-} from "lucide-react";
-import api from "@/lib/axios";
+import { AlertCircle, Check, ShieldCheck, Sparkles, Star, X } from "lucide-react";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 export interface TutorOfferItem {
@@ -57,6 +47,8 @@ interface OfferComparisonModalProps {
   onDeclineOffer?: (offerId: string) => void;
 }
 
+const money = (value: number) => value.toLocaleString("en-US", { maximumFractionDigits: 2 });
+
 export default function OfferComparisonModal({
   isOpen,
   onClose,
@@ -70,38 +62,21 @@ export default function OfferComparisonModal({
   onDeclineOffer,
 }: OfferComparisonModalProps) {
   const [counteringOfferId, setCounteringOfferId] = useState<string | null>(null);
-  const [counterAmount, setCounterAmount] = useState<string>("");
-  const [showGuaranteeConfirm, setShowGuaranteeConfirm] = useState<string | null>(null);
+  const [counterAmount, setCounterAmount] = useState("");
+  const [confirmingOfferId, setConfirmingOfferId] = useState<string | null>(null);
   const modalRef = useFocusTrap(isOpen, onClose);
 
   if (!isOpen) return null;
 
-  const handleSendCounter = (offerId: string) => {
-    const amt = parseFloat(counterAmount);
-    if (!amt || isNaN(amt) || amt <= 0) return;
-    onCounterOffer(offerId, amt);
+  const sendCounter = (offerId: string) => {
+    const amount = Number(counterAmount);
+    if (!Number.isFinite(amount) || amount <= 0) return;
+    onCounterOffer(offerId, amount);
     setCounteringOfferId(null);
     setCounterAmount("");
   };
 
-  const rowStyle: React.CSSProperties = {
-    borderBottom: "1px solid #e2e8f0",
-  };
-
-  const cellStyle: React.CSSProperties = {
-    padding: "0.85rem 0.75rem",
-    fontSize: "0.82rem",
-    color: "#334155",
-    verticalAlign: "middle",
-  };
-
-  const headerCellStyle: React.CSSProperties = {
-    ...cellStyle,
-    fontWeight: 700,
-    color: "#021550",
-    background: "#f8faff",
-    whiteSpace: "nowrap",
-  };
+  const confirmingOffer = offers.find((offer) => offer._id === confirmingOfferId);
 
   return (
     <div
@@ -111,386 +86,161 @@ export default function OfferComparisonModal({
       style={{
         position: "fixed",
         inset: 0,
-        backgroundColor: "rgba(2, 21, 80, 0.7)",
-        backdropFilter: "blur(6px)",
         zIndex: 99999,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         padding: "1rem",
+        background: "rgba(2, 21, 80, 0.72)",
+        backdropFilter: "blur(6px)",
       }}
     >
       <div
         ref={modalRef}
         style={{
-          background: "white",
-          borderRadius: "1.25rem",
-          maxWidth: "1100px",
-          width: "100%",
+          width: "min(1100px, 100%)",
           maxHeight: "90vh",
+          overflow: "hidden",
+          borderRadius: "1.25rem",
+          background: "white",
+          border: "1px solid #bfdbfe",
+          boxShadow: "0 25px 50px -12px rgba(0,0,0,.25)",
           display: "flex",
           flexDirection: "column",
-          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-          border: "1px solid #bfdbfe",
-          overflow: "hidden",
-          animation: "modalFadeIn 0.2s ease-out",
         }}
       >
-        {/* Header */}
-        <div
+        <header
           style={{
-            background: "linear-gradient(135deg, #021550 0%, #0329b2 100%)",
-            color: "white",
-            padding: "1.25rem 1.75rem",
             display: "flex",
             justifyContent: "space-between",
+            gap: "1rem",
             alignItems: "center",
+            padding: "1.25rem 1.5rem",
+            color: "white",
+            background: "linear-gradient(135deg,#021550,#0329b2)",
           }}
         >
           <div>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", background: "rgba(255, 255, 255, 0.2)", padding: "0.2rem 0.6rem", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 700, marginBottom: "0.35rem" }}>
-              <Sparkles size={12} /> Compare Tutor Offers
+            <div style={{ display: "inline-flex", alignItems: "center", gap: ".35rem", fontSize: ".75rem", fontWeight: 800 }}>
+              <Sparkles size={14} /> Compare Tutor Offers
             </div>
-            <h2 id="comparison-title" style={{ fontSize: "1.25rem", fontWeight: 800, margin: 0 }}>
-              {requestTitle}
-            </h2>
-            <p style={{ fontSize: "0.82rem", color: "#bfdbfe", margin: "0.25rem 0 0" }}>
-              Your Proposed Budget: <strong style={{ color: "#34d399" }}>{currency} {proposedBudget.toLocaleString()}/{pricingUnit}</strong> · {offers.length} Tutor Offers Received
+            <h2 id="comparison-title" style={{ margin: ".25rem 0 0", fontSize: "1.3rem" }}>{requestTitle}</h2>
+            <p style={{ margin: ".25rem 0 0", color: "#bfdbfe", fontSize: ".82rem" }}>
+              Your budget: <strong style={{ color: "#86efac" }}>{currency} {money(proposedBudget)}/{pricingUnit}</strong> · {offers.length} offer{offers.length === 1 ? "" : "s"}
             </p>
           </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close comparison modal"
-            style={{
-              background: "rgba(255, 255, 255, 0.15)",
-              border: "none",
-              color: "white",
-              borderRadius: "50%",
-              width: "44px",
-              height: "44px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-            }}
-          >
-            <X size={18} />
+          <button type="button" onClick={onClose} aria-label="Close offer comparison" style={{ width: 44, height: 44, borderRadius: "50%", border: 0, background: "rgba(255,255,255,.15)", color: "white", cursor: "pointer" }}>
+            <X size={19} />
           </button>
-        </div>
+        </header>
 
-        {/* Modal Content: Tabular Layout */}
-        <div style={{ padding: "1.25rem", overflowY: "auto" }}>
-          <div style={{ overflowX: "auto", border: "1px solid #e2e8f0", borderRadius: "0.75rem" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 860 }}>
-              <thead>
-                <tr>
-                  <th style={headerCellStyle}>Tutor</th>
-                  <th style={headerCellStyle}>Offer</th>
-                  <th style={headerCellStyle}>Rating</th>
-                  <th style={headerCellStyle}>Experience</th>
-                  <th style={headerCellStyle}>Verification</th>
-                  <th style={headerCellStyle}>Availability</th>
-                  <th style={{ ...headerCellStyle, textAlign: "right" }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {offers.map((offer) => {
-                  const isCountering = counteringOfferId === offer._id;
-                  const isPoliceVerified = offer.tutor?.policeVerificationStatus === "approved";
-                  const isDegreeVerified = offer.tutor?.degreeVerificationStatus === "approved";
-                  const rating = offer.tutor?.rating || 4.9;
-                  const reviewsCount = offer.tutor?.reviewsCount || 0;
-                  const experience = offer.tutor?.experience ?? 0;
-                  const matchScore = offer.matchScore;
+        <div style={{ overflowY: "auto", padding: "1.25rem" }}>
+          {offers.length === 0 ? (
+            <div style={{ padding: "3rem 1rem", textAlign: "center", color: "#64748b" }}>
+              No tutor offers have been received for this request yet.
+            </div>
+          ) : (
+            <div style={{ display: "grid", gap: "1rem" }}>
+              {offers.map((offer) => {
+                const tutor = offer.tutor;
+                const rating = typeof tutor.rating === "number" && tutor.rating > 0 ? tutor.rating : null;
+                const reviews = typeof tutor.reviewsCount === "number" && tutor.reviewsCount > 0 ? tutor.reviewsCount : 0;
+                const degreeApproved = tutor.degreeVerificationStatus === "approved";
+                const policeApproved = tutor.policeVerificationStatus === "approved";
+                const isCountering = counteringOfferId === offer._id;
 
-                  return (
-                                            <tr key={offer._id} style={rowStyle}>
-                        <td style={cellStyle}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-                            <div
-                              style={{
-                                width: "36px",
-                                height: "36px",
-                                borderRadius: "50%",
-                                background: "#021550",
-                                color: "white",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                fontSize: "0.95rem",
-                                fontWeight: 800,
-                                flexShrink: 0,
-                              }}
-                            >
-                              {offer.tutor?.name?.charAt(0) || "T"}
-                            </div>
-                            <div>
-                              <div style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem" }}>
-                                <strong style={{ fontSize: "0.9rem", color: "#021550" }}>
-                                  {offer.tutor?.name}
-                                </strong>
-                                {isPoliceVerified && (
-                                  <ShieldCheck size={15} style={{ color: "#10b981" }} />
-                                )}
-                              </div>
-                              <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
-                                {offer.tutor?.title || "Verified Tutor"} · {offer.tutor?.city || "Online"}
-                              </div>
-                              {matchScore !== undefined && (
-                                <div style={{ marginTop: "0.25rem" }}>
-                                  <span style={{ fontSize: "0.72rem", fontWeight: 800, color: "#0329b2", background: "#eef5ff", padding: "0.15rem 0.45rem", borderRadius: 999 }}>
-                                    {matchScore}% Match
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-                        <td style={cellStyle}>
-                          <div>
-                            <span style={{ fontSize: "1.05rem", fontWeight: 900, color: "#021550" }}>
-                              {offer.currency || currency} {offer.amount.toLocaleString()}
-                            </span>
-                            <span style={{ fontSize: "0.75rem", color: "#64748b" }}>/{offer.pricingUnit || pricingUnit}</span>
-                          </div>
-                          {offer.message && (
-                            <p style={{ fontSize: "0.75rem", color: "#475569", marginTop: "0.35rem", lineHeight: 1.4, maxWidth: 260 }}>
-                              &ldquo;{offer.message}&rdquo;
-                            </p>
+                return (
+                  <article key={offer._id} style={{ border: "1px solid #e2e8f0", borderRadius: 14, padding: "1rem", background: "#fff" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "minmax(180px,1.4fr) minmax(120px,.7fr) minmax(160px,1fr) auto", gap: "1rem", alignItems: "center" }} className="offer-comparison-row">
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: ".5rem", flexWrap: "wrap" }}>
+                          <strong style={{ color: "#021550", fontSize: "1rem" }}>{tutor.name || "Tutor"}</strong>
+                          {typeof offer.matchScore === "number" && (
+                            <span style={{ padding: ".15rem .45rem", borderRadius: 999, background: "#eef5ff", color: "#0329b2", fontSize: ".72rem", fontWeight: 800 }}>{offer.matchScore}% match</span>
                           )}
-                        </td>
-                        <td style={cellStyle}>
-                          <div style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", color: "#f59e0b", fontSize: "0.8rem", fontWeight: 700 }}>
-                            <Star size={13} fill="#f59e0b" color="#f59e0b" />
-                            <span>{rating.toFixed(1)}</span>
-                          </div>
-                          <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "0.15rem" }}>
-                            {reviewsCount} reviews
-                          </div>
-                        </td>
-                        <td style={cellStyle}>
-                          <span style={{ fontWeight: 700, color: "#021550" }}>
-                            {experience > 0 ? `${experience} yr${experience === 1 ? "" : "s"}` : "New"}
-                          </span>
-                        </td>
-                        <td style={cellStyle}>
-                          <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-                            <span style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "0.78rem", color: isDegreeVerified ? "#059669" : "#64748b", fontWeight: 600 }}>
-                              {isDegreeVerified ? <ShieldCheck size={14} /> : <AlertCircle size={14} />}
-                              {isDegreeVerified ? "Degree Verified" : "Unverified"}
-                            </span>
-                            <span style={{ fontSize: "0.72rem", color: "#64748b" }}>
-                              {isPoliceVerified ? "Police Cleared" : "No police check"}
-                            </span>
-                            <span style={{ fontSize: "0.72rem", color: offer.tutor?.homeTuitionEligible ? "#059669" : "#64748b" }}>
-                              {offer.tutor?.homeTuitionEligible ? "Home tuition eligible" : "Online tuition only"}
-                            </span>
-                          </div>
-                        </td>
-                        <td style={cellStyle}>
-                          <span style={{ fontSize: "0.8rem", color: "#334155" }}>
-                            {offer.availability || "Flexible"}
-                          </span>
-                        </td>
-                        <td style={{ ...cellStyle, textAlign: "right" }}>
-                          {isCountering ? (
-                            <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", alignItems: "flex-end" }}>
-                              <input
-                                type="number"
-                                min="1"
-                                placeholder={`Counter (${currency})`}
-                                value={counterAmount}
-                                onChange={(e) => setCounterAmount(e.target.value)}
-                                style={{
-                                  padding: "0.45rem 0.65rem",
-                                  borderRadius: "0.4rem",
-                                  border: "1.5px solid #0329b2",
-                                  fontSize: "0.82rem",
-                                  outline: "none",
-                                  width: "100%",
-                                }}
-                              />
-                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.35rem", width: "100%" }}>
-                                <button
-                                  type="button"
-                                  onClick={() => handleSendCounter(offer._id)}
-                                  style={{
-                                    background: "#0329b2",
-                                    color: "white",
-                                    border: "none",
-                                    padding: "0.45rem",
-                                    borderRadius: "0.4rem",
-                                    fontWeight: 700,
-                                    fontSize: "0.75rem",
-                                    cursor: "pointer",
-                                  }}
-                                >
-                                  Send Counter
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => { setCounteringOfferId(null); setCounterAmount(""); }}
-                                  style={{
-                                    background: "#f1f5f9",
-                                    color: "#475569",
-                                    border: "none",
-                                    padding: "0.45rem",
-                                    borderRadius: "0.4rem",
-                                    fontWeight: 600,
-                                    fontSize: "0.75rem",
-                                    cursor: "pointer",
-                                  }}
-                                >
-                                  Cancel
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", alignItems: "flex-end" }}>
-                              <button
-                                type="button"
-                                onClick={() => setShowGuaranteeConfirm(offer._id)}
-                                style={{
-                                  background: "#0329b2",
-                                  color: "white",
-                                  border: "none",
-                                  padding: "0.55rem 0.7rem",
-                                  borderRadius: "0.5rem",
-                                  fontWeight: 700,
-                                  fontSize: "0.78rem",
-                                  cursor: "pointer",
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  gap: "0.3rem",
-                                }}
-                              >
-                                <Check size={14} /> Accept
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => { setCounteringOfferId(offer._id); setCounterAmount(String(offer.amount)); }}
-                                style={{
-                                  background: "#f8fafc",
-                                  color: "#021550",
-                                  border: "1.5px solid #cbd5e1",
-                                  padding: "0.55rem 0.7rem",
-                                  borderRadius: "0.5rem",
-                                  fontWeight: 700,
-                                  fontSize: "0.78rem",
-                                  cursor: "pointer",
-                                  textAlign: "center",
-                                }}
-                              >
-                                Counter Rate
-                              </button>
-                              <Link
-                                href={`/tutors/${offer.tutor._id}`}
-                                style={{ color: "#0329b2", fontWeight: 700, fontSize: "0.78rem", textDecoration: "none" }}
-                              >
-                                View Profile
-                              </Link>
-                              {offer.tutor.demoVideoStatus === "approved" && offer.tutor.videoIntro && (
-                                <a href={offer.tutor.videoIntro} target="_blank" rel="noopener noreferrer" style={{ color: "#0329b2", fontWeight: 700, fontSize: "0.78rem" }}>
-                                  Watch Demo Video
-                                </a>
-                              )}
-                              {onDeclineOffer && (
-                                <button type="button" onClick={() => onDeclineOffer(offer._id)} style={{ background: "transparent", color: "#b91c1c", border: 0, fontWeight: 700, fontSize: "0.78rem", cursor: "pointer" }}>
-                                  Reject Offer
-                                </button>
-                              )}
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        </div>
+                        <div style={{ color: "#64748b", fontSize: ".8rem", marginTop: ".2rem" }}>
+                          {tutor.title || "Tutor"}{tutor.city ? ` · ${tutor.city}` : ""}{tutor.countryName ? `, ${tutor.countryName}` : ""}
+                        </div>
+                        {offer.message && <p style={{ color: "#475569", fontSize: ".82rem", lineHeight: 1.5, margin: ".6rem 0 0" }}>&ldquo;{offer.message}&rdquo;</p>}
+                      </div>
+
+                      <div>
+                        <div style={{ color: "#021550", fontWeight: 900, fontSize: "1.05rem" }}>{offer.currency || currency} {money(offer.amount)}</div>
+                        <div style={{ color: "#64748b", fontSize: ".75rem" }}>/{offer.pricingUnit || pricingUnit}</div>
+                        {offer.availability && <div style={{ marginTop: ".3rem", color: "#475569", fontSize: ".75rem" }}>{offer.availability}</div>}
+                      </div>
+
+                      <div style={{ display: "grid", gap: ".3rem", color: "#475569", fontSize: ".78rem" }}>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: ".3rem" }}>
+                          {rating ? <><Star size={14} fill="#f59e0b" color="#f59e0b" /> {rating.toFixed(1)} ({reviews} review{reviews === 1 ? "" : "s"})</> : <><Star size={14} color="#94a3b8" /> No reviews yet</>}
+                        </span>
+                        <span>{tutor.experience && tutor.experience > 0 ? `${tutor.experience} year${tutor.experience === 1 ? "" : "s"} experience` : "Experience not specified"}</span>
+                        <span style={{ color: degreeApproved ? "#047857" : "#64748b", display: "inline-flex", alignItems: "center", gap: ".3rem" }}>
+                          {degreeApproved ? <ShieldCheck size={14} /> : <AlertCircle size={14} />} {degreeApproved ? "Degree verification approved" : "Degree verification not published"}
+                        </span>
+                        <span style={{ color: policeApproved ? "#047857" : "#64748b" }}>{policeApproved ? "Police verification approved" : "Police verification not published"}</span>
+                      </div>
+
+                      <div style={{ display: "grid", gap: ".4rem", minWidth: 130 }}>
+                        <button type="button" onClick={() => setConfirmingOfferId(offer._id)} disabled={offer.status !== "pending" && offer.status !== "countered"} style={{ padding: ".55rem .7rem", border: 0, borderRadius: 8, background: "#0329b2", color: "white", fontWeight: 800, cursor: "pointer" }}>
+                          <Check size={14} style={{ verticalAlign: "middle", marginRight: 4 }} /> Accept
+                        </button>
+                        <button type="button" onClick={() => { setCounteringOfferId(offer._id); setCounterAmount(String(offer.amount)); }} style={{ padding: ".5rem .7rem", borderRadius: 8, border: "1px solid #cbd5e1", background: "white", color: "#021550", fontWeight: 700, cursor: "pointer" }}>
+                          Counter
+                        </button>
+                        <Link href={`/tutors/${tutor._id}`} style={{ color: "#0329b2", textAlign: "center", textDecoration: "none", fontWeight: 700, fontSize: ".8rem" }}>View profile</Link>
+                        {onDeclineOffer && offer.status === "pending" && (
+                          <button type="button" onClick={() => onDeclineOffer(offer._id)} style={{ border: 0, background: "transparent", color: "#b91c1c", fontWeight: 700, cursor: "pointer", fontSize: ".78rem" }}>Decline</button>
+                        )}
+                      </div>
+                    </div>
+
+                    {isCountering && (
+                      <div style={{ marginTop: "1rem", borderTop: "1px solid #e2e8f0", paddingTop: "1rem", display: "flex", gap: ".5rem", flexWrap: "wrap", alignItems: "center" }}>
+                        <label htmlFor={`counter-${offer._id}`} style={{ color: "#334155", fontWeight: 700, fontSize: ".82rem" }}>Your counter-offer</label>
+                        <input id={`counter-${offer._id}`} type="number" min="1" value={counterAmount} onChange={(event) => setCounterAmount(event.target.value)} style={{ width: 150, padding: ".55rem .7rem", border: "1px solid #94a3b8", borderRadius: 8 }} />
+                        <button type="button" onClick={() => sendCounter(offer._id)} style={{ padding: ".55rem .8rem", border: 0, borderRadius: 8, background: "#0329b2", color: "white", fontWeight: 800, cursor: "pointer" }}>Send counter</button>
+                        <button type="button" onClick={() => { setCounteringOfferId(null); setCounterAmount(""); }} style={{ padding: ".55rem .8rem", border: "1px solid #cbd5e1", borderRadius: 8, background: "white", color: "#475569", fontWeight: 700, cursor: "pointer" }}>Cancel</button>
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          )}
         </div>
+      </div>
 
-        {/* Footer info note */}
-        <div style={{ background: "#f8faff", borderTop: "1px solid #e2e8f0", padding: "0.85rem 1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.78rem", color: "#64748b" }}>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem" }}>
-            <ShieldCheck size={14} color="#10b981" /> 0% student fee · TUTORERA Satisfaction Guarantee
-          </span>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{ background: "transparent", border: "none", color: "#0329b2", fontWeight: 700, cursor: "pointer" }}
-          >
-            Done Comparing
-          </button>
-        </div>
-
-        {/* Guarantee Confirmation Dialog */}
-        {showGuaranteeConfirm && (
-          <div style={{
-            position: "absolute",
-            inset: 0,
-            background: "rgba(2,21,80,0.5)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 50,
-            borderRadius: "1rem",
-            backdropFilter: "blur(2px)",
-          }}>
-            <div style={{
-              background: "white",
-              borderRadius: "1rem",
-              padding: "1.5rem",
-              maxWidth: "420px",
-              width: "90%",
-              boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
-                <div style={{ background: "#ecfdf5", borderRadius: "50%", padding: "0.6rem" }}>
-                  <ShieldCheck size={24} color="#10b981" />
-                </div>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800, color: "#021550" }}>TUTORERA Satisfaction Guarantee</h3>
-                  <p style={{ margin: 0, fontSize: "0.8rem", color: "#64748b" }}>Powered by secure platform checkout</p>
-                </div>
-              </div>
-
-              <div style={{ background: "#f8fafc", borderRadius: "0.75rem", padding: "1rem", marginBottom: "1rem", fontSize: "0.83rem", color: "#334155", lineHeight: 1.6 }}>
-                <p style={{ margin: "0 0 0.5rem 0", fontWeight: 700, color: "#021550" }}>Your booking is protected:</p>
-                <ul style={{ margin: 0, paddingLeft: "1.2rem", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-                  <li>First session protection — full refund if not satisfied</li>
-                  <li>Verified tutor credentials before booking</li>
-                  <li>Secure payment processing via Rapid Gateway</li>
-                  <li>Dispute resolution support</li>
-                  <li>0% platform fee — price shown is what tutor receives</li>
-                </ul>
-              </div>
-
-              <p style={{ fontSize: "0.75rem", color: "#94a3b8", marginBottom: "1rem", lineHeight: 1.5 }}>
-                By proceeding, you agree to TUTORERA&apos;s <a href="/terms" style={{ color: "#0329b2" }}>Terms of Service</a> and <a href="/guarantee" style={{ color: "#0329b2" }}>Satisfaction Guarantee</a> policy.
-              </p>
-
-              <div style={{ display: "flex", gap: "0.5rem" }}>
-                <button
-                  onClick={() => setShowGuaranteeConfirm(null)}
-                  style={{ flex: 1, padding: "0.6rem", borderRadius: "0.5rem", border: "1px solid #e2e8f0", background: "white", color: "#334155", fontWeight: 600, cursor: "pointer", fontSize: "0.85rem" }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => { setShowGuaranteeConfirm(null); onAcceptOffer(showGuaranteeConfirm); }}
-                  style={{ flex: 1, padding: "0.6rem", borderRadius: "0.5rem", border: "none", background: "#10b981", color: "white", fontWeight: 700, cursor: "pointer", fontSize: "0.85rem" }}
-                >
-                  Confirm Booking
-                </button>
+      {confirmingOffer && (
+        <div role="dialog" aria-modal="true" aria-labelledby="confirm-offer-title" style={{ position: "fixed", inset: 0, zIndex: 100000, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem", background: "rgba(2,21,80,.75)" }}>
+          <div style={{ width: "min(480px,100%)", borderRadius: 16, background: "white", padding: "1.25rem", boxShadow: "0 25px 50px rgba(0,0,0,.25)" }}>
+            <div style={{ display: "flex", gap: ".75rem", alignItems: "center" }}>
+              <ShieldCheck size={26} color="#047857" />
+              <div>
+                <h3 id="confirm-offer-title" style={{ margin: 0, color: "#021550" }}>Confirm tutor offer</h3>
+                <p style={{ margin: ".2rem 0 0", color: "#64748b", fontSize: ".82rem" }}>Review the tutor profile and booking terms before confirming.</p>
               </div>
             </div>
+            <div style={{ margin: "1rem 0", padding: "1rem", borderRadius: 10, background: "#f8fafc", color: "#334155", lineHeight: 1.6, fontSize: ".85rem" }}>
+              You are accepting <strong>{confirmingOffer.tutor.name || "this tutor"}</strong>&apos;s offer of <strong>{confirmingOffer.currency || currency} {money(confirmingOffer.amount)}/{confirmingOffer.pricingUnit || pricingUnit}</strong>. Eligibility for refunds, credits, replacements, or other protection is governed by the published policies and the specific booking circumstances.
+            </div>
+            <p style={{ color: "#64748b", fontSize: ".78rem", lineHeight: 1.5 }}>
+              By continuing, you agree to TUTORERA&apos;s <Link href="/terms" style={{ color: "#0329b2" }}>Terms of Service</Link> and should review the <Link href="/first-session-guarantee" style={{ color: "#0329b2" }}>First Session Guarantee</Link>.
+            </p>
+            <div style={{ display: "flex", gap: ".6rem", marginTop: "1rem" }}>
+              <button type="button" onClick={() => setConfirmingOfferId(null)} style={{ flex: 1, padding: ".65rem", borderRadius: 8, border: "1px solid #cbd5e1", background: "white", color: "#475569", fontWeight: 700, cursor: "pointer" }}>Cancel</button>
+              <button type="button" onClick={() => { const id = confirmingOffer._id; setConfirmingOfferId(null); onAcceptOffer(id); }} style={{ flex: 1, padding: ".65rem", borderRadius: 8, border: 0, background: "#047857", color: "white", fontWeight: 800, cursor: "pointer" }}>Confirm offer</button>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      <style jsx>{`
+        @media (max-width: 760px) {
+          .offer-comparison-row { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
     </div>
   );
 }
