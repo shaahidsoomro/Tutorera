@@ -21,7 +21,6 @@ export async function generateMetadata({ params }: Omit<Props, "children">): Pro
     robots: {
       index: assessment.indexable,
       follow: true,
-      nocache: !assessment.indexable,
     },
   };
 }
