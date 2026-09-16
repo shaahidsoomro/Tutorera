@@ -2,7 +2,7 @@ name: Build and test
 
 on:
   push:
-    branches: [main]
+    branches: [main, ci/rapidpay-validation]
   pull_request:
     branches: [main]
 
@@ -28,9 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 22 }
-      # The frontend has no committed lockfile yet; retain reproducible backend
-      # installs and avoid pretending npm ci can operate without one.
-      - run: npm install --ignore-scripts
+        with: { node-version: 22, cache: npm, cache-dependency-path: tutorera-frontend/package-lock.json }
+      - run: npm ci
       - run: npm run lint
       - run: npm run build
