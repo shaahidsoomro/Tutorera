@@ -13,16 +13,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, subject: subjectSlug } = await params;
   const city = CITIES[slug as keyof typeof CITIES];
   const subject = SUBJECTS[subjectSlug as keyof typeof SUBJECTS];
-  if (!city || !subject) return {};
+  if (!city || !subject) return { robots: { index: false, follow: true } };
+
   const path = `/tutors/city/${slug}/${subjectSlug}`;
-  const { total } = await fetchTutors({ city, subject }, 1);
+  const { total } = await fetchTutors({ countryCode: "PK", city, subject }, 1);
   const title = `${subject} Tutors in ${city}`;
+  const description = `Browse ${subject} tutor profiles serving ${city} for online and in-person lessons where available. Compare published experience, reviews, availability, verification status, and hourly rates.`;
+
   return {
     title,
-    description: `Find verified ${subject} tutors in ${city} for online and in-person lessons. Compare experience, ratings, availability, and hourly rates.`,
+    description,
     alternates: { canonical: path },
-    robots: total > 0 ? { index: true, follow: true } : { index: false, follow: true },
-    openGraph: { title: `${title} | TUTORERA®`, description: `Browse verified ${subject} tutors serving ${city}.`, url: path },
+    robots: { index: total > 0, follow: true },
+    openGraph: { title: `${title} | TUTORERA`, description, url: path },
   };
 }
 
@@ -31,5 +34,15 @@ export default async function Page({ params }: Props) {
   const city = CITIES[slug as keyof typeof CITIES];
   const subject = SUBJECTS[subjectSlug as keyof typeof SUBJECTS];
   if (!city || !subject || !PRIMARY_CITY_SLUGS.includes(slug as typeof PRIMARY_CITY_SLUGS[number]) || !LOCAL_SUBJECT_SLUGS.includes(subjectSlug as typeof LOCAL_SUBJECT_SLUGS[number])) notFound();
-  return <SeoTutorDirectory kind="city" value={city} filters={{ city, subject }} title={`${subject} Tutors in ${city}`} description={`Compare verified ${subject} tutors available in ${city} for online and in-person lessons.`} canonicalPath={`/tutors/city/${slug}/${subjectSlug}`} />;
+
+  return (
+    <SeoTutorDirectory
+      kind="city"
+      value={city}
+      filters={{ countryCode: "PK", city, subject }}
+      title={`${subject} Tutors in ${city}`}
+      description={`Compare ${subject} tutor profiles available in ${city} for online and in-person lessons where listed.`}
+      canonicalPath={`/tutors/city/${slug}/${subjectSlug}`}
+    />
+  );
 }
