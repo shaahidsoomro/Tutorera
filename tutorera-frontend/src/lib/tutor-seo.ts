@@ -41,10 +41,10 @@ export function assessTutorSeoQuality(tutor: TutorProfile): TutorSeoAssessment {
 
   const hasCoreContent = hasName && hasSubject && hasLevel && hasCity && hasUsefulBio && hasRate;
 
-  // Search indexing is deliberately stricter than marketplace visibility. A profile may remain
-  // usable on TUTORERA while search engines are asked not to index it until it has sufficient
-  // factual content and an explicit verification trust signal.
-  const indexable = hasCoreContent && isVerified && score >= 75;
+  // Marketplace visibility and search visibility are intentionally separate. Profiles may remain
+  // usable on TUTORERA, while search engines are asked not to index them until they contain enough
+  // factual content and both approval and verification trust signals are explicitly present.
+  const indexable = hasCoreContent && hasApprovedStatus && isVerified && score >= 75;
 
   return { indexable, score, reasons };
 }
