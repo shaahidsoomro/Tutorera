@@ -1,0 +1,40 @@
+name: Rapid Gateway migration validation
+
+on:
+  push:
+    branches: [fix/rapidpay-only-gateway]
+  pull_request:
+    branches: [main]
+
+jobs:
+  payment-backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tutorera-backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tutorera-backend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm test -- --runTestsByPath src/tests/payment-provider.test.ts --runInBand
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tutorera-frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tutorera-frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
