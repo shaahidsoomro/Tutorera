@@ -12,12 +12,20 @@ export async function generateMetadata({ params }: Omit<Props, "children">): Pro
   const { id } = await params;
   const tutor = await fetchTutor(id);
 
+  const title = {
+    default: "Tutor Profile | TUTORERA",
+    // The profile page currently emits its complete branded title. Prevent the
+    // root `%s | TUTORERA` template from appending the brand a second time.
+    template: "%s",
+  };
+
   if (!tutor) {
-    return { robots: { index: false, follow: true } };
+    return { title, robots: { index: false, follow: true } };
   }
 
   const assessment = assessTutorSeoQuality(tutor);
   return {
+    title,
     robots: {
       index: assessment.indexable,
       follow: true,
