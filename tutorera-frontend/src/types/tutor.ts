@@ -27,6 +27,8 @@ export interface TutorProfile {
   levels: string[];
   hourlyRate: number;
   averageRating: number;
+  /** Legacy API compatibility only. Prefer averageRating for public tutor ratings. */
+  rating?: number;
   totalReviews: number;
   bio: string;
   videoIntro?: string;
@@ -57,16 +59,16 @@ export interface FiltersState {
 }
 
 export const LEVELS = [
-  "Primary (Grades 1-5)", 
-  "Middle (Grades 6-8)", 
-  "Matric (9th & 10th)", 
-  "Intermediate / FSc", 
-  "O-Level (Cambridge / Edexcel)", 
-  "A-Level (Cambridge / Edexcel)", 
-  "IB (Middle Years / Diploma)", 
-  "University / Degree", 
-  "Test Preparation", 
-  "Other"
+  "Primary (Grades 1-5)",
+  "Middle (Grades 6-8)",
+  "Matric (9th & 10th)",
+  "Intermediate / FSc",
+  "O-Level (Cambridge / Edexcel)",
+  "A-Level (Cambridge / Edexcel)",
+  "IB (Middle Years / Diploma)",
+  "University / Degree",
+  "Test Preparation",
+  "Other",
 ];
 
 export const TEACHING_MODES = [
@@ -110,7 +112,7 @@ export const INITIAL_FILTERS: FiltersState = {
 
 export interface Review {
   _id: string;
-  student: { name: string; avatar: string; };
+  student: { name: string; avatar: string };
   rating: number;
   comment: string;
   createdAt: string;
