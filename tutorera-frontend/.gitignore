@@ -15,7 +15,7 @@
 /playwright-report/
 /test-results/
 
-# next.js
+# next.js / OpenNext Cloudflare
 /.next/
 /out/
 /.open-next/
@@ -36,9 +36,6 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
-
-# vercel
-.vercel
 
 # typescript
 *.tsbuildinfo
