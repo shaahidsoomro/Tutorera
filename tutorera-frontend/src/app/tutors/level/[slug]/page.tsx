@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import SeoTutorDirectory from "@/components/Tutors/SeoTutorDirectory";
-import { LEVELS } from "@/lib/tutor-directory";
+import { LEVELS, fetchTutors } from "@/lib/tutor-directory";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -12,13 +12,18 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const level = LEVELS[slug as keyof typeof LEVELS];
-  if (!level) return {};
+  if (!level) return { robots: { index: false, follow: true } };
+
   const path = `/tutors/level/${slug}`;
+  const { total } = await fetchTutors({ level }, 1);
+  const title = `${level} Tutors Online & Locally`;
+  const description = `Browse ${level} tutor profiles for online learning and local in-person support where available. Compare published experience, reviews, availability, verification status, and rates.`;
 
   return {
-    title: `${level} Tutors Online & Locally`,
-    description: `Find verified ${level} tutors for online worldwide learning and local in-person lessons where available. Compare profiles, ratings, availability, and rates.`,
+    title,
+    description,
     alternates: { canonical: path },
+    robots: { index: total > 0, follow: true },
   };
 }
 
@@ -32,7 +37,7 @@ export default async function Page({ params }: Props) {
       kind="level"
       value={level}
       title={`${level} Tutors Online & Locally`}
-      description={`Browse verified tutors experienced in teaching students at ${level} level for online worldwide and local in-person support.`}
+      description={`Browse tutor profiles listing experience with ${level} students for online learning and local in-person support where available.`}
       canonicalPath={`/tutors/level/${slug}`}
     />
   );
