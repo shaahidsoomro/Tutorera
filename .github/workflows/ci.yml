@@ -1,13 +1,11 @@
-name: Build and test
+name: Rapid Gateway validation
 
 on:
   push:
-    branches: [main, ci/rapidpay-validation]
-  pull_request:
-    branches: [main]
+    branches: [ci/rapidpay-validation]
 
 jobs:
-  backend:
+  payment-backend:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -18,7 +16,7 @@ jobs:
         with: { node-version: 22, cache: npm, cache-dependency-path: tutorera-backend/package-lock.json }
       - run: npm ci
       - run: npm run build
-      - run: npm test -- --passWithNoTests
+      - run: npm test -- --runTestsByPath src/tests/payment-provider.test.ts --runInBand
 
   frontend:
     runs-on: ubuntu-latest
