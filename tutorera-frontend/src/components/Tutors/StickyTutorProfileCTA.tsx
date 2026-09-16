@@ -9,7 +9,7 @@ interface StickyTutorProfileCTAProps {
   tutorId: string;
   tutorUserId: string;
   tutorName: string;
-  hourlyRate: number;
+  hourlyRate?: number;
   currency?: string;
   rating?: number;
   teachingMode: "online" | "in-person" | "both";
@@ -18,17 +18,18 @@ interface StickyTutorProfileCTAProps {
 }
 
 export default function StickyTutorProfileCTA({
-  tutorId,
   tutorUserId,
   tutorName,
   hourlyRate,
   currency = "PKR",
-  rating = 4.9,
+  rating,
   teachingMode,
   city,
   subjects,
 }: StickyTutorProfileCTAProps) {
   const [bookingOpen, setBookingOpen] = useState(false);
+  const hasRate = typeof hourlyRate === "number" && hourlyRate > 0;
+  const requestHref = `/post-tuition-request?subject=${encodeURIComponent(subjects[0] || "")}&city=${encodeURIComponent(city || "")}`;
 
   return (
     <>
@@ -50,25 +51,22 @@ export default function StickyTutorProfileCTA({
           boxShadow: "0 -4px 16px rgba(2, 21, 80, 0.08)",
         }}
       >
-        {/* Rate & Rating Display */}
         <div style={{ minWidth: 0, paddingRight: "0.5rem" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
             <strong style={{ fontSize: "1.05rem", fontWeight: 900, color: "#0329b2" }}>
-              {currency} {hourlyRate.toLocaleString()}
+              {hasRate ? `${currency} ${hourlyRate.toLocaleString()}` : "Rate on request"}
             </strong>
-            <span style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: 500 }}>/hr</span>
+            {hasRate && <span style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: 500 }}>/hr</span>}
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.25rem", fontSize: "0.72rem", color: "#d97706" }}>
-            <Star size={12} fill="#d97706" />
-            <span style={{ fontWeight: 700 }}>{rating ? rating.toFixed(1) : "5.0"}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.25rem", fontSize: "0.72rem", color: rating ? "#d97706" : "#64748b" }}>
+            {rating ? <><Star size={12} fill="#d97706" /><span style={{ fontWeight: 700 }}>{rating.toFixed(1)}</span></> : <span>No reviews yet</span>}
             <span style={{ color: "#94a3b8" }}>· {teachingMode}</span>
           </div>
         </div>
 
-        {/* Action Buttons */}
         <div style={{ display: "flex", gap: "0.4rem", alignItems: "center", flexShrink: 0 }}>
           <Link
-            href={`/post-tuition-request?subject=${encodeURIComponent(subjects[0] || "")}&city=${encodeURIComponent(city || "")}`}
+            href={requestHref}
             style={{
               background: "#eef5ff",
               color: "#0329b2",
@@ -87,27 +85,48 @@ export default function StickyTutorProfileCTA({
             <PlusCircle size={14} /> Invite
           </Link>
 
-          <button
-            type="button"
-            onClick={() => setBookingOpen(true)}
-            style={{
-              background: "linear-gradient(135deg, #0329b2 0%, #016ef8 100%)",
-              color: "white",
-              border: "none",
-              padding: "0.6rem 1.15rem",
-              borderRadius: "0.5rem",
-              fontSize: "0.85rem",
-              fontWeight: 800,
-              cursor: "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "0.35rem",
-              boxShadow: "0 4px 12px rgba(3, 41, 178, 0.3)",
-              minHeight: "44px",
-            }}
-          >
-            <Calendar size={15} /> Request Tutor
-          </button>
+          {hasRate ? (
+            <button
+              type="button"
+              onClick={() => setBookingOpen(true)}
+              style={{
+                background: "linear-gradient(135deg, #0329b2 0%, #016ef8 100%)",
+                color: "white",
+                border: "none",
+                padding: "0.6rem 1.15rem",
+                borderRadius: "0.5rem",
+                fontSize: "0.85rem",
+                fontWeight: 800,
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.35rem",
+                boxShadow: "0 4px 12px rgba(3, 41, 178, 0.3)",
+                minHeight: "44px",
+              }}
+            >
+              <Calendar size={15} /> Request Tutor
+            </button>
+          ) : (
+            <Link
+              href={requestHref}
+              style={{
+                background: "linear-gradient(135deg, #0329b2 0%, #016ef8 100%)",
+                color: "white",
+                padding: "0.6rem 1.15rem",
+                borderRadius: "0.5rem",
+                fontSize: "0.85rem",
+                fontWeight: 800,
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.35rem",
+                minHeight: "44px",
+              }}
+            >
+              <Calendar size={15} /> Post Request
+            </Link>
+          )}
         </div>
 
         <style jsx>{`
@@ -119,7 +138,7 @@ export default function StickyTutorProfileCTA({
         `}</style>
       </div>
 
-      {bookingOpen && (
+      {bookingOpen && hasRate && (
         <DirectBookingModal
           tutorId={tutorUserId}
           tutorUserId={tutorUserId}
