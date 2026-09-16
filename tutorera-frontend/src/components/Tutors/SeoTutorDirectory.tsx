@@ -12,23 +12,35 @@ export default async function SeoTutorDirectory({ kind, value, filters, title, d
   const displayCurrency = currency || result.tutors.find((t) => t.currency)?.currency || "PKR";
   const context = filters?.city && filters?.subject ? `${filters.subject} tutoring in ${filters.city}` : `${value} tutoring`;
   const faq = [
-    { q: `How do I choose a ${value} tutor?`, a: `Compare verified profiles by relevant subjects, teaching levels, experience, lesson mode, availability, completed-booking reviews, and hourly rate. Discuss learning goals before confirming a booking.` },
+    { q: `How do I choose a ${value} tutor?`, a: `Compare tutor profiles by relevant subjects, teaching levels, experience, lesson mode, availability, completed-booking reviews, verification status, and hourly rate. Discuss learning goals before confirming a booking.` },
     { q: `Can I book ${context} online?`, a: `Yes. Use the teaching-mode information on each profile to find tutors offering online lessons, in-person lessons, or both.` },
     { q: `How much does ${context} cost?`, a: averageRate ? `The currently displayed matching tutors average approximately ${displayCurrency} ${averageRate.toLocaleString()} per hour. Individual rates vary by experience, subject, level, and lesson mode.` : `Rates vary by experience, subject, academic level, location, and lesson mode. Each available tutor publishes an hourly rate on their profile.` },
   ];
   const breadcrumb = {
-    "@context": "https://schema.org", "@type": "BreadcrumbList",
+    "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Home", item: "https://tutorera.ac.pk/" },
       { "@type": "ListItem", position: 2, name: "Tutors", item: "https://tutorera.ac.pk/tutors" },
       { "@type": "ListItem", position: 3, name: title, item: `https://tutorera.ac.pk${canonicalPath}` },
     ],
   };
-  const directorySchema = { "@context": "https://schema.org", "@graph": [
-    breadcrumb,
-    { "@type": "ItemList", name: title, numberOfItems: result.tutors.length, itemListElement: result.tutors.map((tutor, index) => ({ "@type": "ListItem", position: index + 1, url: `https://tutorera.ac.pk${tutorProfileHref(tutor)}`, name: tutor.user?.name })) },
-    { "@type": "FAQPage", mainEntity: faq.map((item) => ({ "@type": "Question", name: item.q, acceptedAnswer: { "@type": "Answer", text: item.a } })) },
-  ] };
+  const directorySchema = {
+    "@context": "https://schema.org",
+    "@graph": [
+      breadcrumb,
+      {
+        "@type": "ItemList",
+        name: title,
+        numberOfItems: result.tutors.length,
+        itemListElement: result.tutors.map((tutor, index) => ({
+          "@type": "ListItem",
+          position: index + 1,
+          url: `https://tutorera.ac.pk${tutorProfileHref(tutor)}`,
+          name: tutor.user?.name,
+        })),
+      },
+    ],
+  };
 
   return (
     <div className={styles.page}>
@@ -59,13 +71,13 @@ export default async function SeoTutorDirectory({ kind, value, filters, title, d
         </div>
       </div>
       <main className={styles.main} style={{ maxWidth: 1180, margin: "0 auto", padding: "3rem 1.5rem" }}>
-        <p className={styles.resultsCount}><span className={styles.resultsCountAccent}>{result.total}</span> verified tutors found</p>
+        <p className={styles.resultsCount}><span className={styles.resultsCountAccent}>{result.total}</span> tutors found</p>
         {result.tutors.length ? (
           <div className={styles.grid}>{result.tutors.map((tutor) => <TutorCard key={tutor._id} tutor={tutor} />)}</div>
         ) : (
           <div style={{ textAlign: "center", padding: "4rem 1rem", background: "white", borderRadius: "1rem", border: "1px solid #e2e8f0" }}>
             <h2 style={{ marginBottom: ".75rem", color: "#021550" }}>No matching tutors listed right now</h2>
-            <p style={{ color: "#64748b", marginBottom: "1.5rem" }}>Tell us your exact requirements and let verified tutors send offers directly to you.</p>
+            <p style={{ color: "#64748b", marginBottom: "1.5rem" }}>Tell us your exact requirements and let eligible tutors send offers directly to you.</p>
             <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
               <Link href="/post-tuition-request" style={{ background: "#0329B2", color: "white", padding: "0.75rem 1.5rem", borderRadius: "0.5rem", fontWeight: 800, textDecoration: "none" }}>
                 Post Tuition Request
@@ -79,7 +91,7 @@ export default async function SeoTutorDirectory({ kind, value, filters, title, d
       </main>
       <section style={{ maxWidth: 900, margin: "0 auto", padding: "0 1.5rem 4rem", color: "#4b5563", lineHeight: 1.8 }}>
         <h2 style={{ color: "#021550", marginBottom: ".75rem" }}>Choosing the right tutor</h2>
-        <p>TUTORERA currently lists {result.total} approved {result.total === 1 ? "profile" : "profiles"} matching this requirement. Profiles show the tutor’s subjects, academic levels, city, teaching mode, rate, experience, availability, verification status, and completed-booking reviews where available.</p>
+        <p>TUTORERA currently lists {result.total} {result.total === 1 ? "profile" : "profiles"} matching this requirement. Profiles show the tutor’s subjects, academic levels, city, teaching mode, rate, experience, availability, verification status, and completed-booking reviews where available.</p>
         <p style={{ marginTop: ".75rem" }}>For the best match, identify the exact curriculum or examination, topics requiring support, preferred lesson schedule, and whether online or in-person teaching is suitable. Shortlist tutors whose documented experience and teaching levels align with those needs.</p>
         <h2 style={{ color: "#021550", margin: "2rem 0 .75rem" }}>Frequently asked questions</h2>
         {faq.map((item) => <div key={item.q} style={{ marginBottom: "1.25rem" }}><h3 style={{ color: "#021550", fontSize: "1rem" }}>{item.q}</h3><p>{item.a}</p></div>)}
