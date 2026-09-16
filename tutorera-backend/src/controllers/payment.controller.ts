@@ -122,7 +122,7 @@ export const createBookingCheckout = async (req: AuthRequest, res: Response): Pr
   }
 };
 
-// @desc    Receive payment confirmation webhooks from the authorized payment gateway
+// @desc    Receive payment confirmation webhooks from Rapid Gateway
 // @route   POST /api/v1/payments/webhook
 // @access  Public (verified via HMAC signature, not auth middleware)
 export const handleRapidGatewayWebhook = async (req: Request, res: Response): Promise<void> => {
@@ -134,12 +134,23 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
     return;
   }
 
-  const signature = req.header("x-sfpy-signature") || "";
-  const timestamp = req.header("x-sfpy-timestamp") || "";
+  // Prefer Rapid Gateway's current signed-webhook headers. RapidPay aliases
+  // are accepted only for the provider's documented transition period; the
+  // older X-RG-Signature format is supported for legacy deliveries.
+  const signature =
+    req.header("x-rapidgateway-signature") ||
+    req.header("x-rapidpay-signature") ||
+    req.header("x-rg-signature") ||
+    "";
+  const timestamp =
+    req.header("x-rapidgateway-timestamp") ||
+    req.header("x-rapidpay-timestamp") ||
+    req.header("x-rg-timestamp") ||
+    "";
 
   const isValid = paymentProvider.verifyWebhookSignature(rawBody, signature, timestamp);
   if (!isValid) {
-    logger.warn({ requestId: (req as any).id }, "Rejected payment webhook — invalid or stale signature");
+    logger.warn({ requestId: (req as any).id }, "Rejected Rapid Gateway webhook — invalid or stale signature");
     res.status(401).json({ success: false, message: "Invalid signature" });
     return;
   }
@@ -241,7 +252,7 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
 
         if (booking.paymentStatus !== "confirmed") {
           booking.paymentStatus = "confirmed";
-          booking.paymentNote = `Confirmed via authorized payment gateway (event ${event.eventId})`;
+          booking.paymentNote = `Confirmed via Rapid Gateway (event ${event.eventId})`;
           await booking.save();
 
           const appliedPromo = await getAppliedPromoForBasket(event.merchantTransactionId);
@@ -288,7 +299,7 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
         }
       }
     } else if (event.eventType === "transaction.failed") {
-      logger.info({ requestId: (req as any).id, basketId: event.merchantTransactionId }, "Payment gateway reported a failed transaction");
+      logger.info({ requestId: (req as any).id, basketId: event.merchantTransactionId }, "Rapid Gateway reported a failed transaction");
 
       if (event.merchantTransactionId.startsWith("BID-")) {
         const bidId = event.merchantTransactionId.slice("BID-".length);
@@ -407,7 +418,7 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
 
     res.status(200).json({ success: true });
   } catch (err) {
-    logger.error({ requestId: (req as any).id, err }, "Error processing payment gateway webhook");
+    logger.error({ requestId: (req as any).id, err }, "Error processing Rapid Gateway webhook");
     res.status(500).json({ success: false });
   }
 };
