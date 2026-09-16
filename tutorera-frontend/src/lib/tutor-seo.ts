@@ -25,7 +25,8 @@ export function assessTutorSeoQuality(tutor: TutorProfile): TutorSeoAssessment {
   const hasRate = Number.isFinite(tutor.hourlyRate) && tutor.hourlyRate > 0;
   const hasEducation = Array.isArray(tutor.education) && tutor.education.some((education) => normalize(education.degree).length > 1 && normalize(education.institution).length > 1);
   const hasVisualTrustSignal = Boolean(tutor.user?.avatar || tutor.videoIntro);
-  const isApproved = verificationStatus === "approved" || verificationStatus === "verified" || tutor.isVerified === true;
+  const hasApprovedStatus = verificationStatus === "approved" || verificationStatus === "verified";
+  const isVerified = tutor.isVerified === true;
 
   if (hasName) score += 10; else reasons.push("missing tutor name");
   if (hasSubject) score += 15; else reasons.push("missing subjects");
@@ -35,10 +36,15 @@ export function assessTutorSeoQuality(tutor: TutorProfile): TutorSeoAssessment {
   if (hasRate) score += 10; else reasons.push("missing valid hourly rate");
   if (hasEducation) score += 10; else reasons.push("missing structured education");
   if (hasVisualTrustSignal) score += 5; else reasons.push("missing profile image or intro video");
-  if (isApproved) score += 10; else reasons.push("profile not approved or verified");
+  if (hasApprovedStatus) score += 5; else reasons.push("profile approval status is not confirmed");
+  if (isVerified) score += 5; else reasons.push("profile does not have a verification badge");
 
   const hasCoreContent = hasName && hasSubject && hasLevel && hasCity && hasUsefulBio && hasRate;
-  const indexable = hasCoreContent && isApproved && score >= 75;
+
+  // Search indexing is deliberately stricter than marketplace visibility. A profile may remain
+  // usable on TUTORERA while search engines are asked not to index it until it has sufficient
+  // factual content and an explicit verification trust signal.
+  const indexable = hasCoreContent && isVerified && score >= 75;
 
   return { indexable, score, reasons };
 }
