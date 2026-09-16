@@ -62,7 +62,7 @@ describe("Rapid Gateway direct integration", () => {
           phone: "+923001234567",
         },
         return_url: "https://example.test/success",
-        webhook_url: "https://api.example.test/api/v1/payments/webhook?reference=BOOKING-1001",
+        webhook_url: "https://api.example.test/api/v1/payments/webhook",
       }),
       expect.objectContaining({
         headers: expect.objectContaining({
@@ -111,5 +111,15 @@ describe("Rapid Gateway direct integration", () => {
       .toUpperCase();
 
     expect(rapidpayProvider.verifyWebhookSignature(rawBody, staleSignature, staleTimestamp)).toBe(false);
+  });
+
+  it("supports the provider's legacy raw-body X-RG signature during migration", () => {
+    const rawBody = Buffer.from(JSON.stringify({ eventId: "evt_legacy", eventType: "transaction.completed" }));
+    const signature = crypto
+      .createHmac("sha256", process.env.RAPID_GATEWAY_WEBHOOK_SECRET as string)
+      .update(rawBody)
+      .digest("hex");
+
+    expect(rapidpayProvider.verifyWebhookSignature(rawBody, signature)).toBe(true);
   });
 });
