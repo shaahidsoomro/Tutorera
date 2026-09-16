@@ -1,10 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
 import api from "@/lib/axios";
 import { VerificationComponents } from "@/types/tracking";
+import { CheckCircle2,FileCheck2,Upload,X } from "lucide-react";
+import { useRef,useState } from "react";
 import s from "./DocumentResubmitPanel.module.css";
-import { CheckCircle2, FileCheck2, Upload, X } from "lucide-react";
 
 interface Props {
   components: VerificationComponents;

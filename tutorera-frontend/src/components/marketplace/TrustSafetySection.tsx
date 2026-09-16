@@ -1,5 +1,5 @@
+import { ArrowRight,Award,Eye,Lock,ShieldCheck,Sparkles,UserCheck } from "lucide-react";
 import Link from "next/link";
-import { ShieldCheck, UserCheck, Lock, Award, Eye, ArrowRight, Sparkles } from "lucide-react";
 import TrustBadges from "./TrustBadges";
 
 const trustPillars = [

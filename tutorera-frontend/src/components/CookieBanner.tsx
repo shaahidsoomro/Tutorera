@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { Cookie, ShieldCheck, Settings } from "lucide-react";
 import { UI_COLORS } from "@/lib/brand";
+import { Cookie,Settings } from "lucide-react";
+import Link from "next/link";
+import { useEffect,useState } from "react";
 
 const C = UI_COLORS;
 

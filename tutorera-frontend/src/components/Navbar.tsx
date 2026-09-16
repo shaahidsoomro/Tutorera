@@ -1,27 +1,27 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element */
-import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { 
-  Bell, 
-  BriefcaseBusiness, 
-  ChevronDown, 
-  GraduationCap, 
-  LayoutDashboard, 
-  LogOut, 
-  Menu, 
-  MessageSquare, 
-  PlusCircle, 
-  ShieldCheck, 
-  User, 
-  X,
-  Briefcase
-} from "lucide-react";
+import Image from "next/image";
+import BrandLogo from "@/components/BrandLogo";
 import { useAuth } from "@/context/AuthContext";
 import { useSocket } from "@/context/SocketContext";
-import BrandLogo from "@/components/BrandLogo";
+import {
+  Bell,
+  Briefcase,
+  BriefcaseBusiness,
+  ChevronDown,
+  GraduationCap,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  MessageSquare,
+  PlusCircle,
+  ShieldCheck,
+  User,
+  X
+} from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect,useRef,useState } from "react";
 import s from "./Navbar.module.css";
 
 type MegaKey = "students" | "tutors" | "resources" | null;
@@ -315,7 +315,7 @@ export default function Navbar() {
                   onClick={() => { setShowAccountMenu((open) => !open); setActiveMega(null); setShowNotifications(false); }}
                 >
                   <span className={s.avatar}>
-                    {user.avatar ? <img src={user.avatar} alt="" width={32} height={32} /> : user.name.charAt(0).toUpperCase()}
+                    {user.avatar ? <Image src={user.avatar} alt="" width={32} height={32}  unoptimized/> : user.name.charAt(0).toUpperCase()}
                   </span>
                   <span>{user.name.split(" ")[0]}</span>
                 </button>

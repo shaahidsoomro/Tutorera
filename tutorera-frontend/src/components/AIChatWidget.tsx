@@ -1,9 +1,9 @@
 "use client";
 // components/AIChatWidget.tsx
-import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { usePathname } from "next/navigation";
 import api from "@/lib/axios";
+import { usePathname } from "next/navigation";
+import { useEffect,useRef,useState } from "react";
 
 interface Message {
   role: "user" | "assistant";
@@ -75,7 +75,7 @@ export default function AIChatWidget() {
       }
       setHasGreeted(true);
     }
-  }, [hasGreeted, open, user?.name, persistedLoaded]);
+  }, [hasGreeted, open, user?.name, persistedLoaded, messages.length]);
 
   // Reset on logout — clear storage and state
   useEffect(() => {

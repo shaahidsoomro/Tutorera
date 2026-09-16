@@ -3,7 +3,7 @@
 // Wraps all admin pages with MUI dark theme + CssBaseline.
 // This is a CLIENT component imported once in admin/layout.tsx.
 
-import { ThemeProvider, createTheme, CssBaseline } from "@mui/material";
+import { createTheme,CssBaseline,ThemeProvider } from "@mui/material";
 import { useMemo } from "react";
 
 const adminTheme = createTheme({

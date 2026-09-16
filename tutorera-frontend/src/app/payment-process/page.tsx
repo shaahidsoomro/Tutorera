@@ -1,6 +1,6 @@
+import { BRAND_NAME,SUPPORT_EMAIL,formatPKR } from "@/lib/site";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BRAND_NAME, SUPPORT_EMAIL, formatPKR } from "@/lib/site";
 import s from "../compliance-pages.module.css";
 
 export const metadata: Metadata = {

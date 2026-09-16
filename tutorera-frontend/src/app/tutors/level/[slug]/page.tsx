@@ -1,7 +1,7 @@
+import SeoTutorDirectory from "@/components/Tutors/SeoTutorDirectory";
+import { LEVELS,fetchTutors } from "@/lib/tutor-directory";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import SeoTutorDirectory from "@/components/Tutors/SeoTutorDirectory";
-import { LEVELS, fetchTutors } from "@/lib/tutor-directory";
 
 type Props = { params: Promise<{ slug: string }> };
 

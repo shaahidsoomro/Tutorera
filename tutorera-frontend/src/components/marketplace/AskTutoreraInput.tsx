@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { ArrowRight,Loader2,Mic,Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Sparkles, ArrowRight, Loader2, Mic } from "lucide-react";
+import { useRef,useState } from "react";
 
 interface ParsedRequest {
   subject?: string;

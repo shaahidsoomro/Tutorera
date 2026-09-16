@@ -1,15 +1,15 @@
 // src/lib/geoService.ts
 // Dynamic Geolocation, Subjects, Levels, Curricula, and PKR Base Pricing Service
 
-import { useState, useEffect } from "react";
 import api from "@/lib/axios";
 import {
   COUNTRIES,
-  MASTER_SUBJECTS,
-  MASTER_LEVELS,
   CountryData,
+  MASTER_LEVELS,
+  MASTER_SUBJECTS,
   convertToPKR,
 } from "@/lib/location";
+import { useEffect,useState } from "react";
 
 export interface GeoMasterData {
   countries: CountryData[];

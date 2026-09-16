@@ -1,9 +1,9 @@
 "use client";
-import { UI_COLORS } from "@/lib/brand";
-import { useEffect, useState } from "react";
-import { CheckCircle, XCircle, Eye, EyeOff, Clock, Download, ExternalLink } from "lucide-react";
 import api from "@/lib/axios";
-import { showSuccess, showError } from "@/lib/toast";
+import { UI_COLORS } from "@/lib/brand";
+import { showError,showSuccess } from "@/lib/toast";
+import { CheckCircle,Clock,Download,ExternalLink,Eye,EyeOff,XCircle } from "lucide-react";
+import { useCallback,useEffect,useState } from "react";
 
 const C = UI_COLORS;
 
@@ -45,7 +45,7 @@ export default function VerificationsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
 
-  const fetchTutors = async (page: number = 1) => {
+  const fetchTutors = useCallback(async (page: number = 1) => {
     setLoading(true);
     try {
       const res = await api.get(`/admin/verifications?status=${filter}&page=${page}&limit=20`);
@@ -56,9 +56,9 @@ export default function VerificationsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
 
-  useEffect(() => { fetchTutors(1); }, [filter]);
+  useEffect(() => { fetchTutors(1); }, [fetchTutors]);
 
   const handleApprove = async (id: string) => {
     setActionLoading(id);
@@ -107,14 +107,6 @@ export default function VerificationsPage() {
       else next.add(id);
       return next;
     });
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedIds.size === tutors.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(tutors.map(t => t._id)));
-    }
   };
 
   const handleBulkAction = async (status: "approved" | "rejected") => {

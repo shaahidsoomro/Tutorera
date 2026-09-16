@@ -1,7 +1,7 @@
 "use client";
 
-import s from "./tracking.module.css";
 import { EligibilityInfo } from "@/types/tracking";
+import s from "./tracking.module.css";
 
 export function HomeTuitionStatusCard({ eligibility, required }: { eligibility: EligibilityInfo; required: boolean }) {
   if (!required) {

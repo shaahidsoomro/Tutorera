@@ -1,13 +1,12 @@
-/* eslint-disable @next/next/no-img-element */
+import BrandLogo from "@/components/BrandLogo";
+import { SUPPORT_EMAIL } from "@/lib/site";
+import { BookOpen,Mail } from "lucide-react";
 import Link from "next/link";
-import { BookOpen, Mail } from "lucide-react";
 import { FiFacebook } from "react-icons/fi";
 import { RiTwitterLine } from "react-icons/ri";
 import { SiInstagram } from "react-icons/si";
 import { SlSocialLinkedin } from "react-icons/sl";
 import s from "./Footer.module.css";
-import { SUPPORT_EMAIL } from "@/lib/site";
-import BrandLogo from "@/components/BrandLogo";
 
 const footerColumns = [
   {

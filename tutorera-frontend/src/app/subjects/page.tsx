@@ -1,8 +1,8 @@
 "use client";
 import { UI_COLORS } from "@/lib/brand";
-import Link from "next/link";
-import { slugify } from "@/lib/tutor-directory";
 import { formatPKR } from "@/lib/site";
+import { slugify } from "@/lib/tutor-directory";
+import Link from "next/link";
 
 const C = UI_COLORS;
 

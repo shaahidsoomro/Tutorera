@@ -1,6 +1,6 @@
-import Link from "next/link";
+import { SUPPORT_EMAIL,SUPPORT_PHONE } from "@/lib/site";
 import type { Metadata } from "next";
-import { SUPPORT_EMAIL, SUPPORT_PHONE } from "@/lib/site";
+import Link from "next/link";
 import s from "../../compliance-pages.module.css";
 
 export const metadata: Metadata = { title: "Payment Could Not Be Completed", robots: { index: false, follow: false } };

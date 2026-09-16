@@ -1,22 +1,23 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import api from "@/lib/axios";
-import { useAuth } from "@/context/AuthContext";
-import { showError, showSuccess } from "@/lib/toast";
-import { calculateMarketplaceFees } from "@/lib/site";
-import { 
-  CheckCircle, 
-  Clock, 
-  MessageSquare, 
-  Sparkles, 
-  ArrowRight, 
-  RotateCcw,
-  CreditCard
-} from "lucide-react";
+import Image from "next/image";
 import OfferComparisonModal from "@/components/marketplace/OfferComparisonModal";
+import { useAuth } from "@/context/AuthContext";
+import api from "@/lib/axios";
+import { calculateMarketplaceFees } from "@/lib/site";
+import { showError,showSuccess } from "@/lib/toast";
+import {
+  ArrowRight,
+  CheckCircle,
+  Clock,
+  CreditCard,
+  MessageSquare,
+  RotateCcw,
+  Sparkles
+} from "lucide-react";
+import Link from "next/link";
+import { useRouter,useSearchParams } from "next/navigation";
+import { Suspense,useCallback,useEffect,useState } from "react";
 
 type History = { 
   _id: string; 
@@ -333,7 +334,7 @@ function OffersContent() {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem", marginBottom: "1rem" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
                     <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#0329b2", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem", fontWeight: 800, overflow: "hidden" }}>
-                      {o.tutor.avatar ? <img src={o.tutor.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : o.tutor.name.charAt(0).toUpperCase()}
+                      {o.tutor.avatar ? <Image src={o.tutor.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }}  width={100} height={100} unoptimized/> : o.tutor.name.charAt(0).toUpperCase()}
                     </div>
                     <div>
                       <strong style={{ fontSize: "1rem", color: "#021550", display: "block" }}>{o.tutor.name}</strong>
@@ -623,62 +624,4 @@ const card = {
   border: "1px solid #e2e8f0",
   borderRadius: "1rem",
   boxShadow: "0 4px 16px rgba(2, 21, 80, 0.04)"
-} as const;
-
-const primary = {
-  background: "#0329B2",
-  color: "white",
-  border: 0,
-  borderRadius: 8,
-  padding: "9px 16px",
-  fontWeight: 700,
-  cursor: "pointer"
-} as const;
-
-const secondary = {
-  background: "white",
-  color: "#334155",
-  border: "1px solid #cbd5e1",
-  borderRadius: 8,
-  padding: "9px 16px",
-  fontWeight: 600,
-  cursor: "pointer",
-  textDecoration: "none"
-} as const;
-
-const overlay = {
-  position: "fixed" as const,
-  inset: 0,
-  background: "rgba(15,23,42,.6)",
-  display: "grid",
-  placeItems: "center",
-  padding: 20,
-  zIndex: 1000
-} as const;
-
-const modal = {
-  background: "white",
-  borderRadius: 14,
-  padding: 24,
-  maxWidth: 520,
-  width: "100%",
-  display: "grid",
-  gap: 14,
-  boxShadow: "0 20px 40px rgba(0,0,0,0.2)"
-} as const;
-
-const label = {
-  display: "grid",
-  gap: 6,
-  fontWeight: 700,
-  fontSize: "0.85rem",
-  color: "#021550"
-} as const;
-
-const input = {
-  border: "1.5px solid #cbd5e1",
-  borderRadius: 8,
-  padding: "10px 12px",
-  font: "inherit",
-  fontSize: "0.9rem"
 } as const;

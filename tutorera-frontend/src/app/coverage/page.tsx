@@ -1,6 +1,6 @@
 import { UI_COLORS } from "@/lib/brand";
+import { MapPin,Wifi } from "lucide-react";
 import Link from "next/link";
-import { MapPin, Wifi } from "lucide-react";
 
 const C = UI_COLORS;
 

@@ -2,12 +2,12 @@
 // app/book/page.tsx
 // Rebooking page - pre-fills DirectBookingModal with tutor info from query params
 
-import { Suspense, useEffect, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
 import DashboardLayout from "@/components/Dashboard/DashboardLayout";
 import DirectBookingModal from "@/components/Dashboard/DirectBookingModal";
+import { useAuth } from "@/context/AuthContext";
 import axiosInstance from "@/lib/axios";
+import { useRouter,useSearchParams } from "next/navigation";
+import { Suspense,useEffect,useState } from "react";
 
 interface TutorDetails {
   _id: string;

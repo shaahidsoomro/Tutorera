@@ -1,7 +1,7 @@
 import { UI_COLORS } from "@/lib/brand";
-import Link from "next/link";
 import { BookOpen } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = { title: "Tutors by Academic Level", description: "Find verified tutors for primary, secondary, GCSE, IB, Cambridge, national curricula, university, and test preparation worldwide.", alternates: { canonical: "/levels" } };
 

@@ -1,6 +1,6 @@
-import type { Metadata } from "next";
-import { SITE_URL } from "@/lib/site";
 import { getEditorialArticle } from "@/lib/editorial-content";
+import { SITE_URL } from "@/lib/site";
+import type { Metadata } from "next";
 
 const titles: Record<string, string> = {
   "how-to-find-a-trusted-tutor-in-pakistan": "How to Find a Trusted Tutor in Pakistan",

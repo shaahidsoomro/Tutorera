@@ -1,12 +1,11 @@
 "use client";
 import { UI_COLORS } from "@/lib/brand";
 // app/referral/page.tsx
-import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { Gift, Copy, Check, Users, Coins } from "lucide-react";
 import api from "@/lib/axios";
+import { Check,Coins,Copy,Gift,Users } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect,useState } from "react";
 
 const C = UI_COLORS;
 

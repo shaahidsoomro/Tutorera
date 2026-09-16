@@ -1,9 +1,9 @@
 // hooks/useAppGuard.ts
 "use client";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/axios";
+import { useRouter } from "next/navigation";
+import { useEffect,useState } from "react";
 
 type GuardStatus = "loading" | "ok" | "blocked";
 

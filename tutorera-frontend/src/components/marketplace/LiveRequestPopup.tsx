@@ -1,22 +1,20 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
+import api from "@/lib/axios";
+import {
+  CheckCircle2,
+  ChevronRight,
+  MapPin,
+  Send,
+  ShieldCheck,
+  Sparkles,
+  X
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { 
-  Sparkles, 
-  MapPin, 
-  Clock, 
-  Send, 
-  X, 
-  ShieldCheck, 
-  ExternalLink,
-  CheckCircle2,
-  ChevronRight
-} from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
-import api from "@/lib/axios";
-import { useFocusTrap } from "@/hooks/useFocusTrap";
+import { useEffect,useState } from "react";
 
 export interface LiveRequestItem {
   id: string;

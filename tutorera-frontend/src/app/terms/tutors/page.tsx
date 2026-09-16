@@ -1,25 +1,13 @@
-import Link from "next/link";
-import { 
-  Briefcase, 
-  Award, 
-  ShieldCheck, 
-  DollarSign, 
-  AlertCircle, 
-  FileText, 
-  Scale, 
-  CheckCircle2 
-} from "lucide-react";
-import s from "../../compliance-pages.module.css";
-import { 
-  LEGAL_ENTITY_NAME, 
-  TRADING_NAME, 
-  SUPPORT_EMAIL, 
-  LEGAL_CONTACT_EMAIL, 
-  TERMS_VERSION, 
-  LAST_LEGAL_UPDATE,
-  PLATFORM_FEE_PERCENT 
+import {
+  PLATFORM_FEE_PERCENT,
+  TRADING_NAME
 } from "@/lib/site";
+import {
+  Briefcase
+} from "lucide-react";
 import { Metadata } from "next";
+import Link from "next/link";
+import s from "../../compliance-pages.module.css";
 
 export const metadata: Metadata = {
   title: "Tutor Marketplace Agreement | TUTORERA",

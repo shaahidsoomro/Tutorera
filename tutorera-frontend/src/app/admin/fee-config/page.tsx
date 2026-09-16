@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { Sliders, ArrowLeft, RefreshCw, Save, CheckCircle, History, AlertCircle, Percent, DollarSign } from "lucide-react";
 import api from "@/lib/axios";
+import { AlertCircle,ArrowLeft,CheckCircle,DollarSign,History,Percent,RefreshCw,Save,Sliders } from "lucide-react";
+import Link from "next/link";
+import { useEffect,useState } from "react";
 
 interface FeeConfigData {
   _id?: string;

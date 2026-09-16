@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { Users, ArrowLeft, RefreshCw, Search, BookOpen, CheckCircle, CreditCard, X } from "lucide-react";
 import api from "@/lib/axios";
+import { ArrowLeft,RefreshCw,Search,X } from "lucide-react";
+import Link from "next/link";
+import { useEffect,useState } from "react";
 
 interface StudentItem {
   _id: string;

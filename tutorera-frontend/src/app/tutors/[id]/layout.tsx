@@ -1,7 +1,7 @@
-import type { Metadata } from "next";
-import type { ReactNode } from "react";
 import { fetchTutor } from "@/lib/tutor-directory";
 import { assessTutorSeoQuality } from "@/lib/tutor-seo";
+import type { Metadata } from "next";
+import type { ReactNode } from "react";
 
 type Props = {
   children: ReactNode;

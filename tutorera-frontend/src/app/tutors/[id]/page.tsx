@@ -1,28 +1,28 @@
-import { notFound } from "next/navigation";
-import Link from "next/link";
-import type { Metadata } from "next";
+import AvatarImage from "@/components/Common/AvatarImage";
+import ShareProfileButton from "@/components/Tutors/ShareProfileButton";
+import StickyTutorProfileCTA from "@/components/Tutors/StickyTutorProfileCTA";
+import TutorProfileActions from "@/components/Tutors/TutorProfileActions";
+import TutorVideoPlayer from "@/components/Tutors/TutorVideoPlayer";
+import { SITE_URL } from "@/lib/site";
+import { fetchTutor,tutorProfileHref } from "@/lib/tutor-directory";
+import type { Review } from "@/types/tutor";
 import {
+  Award,
   BookOpen,
   CheckCircle,
-  Clock,
-  MapPin,
-  Star,
-  ShieldCheck,
-  Award,
-  Video,
-  Sparkles,
-  Home,
   ChevronRight,
+  Clock,
+  Home,
+  MapPin,
+  ShieldCheck,
+  Sparkles,
+  Star,
+  Video,
   Zap,
 } from "lucide-react";
-import TutorProfileActions from "@/components/Tutors/TutorProfileActions";
-import StickyTutorProfileCTA from "@/components/Tutors/StickyTutorProfileCTA";
-import AvatarImage from "@/components/Common/AvatarImage";
-import TutorVideoPlayer from "@/components/Tutors/TutorVideoPlayer";
-import ShareProfileButton from "@/components/Tutors/ShareProfileButton";
-import { fetchTutor, tutorProfileHref } from "@/lib/tutor-directory";
-import { SITE_URL } from "@/lib/site";
-import type { Review } from "@/types/tutor";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||

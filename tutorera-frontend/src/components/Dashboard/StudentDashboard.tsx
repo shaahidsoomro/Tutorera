@@ -1,23 +1,24 @@
 "use client";
+import Image from "next/image";
 import { UI_COLORS } from "@/lib/brand";
 // components/dashboard/StudentDashboard.tsx
-import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
-import axiosInstance from "@/lib/axios";
-import { DashRequest, DashBid, DashBooking } from "@/types/dashboard";
-import PostRequestModal from "./PostRequestModal";
 import s from "@/app/dashboard/dashboard.module.css";
-import { useRouter } from "next/navigation";
-import { Trash2, Clock, Video, ShieldCheck } from "lucide-react";
-import { TutorProfile } from "@/types/tutor";
-import RatingModal from "./RatingModal";
-import { showSuccess, showError } from "@/lib/toast";
-import { SUPPORT_EMAIL, formatPKR } from "@/lib/site";
-import { tutorProfileHref } from "@/lib/tutor-directory";
+import OfferComparisonModal from "@/components/Dashboard/OfferComparisonModal";
 import MatchScoreBadge from "@/components/marketplace/MatchScoreBadge";
 import MatchedTutorsModal from "@/components/marketplace/MatchedTutorsModal";
-import OfferComparisonModal from "@/components/Dashboard/OfferComparisonModal";
 import { useCurrentTime } from "@/hooks/useCurrentTime";
+import axiosInstance from "@/lib/axios";
+import { SUPPORT_EMAIL,formatPKR } from "@/lib/site";
+import { showError,showSuccess } from "@/lib/toast";
+import { tutorProfileHref } from "@/lib/tutor-directory";
+import { DashBid,DashBooking,DashRequest } from "@/types/dashboard";
+import { TutorProfile } from "@/types/tutor";
+import { Clock,ShieldCheck,Trash2,Video } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useCallback,useEffect,useState } from "react";
+import PostRequestModal from "./PostRequestModal";
+import RatingModal from "./RatingModal";
 
 const C = UI_COLORS;
 
@@ -104,7 +105,7 @@ function Avatar({ name, avatar, size = 40 }: { name: string; avatar?: string; si
   return (
     <div className={size === 40 ? s.personAvatar : s.bidAvatar}>
       {avatar
-        ? <img src={avatar} alt={name} />
+        ? <Image src={avatar} alt={name}  width={100} height={100} unoptimized/>
         : name.charAt(0).toUpperCase()}
     </div>
   );
@@ -472,7 +473,6 @@ function SavedTutorCard({ tutor, onRemove }: { tutor: TutorProfile; onRemove: (i
 
 function RequestCard({
   request,
-  onBidAccepted,
   onRefresh,
 }: {
   request: DashRequest;
@@ -812,7 +812,7 @@ function RequestCard({
                     )}
                     <div className={s.bidAvatar}>
                       {bid.tutor.avatar
-                        ? <img src={bid.tutor.avatar} alt={bid.tutor.name} />
+                        ? <Image src={bid.tutor.avatar} alt={bid.tutor.name}  width={100} height={100} unoptimized/>
                         : bid.tutor.name.charAt(0).toUpperCase()}
                     </div>
                     <div className={s.bidBody}>
@@ -1027,7 +1027,7 @@ const fetchRequests = useCallback(async () => {
         <div className={s.headerInner} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1.25rem" }}>
           <div className={s.headerLeft} style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
             <div className={s.avatar} style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 800, border: "2px solid rgba(255,255,255,0.4)" }}>
-              {userAvatar ? <img src={userAvatar} alt={userName} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} /> : userName.charAt(0).toUpperCase()}
+              {userAvatar ? <Image src={userAvatar} alt={userName} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }}  width={100} height={100} unoptimized/> : userName.charAt(0).toUpperCase()}
             </div>
             <div>
               <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "#08bffc", textTransform: "uppercase", letterSpacing: "0.08em" }}>

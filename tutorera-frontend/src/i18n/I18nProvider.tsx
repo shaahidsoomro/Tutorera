@@ -3,12 +3,12 @@
 // src/i18n/I18nProvider.tsx
 // Wraps the app in react-i18next so all components can call useTranslation()
 
-import React, { useEffect } from "react";
 import i18n from "i18next";
-import { initReactI18next, I18nextProvider } from "react-i18next";
-import { en } from "./messages/en";
+import React,{ useEffect } from "react";
+import { I18nextProvider,initReactI18next } from "react-i18next";
+import { defaultLocale,directionFor } from "./config";
 import { ar } from "./messages/ar";
-import { defaultLocale, directionFor } from "./config";
+import { en } from "./messages/en";
 
 // Flatten nested messages object into dot-key pairs that i18next expects
 function flatten(obj: Record<string, unknown>, prefix = ""): Record<string, string> {

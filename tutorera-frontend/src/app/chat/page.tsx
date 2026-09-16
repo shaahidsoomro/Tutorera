@@ -1,12 +1,13 @@
 "use client";
-import { UI_COLORS } from "@/lib/brand";
-import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { MessageSquare, ArrowRight } from "lucide-react";
-import api from "@/lib/axios";
 import { useAppGuard } from "@/hooks/useAppGuard";
+import api from "@/lib/axios";
+import { UI_COLORS } from "@/lib/brand";
+import { ArrowRight,MessageSquare } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect,useState } from "react";
 
 const C = UI_COLORS;
 
@@ -88,7 +89,7 @@ export default function ChatListPage() {
                     <div style={{ position: 'relative', flexShrink: 0 }}>
                       <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '700', fontSize: '1.1rem', overflow: 'hidden' }}>
                         {otherUser?.avatar ? (
-                          <img src={otherUser.avatar} alt={otherUser.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <Image src={otherUser.avatar} alt={otherUser.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }}  width={100} height={100} unoptimized/>
                         ) : otherUser?.name?.charAt(0)}
                       </div>
                       {unreadCount > 0 && (

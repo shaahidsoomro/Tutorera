@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { TrendingDown, ArrowLeft, RefreshCw, AlertCircle, CheckCircle, ShieldCheck, MapPin, BookOpen } from "lucide-react";
 import api from "@/lib/axios";
+import { AlertCircle,ArrowLeft,BookOpen,MapPin,RefreshCw,ShieldCheck } from "lucide-react";
+import Link from "next/link";
+import { useEffect,useState } from "react";
 
 interface SupplyGap {
   subject: string;

@@ -1,6 +1,6 @@
 "use client";
 import { useAuth } from "@/context/AuthContext";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname,useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 const PATH_PERMISSIONS: Record<string, string> = {

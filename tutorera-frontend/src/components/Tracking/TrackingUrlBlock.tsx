@@ -1,8 +1,8 @@
 "use client";
 
+import { showError,showSuccess } from "@/lib/toast";
 import { useState } from "react";
 import s from "./tracking.module.css";
-import { showSuccess, showError } from "@/lib/toast";
 
 export function TrackingUrlBlock({ applicationId, token, basePath = "/track/tutor" }: { applicationId: string; token?: string; basePath?: string }) {
   const [tokenState, setTokenState] = useState(token);

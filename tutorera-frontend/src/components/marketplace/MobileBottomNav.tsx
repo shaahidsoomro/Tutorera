@@ -1,9 +1,9 @@
 "use client";
 
+import { useAuth } from "@/context/AuthContext";
+import { Briefcase,CreditCard,Home,LayoutDashboard,LogIn,PlusCircle,Search,User } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Search, PlusCircle, CreditCard, User, Briefcase, Tag, LogIn, LayoutDashboard } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
 
 export default function MobileBottomNav() {
   const pathname = usePathname();

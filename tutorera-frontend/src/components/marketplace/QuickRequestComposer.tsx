@@ -1,20 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useGeoData } from "@/lib/geoService";
+import { COUNTRIES,Country,getCountryByCode } from "@/lib/location";
 import {
   ArrowRight,
-  Sparkles,
-  Globe,
-  Home,
-  Laptop,
   Check,
   ChevronDown,
-  MapPin,
-  DollarSign
+  Sparkles
 } from "lucide-react";
-import { COUNTRIES, getCountryByCode, Country } from "@/lib/location";
-import { useGeoData } from "@/lib/geoService";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import CountryCityPickerModal from "./CountryCityPickerModal";
 
 export default function QuickRequestComposer() {

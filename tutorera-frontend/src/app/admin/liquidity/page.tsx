@@ -1,8 +1,8 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { AlertCircle, ArrowLeft, Filter, RefreshCw, Search, TrendingUp } from "lucide-react";
 import api from "@/lib/axios";
+import { AlertCircle,ArrowLeft,Filter,RefreshCw,Search,TrendingUp } from "lucide-react";
+import Link from "next/link";
+import { useCallback,useEffect,useMemo,useState } from "react";
 import styles from "./page.module.css";
 
 type Score={score:number;grade:"High"|"Moderate"|"Low"|"Very Low";components:{demandScore:number;supplyScore:number;fillRateScore:number;competitionScore:number};meta:{openRequests:number;eligibleTutors:number;fillRate:number;avgOffersPerRequest:number;avgSessionPrice:number;sampleSize:number}};

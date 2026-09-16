@@ -1,5 +1,5 @@
+import { BUSINESS_ADDRESS,LEGAL_OPERATOR,SUPPORT_EMAIL } from "@/lib/site";
 import type { Metadata } from "next";
-import { BUSINESS_ADDRESS, LEGAL_OPERATOR, SUPPORT_EMAIL } from "@/lib/site";
 import s from "../compliance-pages.module.css";
 
 export const metadata: Metadata = {

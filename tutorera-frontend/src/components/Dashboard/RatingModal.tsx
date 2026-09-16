@@ -1,7 +1,7 @@
 "use client";
 // components/dashboard/RatingModal.tsx
-import { useState } from "react";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
+import { useState } from "react";
 
 interface Props {
   title: string;

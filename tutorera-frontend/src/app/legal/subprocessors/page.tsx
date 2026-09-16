@@ -1,21 +1,17 @@
-import type { Metadata } from "next";
-import Link from "next/link";
-import {
-  Server,
-  ShieldCheck,
-  CreditCard,
-  Mail,
-  HardDrive,
-  Activity,
-  Globe,
-  ArrowRight
-} from "lucide-react";
-import s from "../../compliance-pages.module.css";
 import {
   LEGAL_OPERATOR,
   PRIVACY_CONTACT_EMAIL,
   PRIVACY_VERSION
 } from "@/lib/site";
+import {
+  Activity,
+  ArrowRight,
+  HardDrive,
+  Server
+} from "lucide-react";
+import type { Metadata } from "next";
+import Link from "next/link";
+import s from "../../compliance-pages.module.css";
 
 export const metadata: Metadata = {
   title: "Authorized Subprocessors Directory | Privacy & Data Processing | TUTORERA",

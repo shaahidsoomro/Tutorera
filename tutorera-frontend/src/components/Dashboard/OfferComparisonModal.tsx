@@ -1,10 +1,11 @@
 "use client";
-import React from "react";
-import Link from "next/link";
-import { DashBid } from "@/types/dashboard";
-import { formatPKR } from "@/lib/site";
+import Image from "next/image";
 import MatchScoreBadge from "@/components/marketplace/MatchScoreBadge";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
+import { formatPKR } from "@/lib/site";
+import { DashBid } from "@/types/dashboard";
+import Link from "next/link";
+import React from "react";
 
 interface OfferComparisonModalProps {
   offers: DashBid[];
@@ -278,7 +279,7 @@ export default function OfferComparisonModal({
                         }}
                       >
                         {bid.tutor.avatar ? (
-                          <img src={bid.tutor.avatar} alt={bid.tutor.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          <Image src={bid.tutor.avatar} alt={bid.tutor.name} style={{ width: "100%", height: "100%", objectFit: "cover" }}  width={100} height={100} unoptimized/>
                         ) : (
                           bid.tutor.name.charAt(0).toUpperCase()
                         )}

@@ -1,9 +1,9 @@
 "use client";
-import { UI_COLORS } from "@/lib/brand";
-import { useEffect, useState } from "react";
-import { MessageSquare, AlertTriangle, CheckCircle } from "lucide-react";
 import api from "@/lib/axios";
-import { showSuccess, showError } from "@/lib/toast";
+import { UI_COLORS } from "@/lib/brand";
+import { showError,showSuccess } from "@/lib/toast";
+import { AlertTriangle,CheckCircle,MessageSquare } from "lucide-react";
+import { useCallback,useEffect,useState } from "react";
 
 const C = UI_COLORS;
 
@@ -32,7 +32,7 @@ export default function ContactsPage() {
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
   const [counts, setCounts] = useState({ all: 0, support: 0, general: 0 });
 
-  const fetchContacts = (page: number = 1, type: string = filter) => {
+  const fetchContacts = useCallback((page: number = 1, type: string = filter) => {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), limit: "30" });
     if (type !== "all") params.set("type", type);
@@ -44,9 +44,9 @@ export default function ContactsPage() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  };
+  }, [filter]);
 
-  useEffect(() => { fetchContacts(1, filter); }, [filter]);
+  useEffect(() => { fetchContacts(1, filter); }, [fetchContacts, filter]);
 
   const handleStatusChange = async (id: string, newStatus: Contact["status"]) => {
     setStatusLoading(id);

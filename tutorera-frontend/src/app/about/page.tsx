@@ -1,8 +1,8 @@
 import { UI_COLORS } from "@/lib/brand";
-import Link from "next/link";
-import { BookOpen, Users, Shield, Target, Heart, Globe2 } from "lucide-react";
+import { BUSINESS_ADDRESS,LEGAL_OPERATOR,SUPPORT_EMAIL,SUPPORT_PHONE } from "@/lib/site";
+import { BookOpen,Globe2,Shield,Target,Users } from "lucide-react";
 import type { Metadata } from "next";
-import { BUSINESS_ADDRESS, LEGAL_OPERATOR, SUPPORT_EMAIL, SUPPORT_PHONE } from "@/lib/site";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "About TUTORERA® | Global Student-Led Tutoring Marketplace",

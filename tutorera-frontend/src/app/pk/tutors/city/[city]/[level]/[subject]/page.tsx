@@ -1,8 +1,8 @@
+import SeoTutorDirectory from "@/components/Tutors/SeoTutorDirectory";
+import { CITIES,LEVELS,SUBJECTS,fetchTutors } from "@/lib/tutor-directory";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import SeoTutorDirectory from "@/components/Tutors/SeoTutorDirectory";
-import { CITIES, LEVELS, SUBJECTS, fetchTutors } from "@/lib/tutor-directory";
 
 const CITIES_TO_TARGET = ["lahore", "karachi", "islamabad", "rawalpindi", "faisalabad"] as const;
 const LEVELS_TO_TARGET = ["matric", "intermediate", "o-level", "a-level"] as const;

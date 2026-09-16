@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { Share2, Check } from "lucide-react";
+import { Check,Share2 } from "lucide-react";
+import { useState } from "react";
 
 interface ShareProfileButtonProps {
   tutorName: string;

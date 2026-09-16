@@ -1,6 +1,6 @@
-import type { ReactNode } from "react";
-import { notFound } from "next/navigation";
 import { getMarketByRoute } from "@/lib/markets";
+import { notFound } from "next/navigation";
+import type { ReactNode } from "react";
 
 interface Props {
   children: ReactNode;

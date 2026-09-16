@@ -1,6 +1,6 @@
 "use client";
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { io, Socket } from "socket.io-client";
+import { createContext,ReactNode,useContext,useEffect,useState } from "react";
+import { io } from "socket.io-client";
 import { useAuth } from "./AuthContext";
 
 interface Notification {
@@ -24,7 +24,6 @@ const SocketContext = createContext<SocketContextType>({} as SocketContextType);
 
 export const SocketProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
-  const [socket, setSocket] = useState<Socket | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -79,8 +78,6 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
         });
       }
     });
-
-    setSocket(newSocket);
 
     return () => {
       newSocket.disconnect();

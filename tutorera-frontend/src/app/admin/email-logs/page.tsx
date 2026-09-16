@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import api from "@/lib/axios";
-import { showError } from "@/lib/toast";
 import { UI_COLORS } from "@/lib/brand";
+import { showError } from "@/lib/toast";
+import { useEffect,useMemo,useState } from "react";
 
 type EmailStatus = "queued" | "sent" | "delivered" | "opened" | "bounced" | "failed";
 

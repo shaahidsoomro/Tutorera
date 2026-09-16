@@ -1,12 +1,13 @@
 "use client";
-import { UI_COLORS } from "@/lib/brand";
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
-import { Camera, Save, User, Mail, Phone, MapPin, BookOpen } from "lucide-react";
-import api from "@/lib/axios";
 import { useAppGuard } from "@/hooks/useAppGuard";
-import { useGeoData, convertToPKR } from "@/lib/geoService";
+import api from "@/lib/axios";
+import { UI_COLORS } from "@/lib/brand";
+import { convertToPKR,useGeoData } from "@/lib/geoService";
+import { BookOpen,Camera,Mail,MapPin,Phone,Save,User } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect,useMemo,useState } from "react";
 
 const C = UI_COLORS;
 
@@ -18,8 +19,8 @@ export default function ProfilePage() {
 
   const userCountryCode = user?.countryCode || "PK";
   const cities = (geo.countries?.find(c => c.code === userCountryCode)?.cities?.map(ct => ct.name)) || ["Other"];
-  const subjects = geo.subjects && geo.subjects.length > 0 ? geo.subjects : ["Mathematics", "Physics", "Chemistry", "Biology", "English", "Urdu", "Computer Science", "Islamiyat", "Pakistan Studies", "Economics", "Statistics", "Other"];
-  const levels = geo.levels && geo.levels.length > 0 ? geo.levels : ["Primary (Grades 1-5)", "Middle (Grades 6-8)", "Matric (9th & 10th)", "Intermediate / FSc", "O-Level (Cambridge / Edexcel)", "A-Level (Cambridge / Edexcel)", "IB (Middle Years / Diploma)", "University / Degree", "Test Preparation", "Other"];
+  const subjects = useMemo(() => geo.subjects && geo.subjects.length > 0 ? geo.subjects : ["Mathematics", "Physics", "Chemistry", "Biology", "English", "Urdu", "Computer Science", "Islamiyat", "Pakistan Studies", "Economics", "Statistics", "Other"], [geo.subjects]);
+  const levels = useMemo(() => geo.levels && geo.levels.length > 0 ? geo.levels : ["Primary (Grades 1-5)", "Middle (Grades 6-8)", "Matric (9th & 10th)", "Intermediate / FSc", "O-Level (Cambridge / Edexcel)", "A-Level (Cambridge / Edexcel)", "IB (Middle Years / Diploma)", "University / Degree", "Test Preparation", "Other"], [geo.levels]);
 
   const [activeTab, setActiveTab] = useState<"personal" | "tutor">("personal");
   const [saving, setSaving] = useState(false);
@@ -85,7 +86,7 @@ export default function ProfilePage() {
           }).catch(() => {});
       }
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, subjects, levels]);
 
     // ← ADD: block pending/rejected tutors + show spinner while checking
   if (guardStatus !== "ok") return null;
@@ -164,7 +165,7 @@ export default function ProfilePage() {
           <div style={{ position: 'relative' }}>
             <div style={{ width: '90px', height: '90px', borderRadius: '50%', backgroundColor: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: '800', color: 'white', border: '3px solid rgba(255,255,255,0.2)', overflow: 'hidden' }}>
               {avatarPreview || user.avatar ? (
-                <img src={avatarPreview || user.avatar} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <Image src={(avatarPreview || user.avatar) as string} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }}  width={100} height={100} unoptimized/>
               ) : user.name.charAt(0).toUpperCase()}
             </div>
             <label style={{ position: 'absolute', bottom: 0, right: 0, width: '28px', height: '28px', backgroundColor: C.accent, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '2px solid white' }}>

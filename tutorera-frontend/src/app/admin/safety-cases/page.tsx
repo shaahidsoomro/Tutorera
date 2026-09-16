@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import {
-  ShieldAlert, ArrowLeft, RefreshCw, AlertCircle, CheckCircle,
-  Search, PlusCircle, ShieldCheck, UserX, UserCheck, Eye,
-} from "lucide-react";
 import api from "@/lib/axios";
-import { showSuccess, showError } from "@/lib/toast";
+import { showError,showSuccess } from "@/lib/toast";
+import {
+  ArrowLeft,
+  CheckCircle,
+  RefreshCw
+} from "lucide-react";
+import Link from "next/link";
+import { useCallback,useEffect,useState } from "react";
 
 interface SafetyCaseItem {
   _id: string;
@@ -32,7 +33,7 @@ export default function SafetyCasesPage() {
   const [resolutionSummary, setResolutionSummary] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const fetchCases = async () => {
+  const fetchCases = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.get(`/admin/safety/cases${filterStatus !== "all" ? `?status=${filterStatus}` : ""}`);
@@ -42,11 +43,11 @@ export default function SafetyCasesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filterStatus]);
 
   useEffect(() => {
     fetchCases();
-  }, [filterStatus]);
+  }, [fetchCases]);
 
   const handleResolveCase = async () => {
     if (!selectedCase) return;

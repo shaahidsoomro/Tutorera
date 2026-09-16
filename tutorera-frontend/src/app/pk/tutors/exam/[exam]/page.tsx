@@ -1,8 +1,8 @@
+import SeoTutorDirectory from "@/components/Tutors/SeoTutorDirectory";
+import { SUBJECTS,fetchTutors } from "@/lib/tutor-directory";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import SeoTutorDirectory from "@/components/Tutors/SeoTutorDirectory";
-import { SUBJECTS, fetchTutors } from "@/lib/tutor-directory";
 
 const EXAMS = ["mdcat", "ecat", "ielts"] as const;
 type ExamSlug = (typeof EXAMS)[number];

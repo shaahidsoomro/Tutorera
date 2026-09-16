@@ -1,23 +1,12 @@
-import Link from "next/link";
-import { 
-  GraduationCap, 
-  Users, 
-  ShieldCheck, 
-  Clock, 
-  HeartHandshake, 
-  AlertTriangle, 
-  CheckCircle2 
-} from "lucide-react";
-import s from "../../compliance-pages.module.css";
-import { 
-  LEGAL_ENTITY_NAME, 
-  TRADING_NAME, 
-  SUPPORT_EMAIL, 
-  LEGAL_CONTACT_EMAIL, 
-  TERMS_VERSION, 
-  LAST_LEGAL_UPDATE 
+import {
+  TRADING_NAME
 } from "@/lib/site";
+import {
+  GraduationCap
+} from "lucide-react";
 import { Metadata } from "next";
+import Link from "next/link";
+import s from "../../compliance-pages.module.css";
 
 export const metadata: Metadata = {
   title: "Student & Parent Platform Terms | TUTORERA",

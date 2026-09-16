@@ -1,7 +1,7 @@
 "use client";
 
-import s from "./tracking.module.css";
 import { ChecklistItem } from "@/types/tracking";
+import s from "./tracking.module.css";
 
 const ICONS: Record<string, string> = {
   done: "✓",

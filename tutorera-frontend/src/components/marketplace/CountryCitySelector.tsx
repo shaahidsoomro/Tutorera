@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
-import { Globe, MapPin, ChevronDown, Sparkles } from "lucide-react";
-import { COUNTRIES, Country } from "@/lib/location";
+import { COUNTRIES,Country } from "@/lib/location";
+import { ChevronDown,Globe,MapPin } from "lucide-react";
+import { useMemo,useState } from "react";
 import CountryCityPickerModal from "./CountryCityPickerModal";
 
 interface CountryCitySelectorProps {
@@ -43,12 +43,6 @@ export default function CountryCitySelector({
     const found = list.find((c) => c.code === countryCode);
     return found || list[0];
   }, [countryCode, countriesProp]);
-  const availableCities = useMemo(() => {
-    const list = countriesProp || COUNTRIES;
-    const country = list.find((c) => c.code === currentCountry.code);
-    return country ? country.cities.map((ct) => ct.name) : [];
-  }, [currentCountry.code, countriesProp]);
-
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"country_and_city" | "country_only" | "city_only">("country_and_city");
 

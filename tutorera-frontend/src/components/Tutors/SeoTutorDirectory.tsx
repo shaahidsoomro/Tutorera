@@ -1,7 +1,7 @@
-import Link from "next/link";
-import TutorCard from "@/components/Tutors/TutorCard";
-import { fetchTutors, type DirectoryKind, type TutorSearchFilters, tutorProfileHref } from "@/lib/tutor-directory";
 import styles from "@/app/tutors/page.module.css";
+import TutorCard from "@/components/Tutors/TutorCard";
+import { fetchTutors,tutorProfileHref,type DirectoryKind,type TutorSearchFilters } from "@/lib/tutor-directory";
+import Link from "next/link";
 
 interface Props { kind: DirectoryKind; value: string; filters?: TutorSearchFilters; title: string; description: string; canonicalPath: string; currency?: string; }
 

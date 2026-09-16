@@ -1,5 +1,5 @@
+import { ArrowRight,CheckCircle2,Home,Laptop,MapPin,ShieldCheck } from "lucide-react";
 import Link from "next/link";
-import { ArrowRight, Home, Laptop, ShieldCheck, MapPin, CheckCircle2 } from "lucide-react";
 
 export default function HomeOnlineTuitionCards() {
   return (

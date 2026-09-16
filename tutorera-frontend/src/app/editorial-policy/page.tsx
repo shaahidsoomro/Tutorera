@@ -1,5 +1,5 @@
-import type { Metadata } from "next";
 import TrustArticle from "@/components/TrustArticle";
+import type { Metadata } from "next";
 export const metadata: Metadata = { title: "Editorial Policy", description: "TUTORERA's standards for accurate, useful, and transparent educational content.", alternates: { canonical: "/editorial-policy" } };
 export default function Page() { return <TrustArticle title="Editorial Policy" path="/editorial-policy" intro="TUTORERA publishes educational and platform guidance to help Pakistani students, parents, and tutors make informed decisions." sections={[
   { heading: "Purpose and audience", body: "Content should answer a clear student, parent, or tutor question in practical language and reflect the Pakistani education context where relevant." },

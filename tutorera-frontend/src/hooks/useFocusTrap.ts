@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect,useRef } from "react";
 
 /**
  * Traps keyboard focus within a modal while it's open, restores focus to the

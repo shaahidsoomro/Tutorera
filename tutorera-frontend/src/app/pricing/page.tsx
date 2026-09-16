@@ -1,7 +1,7 @@
 import { UI_COLORS } from "@/lib/brand";
+import { GST_EFFECTIVE_PERCENT,GST_ON_PLATFORM_FEE_PERCENT,PLATFORM_FEE_PERCENT,SUPPORT_EMAIL,TOTAL_FEE_PERCENT } from "@/lib/site";
+import { CheckCircle } from "lucide-react";
 import Link from "next/link";
-import { CheckCircle, XCircle } from "lucide-react";
-import { GST_EFFECTIVE_PERCENT, GST_ON_PLATFORM_FEE_PERCENT, PLATFORM_FEE_PERCENT, SUPPORT_EMAIL, TOTAL_FEE_PERCENT } from "@/lib/site";
 
 const C = UI_COLORS;
 

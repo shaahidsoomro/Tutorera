@@ -1,6 +1,6 @@
+import { CITIES } from "@/lib/tutor-directory";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CITIES } from "@/lib/tutor-directory";
 
 export const metadata: Metadata = {
   title: "Tutors by Market and Location",

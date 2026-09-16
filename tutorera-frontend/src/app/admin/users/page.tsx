@@ -1,9 +1,9 @@
 "use client";
-import { UI_COLORS } from "@/lib/brand";
-import { useEffect, useState } from "react";
-import { UserCheck, UserX, Search } from "lucide-react";
 import api from "@/lib/axios";
-import { showSuccess, showError } from "@/lib/toast";
+import { UI_COLORS } from "@/lib/brand";
+import { showError,showSuccess } from "@/lib/toast";
+import { Search,UserCheck,UserX } from "lucide-react";
+import { useCallback,useEffect,useState } from "react";
 
 const C = UI_COLORS;
 
@@ -32,7 +32,7 @@ export default function UsersPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
 
-  const fetchUsers = (page: number = 1, searchTerm: string = search, role: string = roleFilter) => {
+  const fetchUsers = useCallback((page: number = 1, searchTerm: string = "", role: string = "all") => {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), limit: "20" });
     if (searchTerm.trim()) params.set("search", searchTerm.trim());
@@ -44,22 +44,13 @@ export default function UsersPage() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  };
+  }, []);
 
-  useEffect(() => { fetchUsers(1); }, []);
-
-  // Debounced search
   useEffect(() => {
-    const timer = setTimeout(() => fetchUsers(1, search, roleFilter), 400);
+    const delay = search.trim() ? 400 : 0;
+    const timer = setTimeout(() => fetchUsers(1, search, roleFilter), delay);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search]);
-
-  // Immediate refetch on role filter change
-  useEffect(() => {
-    fetchUsers(1, search, roleFilter);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roleFilter]);
+  }, [search, roleFilter, fetchUsers]);
 
   const handleToggleStatus = async (id: string) => {
     setActionLoading(id);

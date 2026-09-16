@@ -1,23 +1,23 @@
-import type { Metadata } from "next";
-import Link from "next/link";
-import {
-  ShieldCheck,
-  CheckCircle2,
-  AlertCircle,
-  FileBadge,
-  Award,
-  Video,
-  UserCheck,
-  Building,
-  HelpCircle,
-  ArrowRight
-} from "lucide-react";
-import s from "../compliance-pages.module.css";
 import {
   LEGAL_OPERATOR,
   SUPPORT_EMAIL,
   TERMS_VERSION
 } from "@/lib/site";
+import {
+  AlertCircle,
+  ArrowRight,
+  Award,
+  Building,
+  CheckCircle2,
+  FileBadge,
+  HelpCircle,
+  ShieldCheck,
+  UserCheck,
+  Video
+} from "lucide-react";
+import type { Metadata } from "next";
+import Link from "next/link";
+import s from "../compliance-pages.module.css";
 
 export const metadata: Metadata = {
   title: "Tutor Verification & Badging Standards | TUTORERA",

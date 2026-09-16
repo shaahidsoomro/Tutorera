@@ -1,7 +1,7 @@
-import type { Metadata } from "next";
 import TuitionRequestsExplorer from "@/components/TuitionRequests/TuitionRequestsExplorer";
-import { fetchRequests } from "@/lib/tuition-requests";
 import type { RequestFilters } from "@/lib/tuition-requests";
+import { fetchRequests } from "@/lib/tuition-requests";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Browse Tuition Requests | TUTORERA",

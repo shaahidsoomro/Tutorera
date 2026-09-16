@@ -1,12 +1,11 @@
 "use client";
-import { UI_COLORS } from "@/lib/brand";
-import { useState, useEffect } from "react";
-import { Link2, Plus, Trash2, Users, BookOpen, CheckCircle, Clock } from "lucide-react";
-import DashboardLayout from "./DashboardLayout";
-import api from "@/lib/axios";
-import { showSuccess, showError } from "@/lib/toast";
-import { formatPKR } from "@/lib/site";
 import ConsentLinkChildModal from "@/components/Parent/ConsentLinkChildModal";
+import api from "@/lib/axios";
+import { UI_COLORS } from "@/lib/brand";
+import { formatPKR } from "@/lib/site";
+import { showError,showSuccess } from "@/lib/toast";
+import { BookOpen,Clock,Plus,Trash2,Users } from "lucide-react";
+import { useEffect,useState } from "react";
 
 const C = UI_COLORS;
 
@@ -91,111 +90,21 @@ function EmptyState({ onLink }: { onLink: () => void }) {
   );
 }
 
-function LinkChildModal({ onClose, onLinked }: { onClose: () => void; onLinked: () => void }) {
-  const [studentUserId, setStudentUserId] = useState("");
-  const [name, setName] = useState("");
-  const [level, setLevel] = useState("");
-  const [subjects, setSubjects] = useState("");
-  const [relationship, setRelationship] = useState("child");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!studentUserId.trim() || !name.trim()) { setError("Student User ID and Name are required."); return; }
-    setLoading(true);
-    setError("");
-    try {
-      await api.post("/parent/children", {
-        studentUserId: studentUserId.trim(),
-        name: name.trim(),
-        level: level.trim(),
-        subjects: subjects.split(",").map(s => s.trim()).filter(Boolean),
-        relationship,
-      });
-      showSuccess("Child account linked successfully.");
-      onLinked();
-      onClose();
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to link child account.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: "1rem" }}>
-      <div style={{ backgroundColor: "white", borderRadius: "1rem", padding: "2rem", width: "100%", maxWidth: "480px", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
-        <h2 style={{ fontSize: "1.2rem", fontWeight: 800, color: C.primary, marginBottom: "0.25rem" }}>Link Child Account</h2>
-        <p style={{ color: C.gray500, fontSize: "0.8rem", marginBottom: "1.5rem" }}>Enter the student account ID and details of the child you want to manage.</p>
-
-        {error && (
-          <div style={{ backgroundColor: "#fef2f2", border: "1px solid #fecaca", borderRadius: "0.5rem", padding: "0.75rem 1rem", marginBottom: "1rem", color: C.error, fontSize: "0.875rem" }}>{error}</div>
-        )}
-
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          <div>
-            <label style={{ fontSize: "0.8rem", fontWeight: 600, color: C.primary, marginBottom: "0.3rem", display: "block" }}>Student User ID *</label>
-            <input value={studentUserId} onChange={e => setStudentUserId(e.target.value)} required placeholder="Paste the student's user ID"
-              style={{ width: "100%", padding: "0.7rem 1rem", border: "1.5px solid #e5e7eb", borderRadius: "0.5rem", fontSize: "0.875rem", outline: "none", boxSizing: "border-box", color: C.primary }} />
-            <p style={{ fontSize: "0.72rem", color: C.gray500, marginTop: "0.3rem" }}>Share your Parent ID with the student so they can add you as guardian.</p>
-          </div>
-          <div>
-            <label style={{ fontSize: "0.8rem", fontWeight: 600, color: C.primary, marginBottom: "0.3rem", display: "block" }}>Child's Name *</label>
-            <input value={name} onChange={e => setName(e.target.value)} required placeholder="e.g. Ahmad Khan"
-              style={{ width: "100%", padding: "0.7rem 1rem", border: "1.5px solid #e5e7eb", borderRadius: "0.5rem", fontSize: "0.875rem", outline: "none", boxSizing: "border-box", color: C.primary }} />
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-            <div>
-              <label style={{ fontSize: "0.8rem", fontWeight: 600, color: C.primary, marginBottom: "0.3rem", display: "block" }}>Education Level</label>
-              <input value={level} onChange={e => setLevel(e.target.value)} placeholder="e.g. Matric, FSC"
-                style={{ width: "100%", padding: "0.7rem 1rem", border: "1.5px solid #e5e7eb", borderRadius: "0.5rem", fontSize: "0.875rem", outline: "none", boxSizing: "border-box", color: C.primary }} />
-            </div>
-            <div>
-              <label style={{ fontSize: "0.8rem", fontWeight: 600, color: C.primary, marginBottom: "0.3rem", display: "block" }}>Relationship</label>
-              <select value={relationship} onChange={e => setRelationship(e.target.value)}
-                style={{ width: "100%", padding: "0.7rem 1rem", border: "1.5px solid #e5e7eb", borderRadius: "0.5rem", fontSize: "0.875rem", outline: "none", boxSizing: "border-box", color: C.primary }}>
-                <option value="child">Child</option>
-                <option value="sibling">Sibling</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label style={{ fontSize: "0.8rem", fontWeight: 600, color: C.primary, marginBottom: "0.3rem", display: "block" }}>Subjects (comma-separated)</label>
-            <input value={subjects} onChange={e => setSubjects(e.target.value)} placeholder="e.g. Mathematics, Physics"
-              style={{ width: "100%", padding: "0.7rem 1rem", border: "1.5px solid #e5e7eb", borderRadius: "0.5rem", fontSize: "0.875rem", outline: "none", boxSizing: "border-box", color: C.primary }} />
-          </div>
-
-          <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end", marginTop: "0.5rem" }}>
-            <button type="button" onClick={onClose} style={{ padding: "0.7rem 1.25rem", borderRadius: "0.5rem", border: "1.5px solid #e5e7eb", backgroundColor: "white", fontWeight: 600, fontSize: "0.85rem", cursor: "pointer", color: C.primary }}>Cancel</button>
-            <button type="submit" disabled={loading} style={{ padding: "0.7rem 1.25rem", borderRadius: "0.5rem", border: "none", backgroundColor: loading ? "#93c5fd" : C.accent, fontWeight: 700, fontSize: "0.85rem", cursor: loading ? "not-allowed" : "pointer", color: "white" }}>
-              {loading ? "Linking..." : "Link Account"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
 interface ParentDashboardProps {
   userId: string;
   userName: string;
   userAvatar?: string;
 }
 
-export default function ParentDashboard({ userId, userName }: ParentDashboardProps) {
+export default function ParentDashboard({ userId }: ParentDashboardProps) {
   const [data, setData] = useState<ParentProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showLinkModal, setShowLinkModal] = useState(false);
-  const [parentId, setParentId] = useState<string>("");
 
   const fetchProfile = () => {
     api.get("/parent/profile")
       .then(res => {
         setData(res.data);
-        setParentId(res.data.profile?._id ?? "");
       })
       .catch(() => showError("Failed to load parent profile."))
       .finally(() => setLoading(false));

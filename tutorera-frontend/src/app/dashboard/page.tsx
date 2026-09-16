@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { useAuth } from "@/context/AuthContext";
+import DashboardLayout from "@/components/Dashboard/DashboardLayout";
+import ParentDashboard from "@/components/Dashboard/ParentDashboard";
 import StudentDashboard from "@/components/Dashboard/StudentDashboard";
 import TutorDashboard from "@/components/Dashboard/TutorDashboard";
-import ParentDashboard from "@/components/Dashboard/ParentDashboard";
-import DashboardLayout from "@/components/Dashboard/DashboardLayout";
+import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/axios";
 import { SUPPORT_EMAIL } from "@/lib/site";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect,useState } from "react";
 
 // ─── Loading screen ───────────────────────────────────────────────────────────
 

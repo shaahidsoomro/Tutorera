@@ -1,18 +1,16 @@
-import type { Metadata } from "next";
-import Link from "next/link";
-import { 
-  CheckCircle2, 
-  ArrowRight, 
-  DollarSign, 
-  ShieldCheck, 
-  Clock, 
-  Sparkles,
-  BookOpen,
-  Users
-} from "lucide-react";
-import QuickRequestComposer from "@/components/marketplace/QuickRequestComposer";
 import MarketplaceFlow from "@/components/marketplace/MarketplaceFlow";
 import OfferComparisonDemo from "@/components/marketplace/OfferComparisonDemo";
+import QuickRequestComposer from "@/components/marketplace/QuickRequestComposer";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Clock,
+  DollarSign,
+  ShieldCheck,
+  Sparkles
+} from "lucide-react";
+import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "For Students | Post Requirements & Receive Tutor Offers | TUTORERA",

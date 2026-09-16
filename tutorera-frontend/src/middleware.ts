@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { CANONICAL_HOST, REDIRECT_HOSTS, SEO_PRIVATE_PATHS } from "@/constants/seoRoutes";
+import { CANONICAL_HOST,REDIRECT_HOSTS,SEO_PRIVATE_PATHS } from "@/constants/seoRoutes";
+import { NextRequest,NextResponse } from "next/server";
 
 export function middleware(request: NextRequest) {
   const host = request.nextUrl.hostname.toLowerCase();

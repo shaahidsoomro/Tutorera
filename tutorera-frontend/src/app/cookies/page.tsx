@@ -1,23 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { 
-  Cookie, 
-  ShieldCheck, 
-  Settings2, 
-  CheckCircle2, 
-  HelpCircle, 
-  Save 
-} from "lucide-react";
-import s from "../compliance-pages.module.css";
-import { 
-  LEGAL_ENTITY_NAME, 
-  TRADING_NAME, 
-  SUPPORT_EMAIL, 
-  PRIVACY_CONTACT_EMAIL, 
-  LAST_LEGAL_UPDATE 
+import {
+  TRADING_NAME
 } from "@/lib/site";
+import {
+  CheckCircle2,
+  Save,
+  Settings2
+} from "lucide-react";
+import Link from "next/link";
+import { useEffect,useState } from "react";
+import s from "../compliance-pages.module.css";
 
 const cookieCategories = [
   {

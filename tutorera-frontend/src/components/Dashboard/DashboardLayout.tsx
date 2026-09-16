@@ -1,15 +1,25 @@
 "use client";
-import { UI_COLORS } from "@/lib/brand";
-import { useState } from "react";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
+import Image from "next/image";
 import BrandLogo from "@/components/BrandLogo";
+import { useAuth } from "@/context/AuthContext";
+import { UI_COLORS } from "@/lib/brand";
 import {
-  LayoutDashboard, Bell, Settings, LogOut,
-  ChevronLeft, ChevronRight, MessageSquare,
-  CreditCard, User, Search, Menu, TrendingUp, BriefcaseBusiness,
+  Bell,
+  BriefcaseBusiness,
+  ChevronLeft,ChevronRight,
+  CreditCard,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  MessageSquare,
+  Search,
+  Settings,
+  TrendingUp,
+  User,
 } from "lucide-react";
+import Link from "next/link";
+import { usePathname,useRouter } from "next/navigation";
+import { useState } from "react";
 
 const C = UI_COLORS;
 
@@ -92,7 +102,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div style={{ padding: '1rem 1.25rem', borderBottom: `1px solid ${C.sidebarBorder}` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '700', fontSize: '0.875rem', overflow: 'hidden', flexShrink: 0 }}>
-              {user?.avatar ? <img src={user.avatar} alt="User Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : user?.name?.charAt(0).toUpperCase()}
+              {user?.avatar ? <Image src={user.avatar} alt="User Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }}  width={100} height={100} unoptimized/> : user?.name?.charAt(0).toUpperCase()}
             </div>
             <div style={{ minWidth: 0 }}>
               <p style={{ fontWeight: '700', color: '#fff', fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>{user?.name}</p>
@@ -231,7 +241,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </Link>
             <Link href="/settings" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', padding: '0.25rem 0.75rem', border: '1px solid #e5e7eb', borderRadius: '2rem', backgroundColor: 'white' }}>
               <div style={{ width: '26px', height: '26px', borderRadius: '50%', backgroundColor: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.75rem', fontWeight: '700', overflow: 'hidden' }}>
-                {user?.avatar ? <img src={user.avatar} alt="User Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : user?.name?.charAt(0).toUpperCase()}
+                {user?.avatar ? <Image src={user.avatar} alt="User Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }}  width={100} height={100} unoptimized/> : user?.name?.charAt(0).toUpperCase()}
               </div>
               <span style={{ fontSize: '0.875rem', fontWeight: '600', color: C.primary }}>{user?.name?.split(' ')[0]}</span>
             </Link>

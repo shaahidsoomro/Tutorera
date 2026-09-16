@@ -1,13 +1,13 @@
 "use client";
-import { UI_COLORS } from "@/lib/brand";
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
-import { BookOpen, CheckCircle } from "lucide-react";
-import api from "@/lib/axios";
 import CountryCitySelector from "@/components/marketplace/CountryCitySelector";
+import { useAuth } from "@/context/AuthContext";
+import api from "@/lib/axios";
+import { UI_COLORS } from "@/lib/brand";
+import { useGeoData } from "@/lib/geoService";
 import { Country } from "@/lib/location";
-import { useGeoData, convertToPKR } from "@/lib/geoService";
+import { BookOpen,CheckCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect,useState } from "react";
 
 const C = UI_COLORS;
 

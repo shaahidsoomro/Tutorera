@@ -1,7 +1,7 @@
-import type { Metadata } from "next";
 import TutorsExplorer from "@/components/Tutors/TutorsExplorer";
 import { fetchTutors } from "@/lib/tutor-directory";
 import type { FiltersState } from "@/types/tutor";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Find Tutors Online & In-Person",

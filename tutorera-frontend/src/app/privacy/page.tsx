@@ -1,27 +1,20 @@
-import Link from "next/link";
-import { 
-  Lock, 
-  ShieldCheck, 
-  Eye, 
-  FileCheck2, 
-  Globe2, 
-  UserCheck, 
-  Trash2, 
-  Download,
-  AlertCircle,
-  CheckCircle2
-} from "lucide-react";
-import s from "../compliance-pages.module.css";
-import { 
-  LEGAL_ENTITY_NAME, 
-  TRADING_NAME, 
-  BUSINESS_ADDRESS, 
-  PRIVACY_CONTACT_EMAIL, 
-  SUPPORT_EMAIL, 
-  PRIVACY_VERSION, 
-  LAST_LEGAL_UPDATE 
+import {
+  BUSINESS_ADDRESS,
+  LAST_LEGAL_UPDATE,
+  LEGAL_ENTITY_NAME,
+  PRIVACY_CONTACT_EMAIL,
+  PRIVACY_VERSION,
+  SUPPORT_EMAIL,
+  TRADING_NAME
 } from "@/lib/site";
+import {
+  CheckCircle2,
+  Lock,
+  UserCheck
+} from "lucide-react";
 import { Metadata } from "next";
+import Link from "next/link";
+import s from "../compliance-pages.module.css";
 
 export const metadata: Metadata = {
   title: "Global Privacy Policy | TUTORERA",

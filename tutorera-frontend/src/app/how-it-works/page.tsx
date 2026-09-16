@@ -1,6 +1,6 @@
-import Link from "next/link";
+import { GST_EFFECTIVE_PERCENT,PLATFORM_FEE_PERCENT,SUPPORT_EMAIL } from "@/lib/site";
 import type { Metadata } from "next";
-import { GST_EFFECTIVE_PERCENT, PLATFORM_FEE_PERCENT, SUPPORT_EMAIL } from "@/lib/site";
+import Link from "next/link";
 import s from "../compliance-pages.module.css";
 
 export const metadata: Metadata = {

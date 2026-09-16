@@ -1,8 +1,8 @@
-import type { MetadataRoute } from "next";
-import { SITE_URL } from "@/lib/site";
 import { MARKETS } from "@/lib/markets";
-import { CITIES, LEVELS, LOCAL_SUBJECT_SLUGS, PRIMARY_CITY_SLUGS, SUBJECTS, fetchTutors, tutorProfileSlug } from "@/lib/tutor-directory";
+import { SITE_URL } from "@/lib/site";
+import { CITIES,LEVELS,LOCAL_SUBJECT_SLUGS,PRIMARY_CITY_SLUGS,SUBJECTS,fetchTutors,tutorProfileSlug } from "@/lib/tutor-directory";
 import { assessTutorSeoQuality } from "@/lib/tutor-seo";
+import type { MetadataRoute } from "next";
 
 const routes = [
   "", "online-tutors", "about", "become-a-tutor", "blog", "business-model", "contact", "coverage", "first-session-guarantee", "team",

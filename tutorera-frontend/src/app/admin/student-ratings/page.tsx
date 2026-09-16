@@ -1,8 +1,9 @@
 "use client";
-import { UI_COLORS } from "@/lib/brand";
-import { useEffect, useState } from "react";
-import { Star } from "lucide-react";
+import Image from "next/image";
 import api from "@/lib/axios";
+import { UI_COLORS } from "@/lib/brand";
+import { Star } from "lucide-react";
+import { useEffect,useState } from "react";
 
 const C = UI_COLORS;
 
@@ -80,7 +81,7 @@ export default function StudentRatingsPage() {
                   {/* Student avatar */}
                   <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#EEF5FF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: C.accent, fontSize: '1rem', flexShrink: 0, overflow: 'hidden' }}>
                     {r.student.avatar
-                      ? <img src={r.student.avatar} alt={r.student.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ? <Image src={r.student.avatar} alt={r.student.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }}  width={100} height={100} unoptimized/>
                       : r.student.name.charAt(0).toUpperCase()}
                   </div>
                   <div>

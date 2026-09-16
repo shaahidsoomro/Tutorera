@@ -1,28 +1,25 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import Link from "next/link";
-import {
-  ShieldCheck,
-  Download,
-  Trash2,
-  Lock,
-  FileText,
-  Mail,
-  CheckCircle,
-  AlertCircle,
-  Clock,
-  ArrowRight,
-  ExternalLink,
-  Settings
-} from "lucide-react";
 import api from "@/lib/axios";
-import s from "../compliance-pages.module.css";
 import {
   LEGAL_OPERATOR,
   PRIVACY_CONTACT_EMAIL,
   PRIVACY_VERSION
 } from "@/lib/site";
+import {
+  AlertCircle,
+  ArrowRight,
+  CheckCircle,
+  Download,
+  ExternalLink,
+  Mail,
+  Settings,
+  ShieldCheck,
+  Trash2
+} from "lucide-react";
+import Link from "next/link";
+import { useEffect,useState } from "react";
+import s from "../compliance-pages.module.css";
 
 export default function PrivacyCenterPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -83,7 +80,7 @@ export default function PrivacyCenterPage() {
       });
       setConsentSuccess(true);
       setTimeout(() => setConsentSuccess(false), 4000);
-    } catch (err) {
+    } catch {
       // Handled gracefully
     } finally {
       setIsUpdatingConsent(false);

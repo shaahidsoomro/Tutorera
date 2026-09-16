@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useRef } from "react";
-import { X, ArrowRight, DollarSign, Sparkles, AlertCircle } from "lucide-react";
-import api from "@/lib/axios";
-import { showError, showSuccess } from "@/lib/toast";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
+import api from "@/lib/axios";
+import { showError,showSuccess } from "@/lib/toast";
+import { ArrowRight,X } from "lucide-react";
+import React,{ useState } from "react";
 
 interface CounterOfferSheetProps {
   isOpen: boolean;
@@ -29,7 +29,6 @@ export default function CounterOfferSheet({
   pricingUnit = "hour",
   currency = "PKR",
   tutorName,
-  role = "student",
 }: CounterOfferSheetProps) {
   const [amount, setAmount] = useState(String(currentAmount));
   const [message, setMessage] = useState("");

@@ -1,27 +1,25 @@
-import type { Metadata } from "next";
-import Link from "next/link";
-import {
-  ShieldCheck,
-  AlertTriangle,
-  Home,
-  Laptop,
-  Users,
-  Lock,
-  PhoneCall,
-  Eye,
-  FileCheck,
-  AlertOctagon,
-  ArrowRight,
-  LifeBuoy
-} from "lucide-react";
-import s from "../compliance-pages.module.css";
 import {
   LEGAL_OPERATOR,
   SAFETY_CONTACT_EMAIL,
-  SUPPORT_EMAIL,
   SUPPORT_PHONE,
   TERMS_VERSION
 } from "@/lib/site";
+import {
+  AlertOctagon,
+  AlertTriangle,
+  ArrowRight,
+  Eye,
+  FileCheck,
+  Home,
+  Laptop,
+  LifeBuoy,
+  Lock,
+  ShieldCheck,
+  Users
+} from "lucide-react";
+import type { Metadata } from "next";
+import Link from "next/link";
+import s from "../compliance-pages.module.css";
 
 export const metadata: Metadata = {
   title: "Trust & Safety Center | Global Student & Tutor Protection | TUTORERA",

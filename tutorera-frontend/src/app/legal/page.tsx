@@ -1,31 +1,22 @@
-import Link from "next/link";
-import { 
-  ShieldCheck, 
-  FileText, 
-  Lock, 
-  Globe, 
-  HeartHandshake, 
-  AlertTriangle, 
-  Scale, 
-  Eye, 
-  UserCheck, 
-  CheckCircle, 
-  HelpCircle,
-  Cpu,
-  Server
-} from "lucide-react";
-import s from "../compliance-pages.module.css";
-import { 
-  LEGAL_ENTITY_NAME, 
-  TRADING_NAME, 
-  BUSINESS_ADDRESS, 
-  SUPPORT_EMAIL, 
-  LEGAL_CONTACT_EMAIL, 
-  TERMS_VERSION, 
-  PRIVACY_VERSION, 
-  LAST_LEGAL_UPDATE 
+import {
+  BUSINESS_ADDRESS,
+  LAST_LEGAL_UPDATE,
+  LEGAL_CONTACT_EMAIL,
+  LEGAL_ENTITY_NAME,
+  TERMS_VERSION,
+  TRADING_NAME
 } from "@/lib/site";
+import {
+  FileText,
+  Globe,
+  HeartHandshake,
+  Lock,
+  Scale,
+  ShieldCheck
+} from "lucide-react";
 import { Metadata } from "next";
+import Link from "next/link";
+import s from "../compliance-pages.module.css";
 
 export const metadata: Metadata = {
   title: "Global Legal & Compliance Center | TUTORERA",

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { useAuth } from "@/context/AuthContext";
 import BrandLogo from "@/components/BrandLogo";
+import { useAuth } from "@/context/AuthContext";
+import { useState } from "react";
 
 export default function SelectRolePage() {
   const { selectRole, loading } = useAuth();

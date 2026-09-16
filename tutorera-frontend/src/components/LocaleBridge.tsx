@@ -1,8 +1,8 @@
 "use client";
 
-import { ReactNode } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { I18nProvider } from "@/i18n/I18nProvider";
+import { ReactNode } from "react";
 
 /**
  * Applies a signed-in user's saved language preference to the existing i18n

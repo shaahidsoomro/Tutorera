@@ -1,24 +1,16 @@
-import Link from "next/link";
-import { 
-  ShieldAlert, 
-  Heart, 
-  Lock, 
-  Users, 
-  Eye, 
-  PhoneCall, 
-  AlertTriangle, 
-  CheckCircle2, 
-  FileCheck 
-} from "lucide-react";
-import s from "../compliance-pages.module.css";
-import { 
-  LEGAL_ENTITY_NAME, 
-  TRADING_NAME, 
-  SAFETY_CONTACT_EMAIL, 
-  SUPPORT_EMAIL, 
-  LAST_LEGAL_UPDATE 
+import {
+  LEGAL_ENTITY_NAME,
+  SAFETY_CONTACT_EMAIL,
+  TRADING_NAME
 } from "@/lib/site";
+import {
+  CheckCircle2,
+  PhoneCall,
+  ShieldAlert
+} from "lucide-react";
 import { Metadata } from "next";
+import Link from "next/link";
+import s from "../compliance-pages.module.css";
 
 export const metadata: Metadata = {
   title: "Child Safeguarding & Minor Protection Policy | TUTORERA",

@@ -1,7 +1,7 @@
+import { getEditorialArticle,STATIC_ARTICLES } from "@/lib/editorial-content";
+import { ArrowLeft,Calendar,ShieldCheck,User } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Calendar, ShieldCheck, User } from "lucide-react";
-import { getEditorialArticle, STATIC_ARTICLES } from "@/lib/editorial-content";
 
 export function generateStaticParams() { return STATIC_ARTICLES.map(({ slug }) => ({ slug })); }
 

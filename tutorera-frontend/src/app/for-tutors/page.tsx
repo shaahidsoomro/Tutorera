@@ -1,15 +1,14 @@
+import {
+  ArrowRight,
+  Briefcase,
+  CheckCircle2,
+  DollarSign,
+  Globe,
+  ShieldCheck,
+  Sparkles
+} from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { 
-  ArrowRight, 
-  Briefcase, 
-  ShieldCheck, 
-  DollarSign, 
-  Clock, 
-  Sparkles, 
-  CheckCircle2, 
-  Globe 
-} from "lucide-react";
 
 export const metadata: Metadata = {
   title: "For Tutors | Find Real Student Demand & Send Offers | TUTORERA",

@@ -1,13 +1,13 @@
 "use client";
 
+import BrandLogo from "@/components/BrandLogo";
+import GoogleButton from "@/components/GoogleButton";
+import { useAuth } from "@/context/AuthContext";
 import { UI_COLORS } from "@/lib/brand";
-import { useState } from "react";
+import { BookOpen,Eye,EyeOff,GraduationCap,Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, GraduationCap, BookOpen, Users } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
-import GoogleButton from "@/components/GoogleButton";
-import BrandLogo from "@/components/BrandLogo";
+import { useState } from "react";
 
 const C = UI_COLORS;
 

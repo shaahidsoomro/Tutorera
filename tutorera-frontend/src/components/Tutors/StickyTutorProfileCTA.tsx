@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
-import Link from "next/link";
-import { Calendar, PlusCircle, Star } from "lucide-react";
 import DirectBookingModal from "@/components/Dashboard/DirectBookingModal";
+import { Calendar,PlusCircle,Star } from "lucide-react";
+import Link from "next/link";
+import { useState } from "react";
 
 interface StickyTutorProfileCTAProps {
   tutorId: string;

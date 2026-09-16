@@ -1,24 +1,20 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
-import {
-  Search,
-  X,
-  Globe,
-  MapPin,
-  Check,
-  ChevronRight,
-  ArrowLeft,
-  Sparkles
-} from "lucide-react";
-import {
-  COUNTRIES,
-  Country,
-  getCountryByCode,
-  getCitiesForCountry,
-} from "@/lib/location";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import api from "@/lib/axios";
+import {
+  COUNTRIES,
+  Country
+} from "@/lib/location";
+import {
+  ArrowLeft,
+  Check,
+  ChevronRight,
+  MapPin,
+  Search,
+  X
+} from "lucide-react";
+import React,{ useEffect,useMemo,useState } from "react";
 
 
 interface CountryCityPickerModalProps {

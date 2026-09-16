@@ -1,8 +1,8 @@
+import SeoTutorDirectory from "@/components/Tutors/SeoTutorDirectory";
+import { SITE_URL } from "@/lib/site";
+import { CITIES,LOCAL_SUBJECT_SLUGS,SUBJECTS,fetchTutors } from "@/lib/tutor-directory";
 import type { Metadata } from "next";
 import Link from "next/link";
-import SeoTutorDirectory from "@/components/Tutors/SeoTutorDirectory";
-import { CITIES, LOCAL_SUBJECT_SLUGS, SUBJECTS, fetchTutors } from "@/lib/tutor-directory";
-import { SITE_URL } from "@/lib/site";
 
 const HOME_TUTOR_CITY_SLUGS = ["lahore", "islamabad", "karachi"] as const;
 type HomeTutorCity = typeof HOME_TUTOR_CITY_SLUGS[number];

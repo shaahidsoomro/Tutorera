@@ -1,5 +1,5 @@
-import type { Metadata } from "next";
 import TrustArticle from "@/components/TrustArticle";
+import type { Metadata } from "next";
 export const metadata: Metadata = { title: "Academic Standards", description: "The information and conduct expected from tutors offering lessons through TUTORERA.", alternates: { canonical: "/academic-standards" } };
 export default function Page() { return <TrustArticle title="Academic Standards" path="/academic-standards" intro="TUTORERA expects tutors to represent their qualifications accurately, teach within their stated competence, and support honest learning." sections={[
   { heading: "Accurate qualifications", body: "Tutors must provide accurate education, experience, subject, and level information. They must not claim credentials, affiliations, results, or expertise they do not possess." },

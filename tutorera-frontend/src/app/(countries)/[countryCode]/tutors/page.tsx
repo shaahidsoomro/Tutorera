@@ -1,12 +1,12 @@
-import type { Metadata } from "next";
-import { notFound, permanentRedirect } from "next/navigation";
-import Link from "next/link";
 import TutorsExplorer from "@/components/Tutors/TutorsExplorer";
-import { fetchTutors, CITIES } from "@/lib/tutor-directory";
 import { getCountryByCode } from "@/lib/location";
-import { MARKETS, getMarketByRoute } from "@/lib/markets";
-import type { FiltersState } from "@/types/tutor";
+import { MARKETS,getMarketByRoute } from "@/lib/markets";
 import { SITE_URL } from "@/lib/site";
+import { CITIES,fetchTutors } from "@/lib/tutor-directory";
+import type { FiltersState } from "@/types/tutor";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound,permanentRedirect } from "next/navigation";
 
 interface Props {
   params: Promise<{ countryCode: string }>;

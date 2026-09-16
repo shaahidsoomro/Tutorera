@@ -1,7 +1,7 @@
 import { UI_COLORS } from "@/lib/brand";
-import Link from "next/link";
-import { MessageSquare, BookOpen, Users, Shield } from "lucide-react";
+import { BookOpen,MessageSquare,Shield,Users } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = { title: "Help Center", description: "Answers about finding tutors, tutor verification, bookings, payments, safety, cancellations, and support on TUTORERA.", alternates: { canonical: "/help" } };
 

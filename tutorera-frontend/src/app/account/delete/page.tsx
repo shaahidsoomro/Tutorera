@@ -1,25 +1,19 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import api from "@/lib/axios";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  CheckCircle2,
+  Info,
+  Lock,
+  Trash2,
+  XCircle
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  Trash2,
-  AlertTriangle,
-  ShieldCheck,
-  CheckCircle2,
-  XCircle,
-  Lock,
-  ArrowLeft,
-  Info
-} from "lucide-react";
-import api from "@/lib/axios";
+import React,{ useEffect,useState } from "react";
 import s from "../../compliance-pages.module.css";
-import {
-  LEGAL_OPERATOR,
-  SUPPORT_EMAIL,
-  PRIVACY_CONTACT_EMAIL
-} from "@/lib/site";
 
 export default function AccountDeletePage() {
   const router = useRouter();

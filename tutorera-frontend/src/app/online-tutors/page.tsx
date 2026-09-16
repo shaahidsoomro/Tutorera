@@ -1,8 +1,8 @@
-import type { Metadata } from "next";
 import TutorsExplorer from "@/components/Tutors/TutorsExplorer";
+import { SITE_URL } from "@/lib/site";
 import { fetchTutors } from "@/lib/tutor-directory";
 import type { FiltersState } from "@/types/tutor";
-import { SITE_URL } from "@/lib/site";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Find Online Tutors Worldwide | 1-on-1 Live Lessons",

@@ -1,7 +1,7 @@
-import type { Metadata } from "next";
-import Link from "next/link";
 import TrustArticle from "@/components/TrustArticle";
 import { SUPPORT_EMAIL } from "@/lib/site";
+import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "In-Person / Home Tuition Terms",

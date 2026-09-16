@@ -1,11 +1,10 @@
 "use client";
 
-import React from "react";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { ArrowLeft, Search, Bell, Menu, PlusCircle, ShieldCheck } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
 import BrandLogo from "@/components/BrandLogo";
+import { useAuth } from "@/context/AuthContext";
+import { ArrowLeft,Bell,PlusCircle,Search } from "lucide-react";
+import Link from "next/link";
+import { usePathname,useRouter } from "next/navigation";
 
 const ROUTE_TITLES: Record<string, string> = {
   "/tutors": "Find Verified Tutors",

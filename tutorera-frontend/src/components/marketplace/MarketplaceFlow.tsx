@@ -1,4 +1,4 @@
-import { FileEdit, HandCoins, SlidersHorizontal, UserCheck, GraduationCap } from "lucide-react";
+import { FileEdit,GraduationCap,HandCoins,SlidersHorizontal,UserCheck } from "lucide-react";
 
 const steps = [
   {

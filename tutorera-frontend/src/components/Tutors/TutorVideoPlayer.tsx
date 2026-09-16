@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
-import { Play, ShieldCheck, Film, Sparkles, Calendar, CheckCircle2, MessageSquare, Video } from "lucide-react";
 import AvatarImage from "@/components/Common/AvatarImage";
+import { Calendar,CheckCircle2,Film,Play,ShieldCheck,Sparkles,Video } from "lucide-react";
+import { useState } from "react";
 
 interface TutorVideoPlayerProps {
   videoUrl?: string | null;
@@ -40,9 +40,6 @@ export default function TutorVideoPlayer({
   tutorName,
   posterUrl,
   subjects = [],
-  city = "Pakistan",
-  hourlyRate,
-  currency = "PKR",
 }: TutorVideoPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
 
@@ -50,7 +47,6 @@ export default function TutorVideoPlayer({
   const youtubeUrl = getYouTubeEmbedUrl(cleanUrl);
   const vimeoUrl = getVimeoEmbedUrl(cleanUrl);
   const loomUrl = getLoomEmbedUrl(cleanUrl);
-  const hasEmbed = Boolean(youtubeUrl || vimeoUrl || loomUrl);
   const hasVideo = Boolean(cleanUrl);
 
   const scrollToBooking = () => {

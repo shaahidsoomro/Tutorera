@@ -1,9 +1,9 @@
 "use client";
 
+import { useAuth } from "@/context/AuthContext";
+import { PlusCircle } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { PlusCircle } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
 
 const HIDE_ON_PATHS = [
   "/login",

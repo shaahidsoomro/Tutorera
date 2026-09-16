@@ -1,6 +1,6 @@
 import { UI_COLORS } from "@/lib/brand";
+import { ArrowRight,BookOpen,CheckCircle,Clock,Shield,Star,Users } from "lucide-react";
 import Link from "next/link";
-import { CheckCircle, Star, Users, Clock, Shield, BookOpen, ArrowRight } from "lucide-react";
 
 const C = UI_COLORS;
 

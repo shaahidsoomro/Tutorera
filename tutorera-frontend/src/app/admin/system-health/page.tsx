@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { Activity, ArrowLeft, RefreshCw, CheckCircle, Database, Server, Clock, Cpu, HardDrive, ShieldCheck } from "lucide-react";
 import api from "@/lib/axios";
+import { Activity,ArrowLeft,CheckCircle,Clock,Cpu,Database,HardDrive,RefreshCw,Server,ShieldCheck } from "lucide-react";
+import Link from "next/link";
+import { useEffect,useState } from "react";
 
 interface HealthData {
   api: string;

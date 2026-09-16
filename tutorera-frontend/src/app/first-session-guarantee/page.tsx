@@ -1,7 +1,7 @@
 import { UI_COLORS } from "@/lib/brand";
 // app/first-session-guarantee/page.tsx
+import { CheckCircle,Clock,RefreshCw,Shield } from "lucide-react";
 import Link from "next/link";
-import { CheckCircle, Shield, RefreshCw, Clock } from "lucide-react";
 
 const C = UI_COLORS;
 

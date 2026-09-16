@@ -1,11 +1,11 @@
-import Link from "next/link";
-import type { Metadata } from "next";
 import HeroMarketplace from "@/components/marketplace/HeroMarketplace";
 import HomeOnlineTuitionCards from "@/components/marketplace/HomeOnlineTuitionCards";
 import MarketplaceFlow from "@/components/marketplace/MarketplaceFlow";
-import TopRequestsSection from "@/components/TopRequestsSection";
 import OfferComparisonDemo from "@/components/marketplace/OfferComparisonDemo";
-import { ArrowRight, Star, MapPin } from "lucide-react";
+import TopRequestsSection from "@/components/TopRequestsSection";
+import { ArrowRight,MapPin,Star } from "lucide-react";
+import type { Metadata } from "next";
+import Link from "next/link";
 import s from "./page.module.css";
 
 export const metadata: Metadata = {

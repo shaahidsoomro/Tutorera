@@ -1,13 +1,14 @@
 "use client";
-import { UI_COLORS } from "@/lib/brand";
-import { useEffect, useState, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
+import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
-import { Send, ArrowLeft, Shield, AlertTriangle } from "lucide-react";
-import Link from "next/link";
 import api from "@/lib/axios";
-import { io, Socket } from "socket.io-client";
+import { UI_COLORS } from "@/lib/brand";
 import { formatPKR } from "@/lib/site";
+import { AlertTriangle,ArrowLeft,Send,Shield } from "lucide-react";
+import Link from "next/link";
+import { useParams,useRouter } from "next/navigation";
+import { useEffect,useRef,useState } from "react";
+import { io,Socket } from "socket.io-client";
 
 const C = UI_COLORS;
 
@@ -193,7 +194,7 @@ export default function ChatPage() {
         {/* Avatar */}
         <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '700', fontSize: '1rem', flexShrink: 0, overflow: 'hidden' }}>
           {otherUser?.avatar ? (
-            <img src={otherUser.avatar} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <Image src={otherUser.avatar} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }}  width={100} height={100} unoptimized/>
           ) : otherUser?.name?.charAt(0) || "?"}
         </div>
 
@@ -252,7 +253,7 @@ export default function ChatPage() {
                 {!isMe && (
                   <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.75rem', fontWeight: '700', flexShrink: 0, overflow: 'hidden' }}>
                     {msg.sender?.avatar ? (
-                      <img src={msg.sender.avatar} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <Image src={msg.sender.avatar} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }}  width={100} height={100} unoptimized/>
                     ) : msg.sender?.name?.charAt(0) || "?"}
                   </div>
                 )}

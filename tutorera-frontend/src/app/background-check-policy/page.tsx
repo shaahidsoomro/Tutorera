@@ -1,21 +1,20 @@
-import type { Metadata } from "next";
-import Link from "next/link";
-import {
-  ShieldAlert,
-  FileCheck2,
-  Globe2,
-  AlertTriangle,
-  Scale,
-  RefreshCw,
-  Lock,
-  ArrowRight
-} from "lucide-react";
-import s from "../compliance-pages.module.css";
 import {
   LEGAL_OPERATOR,
   SAFETY_CONTACT_EMAIL,
   TERMS_VERSION
 } from "@/lib/site";
+import {
+  AlertTriangle,
+  ArrowRight,
+  FileCheck2,
+  Globe2,
+  RefreshCw,
+  Scale,
+  ShieldAlert
+} from "lucide-react";
+import type { Metadata } from "next";
+import Link from "next/link";
+import s from "../compliance-pages.module.css";
 
 export const metadata: Metadata = {
   title: "Background Check Policy | In-Person & Home Tuition Screening | TUTORERA",

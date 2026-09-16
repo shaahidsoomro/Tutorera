@@ -1,5 +1,5 @@
-import type { Metadata } from "next";
 import TrustArticle from "@/components/TrustArticle";
+import type { Metadata } from "next";
 export const metadata: Metadata = { title: "Tutor Review Policy", description: "How student reviews, ratings, and tutor averages work on TUTORERA.", alternates: { canonical: "/review-policy" } };
 export default function Page() { return <TrustArticle title="Tutor Review Policy" path="/review-policy" intro="TUTORERA ties tutor reviews to completed bookings so ratings reflect a platform-recorded tutoring relationship." sections={[
   { heading: "Who can leave a review", body: "Only an authenticated student associated with a completed booking for that tutor can submit a review. A review requires a rating from one to five and a written comment." },

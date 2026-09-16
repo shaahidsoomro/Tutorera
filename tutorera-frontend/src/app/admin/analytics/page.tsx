@@ -1,11 +1,15 @@
 "use client";
-import { UI_COLORS } from "@/lib/brand";
-import { useEffect, useState } from "react";
-import Link from "next/link";
 import api from "@/lib/axios";
+import { UI_COLORS } from "@/lib/brand";
+import Link from "next/link";
+import { useEffect,useState } from "react";
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer,
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,YAxis,
 } from "recharts";
 
 const C = UI_COLORS;

@@ -1,6 +1,6 @@
-import Link from "next/link";
-import { Calendar, User, ArrowRight } from "lucide-react";
 import { getEditorialArticles } from "@/lib/editorial-content";
+import { ArrowRight,Calendar,User } from "lucide-react";
+import Link from "next/link";
 
 export default async function BlogPage() {
   const blogs = await getEditorialArticles();

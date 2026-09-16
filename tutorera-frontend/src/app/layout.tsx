@@ -1,15 +1,15 @@
-import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
-import Script from "next/script";
-import "./globals.css";
-import { AuthProvider } from "@/context/AuthContext";
-import { SocketProvider } from "@/context/SocketContext";
 import ConditionalLayout from "@/components/ConditionalLayout";
 import LazyWidgets from "@/components/LazyWidgets";
-import { Toaster } from "react-hot-toast";
-import { LEGAL_OPERATOR, PLATFORM_NAME, SITE_URL, SUPPORT_EMAIL, SUPPORT_PHONE } from "@/lib/site";
-import SkipLink from "@/components/SkipLink";
 import LocaleBridge from "@/components/LocaleBridge";
+import SkipLink from "@/components/SkipLink";
+import { AuthProvider } from "@/context/AuthContext";
+import { SocketProvider } from "@/context/SocketContext";
+import { LEGAL_OPERATOR,PLATFORM_NAME,SITE_URL,SUPPORT_EMAIL,SUPPORT_PHONE } from "@/lib/site";
+import type { Metadata,Viewport } from "next";
+import { Inter } from "next/font/google";
+import Script from "next/script";
+import { Toaster } from "react-hot-toast";
+import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
 

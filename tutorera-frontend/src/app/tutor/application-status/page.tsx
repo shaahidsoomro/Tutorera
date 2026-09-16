@@ -1,23 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { AlertTriangle } from "lucide-react";
+import { ActionRequiredPanel } from "@/components/Tracking/ActionRequiredPanel";
+import { DemoVideoCard } from "@/components/Tracking/DemoVideoCard";
+import { HomeTuitionStatusCard } from "@/components/Tracking/HomeTuitionStatusCard";
+import { MarketplaceStatusCard } from "@/components/Tracking/MarketplaceStatusCard";
+import { ProgressTimeline } from "@/components/Tracking/ProgressTimeline";
+import { StatusHero } from "@/components/Tracking/StatusHero";
+import { StatusHistoryList } from "@/components/Tracking/StatusHistoryList";
+import s from "@/components/Tracking/tracking.module.css";
+import { TrackingUrlBlock } from "@/components/Tracking/TrackingUrlBlock";
+import { VerificationChecklist } from "@/components/Tracking/VerificationChecklist";
+import { VerifiedBadgeCard } from "@/components/Tracking/VerifiedBadgeCard";
+import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/axios";
 import { AuthenticatedTrackingPayload } from "@/types/tracking";
-import s from "@/components/Tracking/tracking.module.css";
-import { StatusHero } from "@/components/Tracking/StatusHero";
-import { ProgressTimeline } from "@/components/Tracking/ProgressTimeline";
-import { VerificationChecklist } from "@/components/Tracking/VerificationChecklist";
-import { ActionRequiredPanel } from "@/components/Tracking/ActionRequiredPanel";
-import { MarketplaceStatusCard } from "@/components/Tracking/MarketplaceStatusCard";
-import { HomeTuitionStatusCard } from "@/components/Tracking/HomeTuitionStatusCard";
-import { DemoVideoCard } from "@/components/Tracking/DemoVideoCard";
-import { VerifiedBadgeCard } from "@/components/Tracking/VerifiedBadgeCard";
-import { StatusHistoryList } from "@/components/Tracking/StatusHistoryList";
-import { TrackingUrlBlock } from "@/components/Tracking/TrackingUrlBlock";
-import { useAuth } from "@/context/AuthContext";
+import { AlertTriangle } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect,useState } from "react";
 
 export default function TutorApplicationStatusPage() {
   const { user, loading } = useAuth();

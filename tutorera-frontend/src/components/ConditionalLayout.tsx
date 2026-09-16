@@ -1,11 +1,11 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import Navbar from "./Navbar";
 import Footer from "./Footer";
-import StickyPostRequestCTA from "./marketplace/StickyPostRequestCTA";
 import MobileBottomNav from "./marketplace/MobileBottomNav";
 import MobileTopBar from "./marketplace/MobileTopBar";
+import StickyPostRequestCTA from "./marketplace/StickyPostRequestCTA";
+import Navbar from "./Navbar";
 
 const HIDE_NAVBAR_AND_FOOTER = [
   "/onboarding",

@@ -1,11 +1,11 @@
 "use client";
-import { UI_COLORS } from "@/lib/brand";
-import { useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Eye, EyeOff } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
 import { useAuth } from "@/context/AuthContext";
+import { UI_COLORS } from "@/lib/brand";
+import { Eye,EyeOff } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 const C = UI_COLORS;
 

@@ -1,18 +1,22 @@
 "use client";
-import { UI_COLORS } from "@/lib/brand";
-import { useEffect, useState } from "react";
-import { useAuth } from "@/context/AuthContext";
-import DashboardLayout from "@/components/Dashboard/DashboardLayout";
-import api from "@/lib/axios";
-import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer,
-} from "recharts";
-import { Calculator } from "lucide-react";
-import { useAppGuard } from "@/hooks/useAppGuard";
-import PayoutReportDownload from "@/components/Finance/PayoutReportDownload";
 import CommissionCalculator from "@/components/Dashboard/CommissionCalculator";
+import DashboardLayout from "@/components/Dashboard/DashboardLayout";
+import PayoutReportDownload from "@/components/Finance/PayoutReportDownload";
 import PayoutTimeline from "@/components/Finance/PayoutTimeline";
+import { useAuth } from "@/context/AuthContext";
+import { useAppGuard } from "@/hooks/useAppGuard";
+import api from "@/lib/axios";
+import { UI_COLORS } from "@/lib/brand";
+import { Calculator } from "lucide-react";
+import { useEffect,useState } from "react";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,YAxis,
+} from "recharts";
 
 const C = UI_COLORS;
 

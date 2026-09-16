@@ -1,10 +1,10 @@
+import { getCountryByCode } from "@/lib/location";
+import { MARKETS,getMarketByRoute } from "@/lib/markets";
+import { SITE_URL } from "@/lib/site";
+import { CITIES,LOCAL_SUBJECT_SLUGS,PRIMARY_CITY_SLUGS,SUBJECTS,fetchTutors } from "@/lib/tutor-directory";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound, permanentRedirect } from "next/navigation";
-import { MARKETS, getMarketByRoute } from "@/lib/markets";
-import { getCountryByCode } from "@/lib/location";
-import { CITIES, LOCAL_SUBJECT_SLUGS, PRIMARY_CITY_SLUGS, SUBJECTS, fetchTutors } from "@/lib/tutor-directory";
-import { SITE_URL } from "@/lib/site";
+import { notFound,permanentRedirect } from "next/navigation";
 
 interface Props { params: Promise<{ countryCode: string }> }
 

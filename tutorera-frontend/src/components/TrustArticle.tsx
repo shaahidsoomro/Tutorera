@@ -1,5 +1,5 @@
+import { SITE_URL,SUPPORT_EMAIL } from "@/lib/site";
 import Link from "next/link";
-import { SITE_URL, SUPPORT_EMAIL } from "@/lib/site";
 
 export interface TrustSection { heading: string; body: string; items?: string[]; }
 interface Props { title: string; intro: string; path: string; sections: TrustSection[]; updated?: string; }

@@ -1,7 +1,7 @@
 "use client";
 
-import s from "./tracking.module.css";
 import { ComponentStatus } from "@/types/tracking";
+import s from "./tracking.module.css";
 
 export function DemoVideoCard({ status, publicProfileVisible, rejectionReason }: { status: ComponentStatus; publicProfileVisible: boolean; rejectionReason: string | null }) {
   let label = "Not submitted";

@@ -1,11 +1,10 @@
 "use client";
-import { useState, useCallback } from "react";
 import {
-  PLATFORM_FEE_PERCENT,
   GST_ON_PLATFORM_FEE_PERCENT,
-  TOTAL_FEE_PERCENT,
-  MARKETPLACE_FEES,
+  PLATFORM_FEE_PERCENT,
+  TOTAL_FEE_PERCENT
 } from "@/lib/site";
+import { useCallback,useState } from "react";
 
 const C = {
   primary: "#021550",
@@ -150,12 +149,6 @@ export default function CommissionCalculator() {
     setRate(num);
     setInputValue(String(num));
   }, []);
-
-  const quickRates: Array<{ label: string; value: number }> = [
-    { label: "1 session", value: rate },
-    { label: "4 sessions/week", value: rate * 4 },
-    { label: "20 sessions/month", value: rate * 20 },
-  ];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>

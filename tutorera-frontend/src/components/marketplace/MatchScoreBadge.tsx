@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { Sparkles, CheckCircle2, ChevronDown, Info, ShieldCheck, Award, Zap } from "lucide-react";
+import { Award,CheckCircle2,ChevronDown,Info,ShieldCheck,Sparkles,Zap } from "lucide-react";
+import { useState } from "react";
 
 export interface MatchScoreBadgeProps {
   score?: number;

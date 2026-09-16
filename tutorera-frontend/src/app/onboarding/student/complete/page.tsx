@@ -1,6 +1,6 @@
 import { UI_COLORS } from "@/lib/brand";
-import Link from "next/link";
 import { CheckCircle } from "lucide-react";
+import Link from "next/link";
 
 const C = UI_COLORS;
 

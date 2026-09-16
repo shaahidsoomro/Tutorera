@@ -1,7 +1,7 @@
 "use client";
 
-import s from "./tracking.module.css";
 import { StatusHistoryEntry } from "@/types/tracking";
+import s from "./tracking.module.css";
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" });

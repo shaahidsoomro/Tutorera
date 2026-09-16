@@ -1,10 +1,10 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState } from "react";
-import { MailCheck, ShieldCheck, X } from "lucide-react";
 import api from "@/lib/axios";
 import { UI_COLORS } from "@/lib/brand";
 import { showSuccess } from "@/lib/toast";
+import { MailCheck,ShieldCheck,X } from "lucide-react";
+import { FormEvent,useEffect,useRef,useState } from "react";
 
 type Props = { onClose: () => void; onLinked: () => void };
 

@@ -1,17 +1,17 @@
 "use client";
 
-import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import api from "@/lib/axios";
-import type { FiltersState, PaginationMeta, TutorProfile } from "@/types/tutor";
-import { CITIES, INITIAL_FILTERS, SORT_OPTIONS } from "@/types/tutor";
-import TutorCard from "./TutorCard";
-import SkeletonCard from "./SkeletonCard";
-import EmptyState from "./EmptyState";
-import Pagination from "./Pagination";
-import { FilterSidebar, MobileFilterSidebar } from "./FilterSidebar";
 import styles from "@/app/tutors/page.module.css";
+import api from "@/lib/axios";
+import type { FiltersState,PaginationMeta,TutorProfile } from "@/types/tutor";
+import { CITIES,INITIAL_FILTERS,SORT_OPTIONS } from "@/types/tutor";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { useCallback,useEffect,useRef,useState } from "react";
+import EmptyState from "./EmptyState";
+import { FilterSidebar,MobileFilterSidebar } from "./FilterSidebar";
+import Pagination from "./Pagination";
+import SkeletonCard from "./SkeletonCard";
+import TutorCard from "./TutorCard";
 
 interface Props {
   initialTutors: TutorProfile[];

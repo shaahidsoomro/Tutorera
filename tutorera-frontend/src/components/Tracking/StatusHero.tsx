@@ -1,7 +1,7 @@
 "use client";
 
-import s from "./tracking.module.css";
 import { CanonicalStatus } from "@/types/tracking";
+import s from "./tracking.module.css";
 
 export function StatusHero({
   applicationId,

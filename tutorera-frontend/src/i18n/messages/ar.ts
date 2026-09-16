@@ -2,7 +2,6 @@
 // Direction: RTL
 // We use `Record<string, unknown>` casting so Arabic strings don't collide with English literal types.
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const ar: Record<string, any> = {
   navigation: {
     postRequirement: "نشر متطلب",

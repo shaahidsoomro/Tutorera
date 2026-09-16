@@ -1,5 +1,5 @@
-import type { Metadata } from "next";
 import { fetchTutors } from "@/lib/tutor-directory";
+import type { Metadata } from "next";
 
 const path = "/research/pakistan-tutoring-rates";
 export async function generateMetadata(): Promise<Metadata> {

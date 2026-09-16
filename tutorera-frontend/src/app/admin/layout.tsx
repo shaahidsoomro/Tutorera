@@ -1,18 +1,41 @@
 "use client";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import {
-  LayoutDashboard, Users, ShieldCheck, LogOut, BookOpen,
-  CreditCard, MessageSquare, Menu, FileText, Shield, Gift,
-  Star, Banknote, BarChart2, ClipboardList,
-  Radio, Mail, Sparkles, AlertTriangle, TrendingDown, ActivitySquare,
-  CheckCircle, Calculator, Sliders, ShieldAlert, Globe,
-  KeyRound, Activity, MapPin, X,
-} from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
 import AdminGuard from "@/components/AdminGuard";
 import BrandLogo from "@/components/BrandLogo";
-import { useEffect, useRef, useState } from "react";
+import { useAuth } from "@/context/AuthContext";
+import {
+  Activity,
+  ActivitySquare,
+  AlertTriangle,
+  Banknote,BarChart2,
+  BookOpen,
+  Calculator,
+  CheckCircle,
+  ClipboardList,
+  CreditCard,
+  FileText,
+  Gift,
+  Globe,
+  KeyRound,
+  LayoutDashboard,
+  LogOut,
+  Mail,
+  MapPin,
+  Menu,
+  MessageSquare,
+  Radio,
+  Shield,
+  ShieldAlert,
+  ShieldCheck,
+  Sliders,
+  Sparkles,
+  Star,
+  TrendingDown,
+  Users,
+  X,
+} from "lucide-react";
+import Link from "next/link";
+import { usePathname,useRouter } from "next/navigation";
+import { useEffect,useRef,useState } from "react";
 import MuiAdminProvider from "./MuiAdminProvider";
 
 const ROLE_PERMISSIONS: Record<string, string[]> = {

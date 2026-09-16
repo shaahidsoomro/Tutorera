@@ -1,10 +1,10 @@
 "use client";
 import { UI_COLORS } from "@/lib/brand";
 
-import { useState } from "react";
-import { Mail, Phone, MapPin, Send, CheckCircle } from "lucide-react";
 import api from "@/lib/axios";
-import { BUSINESS_ADDRESS, LEGAL_OPERATOR, SUPPORT_EMAIL, SUPPORT_PHONE } from "@/lib/site";
+import { BUSINESS_ADDRESS,LEGAL_OPERATOR,SUPPORT_EMAIL,SUPPORT_PHONE } from "@/lib/site";
+import { CheckCircle,Mail,MapPin,Phone,Send } from "lucide-react";
+import { useState } from "react";
 
 const C = UI_COLORS;
 const subjects = ["Student Support", "Tutor Support", "Booking Issue", "Payment Issue", "Refund Request", "Dispute", "Technical Support", "General Enquiry"];

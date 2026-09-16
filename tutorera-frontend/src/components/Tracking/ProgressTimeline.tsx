@@ -1,7 +1,7 @@
 "use client";
 
-import s from "./tracking.module.css";
 import { TimelineCheckpoint } from "@/types/tracking";
+import s from "./tracking.module.css";
 
 export function ProgressTimeline({ items }: { items: TimelineCheckpoint[] }) {
   if (!items.length) {

@@ -1,25 +1,13 @@
-import Link from "next/link";
-import { 
-  Home, 
-  MapPin, 
-  ShieldCheck, 
-  UserCheck, 
-  AlertTriangle, 
-  Car, 
-  Clock, 
-  PhoneCall, 
-  HeartHandshake 
-} from "lucide-react";
-import s from "../../compliance-pages.module.css";
-import { 
-  LEGAL_ENTITY_NAME, 
-  TRADING_NAME, 
-  SUPPORT_EMAIL, 
-  LEGAL_CONTACT_EMAIL, 
-  TERMS_VERSION, 
-  LAST_LEGAL_UPDATE 
+import {
+  LEGAL_CONTACT_EMAIL,
+  TRADING_NAME
 } from "@/lib/site";
+import {
+  ShieldCheck
+} from "lucide-react";
 import { Metadata } from "next";
+import Link from "next/link";
+import s from "../../compliance-pages.module.css";
 
 export const metadata: Metadata = {
   title: "Home & In-Person Tuition Terms | TUTORERA",

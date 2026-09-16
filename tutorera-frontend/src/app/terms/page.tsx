@@ -1,25 +1,20 @@
-import Link from "next/link";
-import { 
-  Scale, 
-  ShieldCheck, 
-  AlertCircle, 
-  HelpCircle, 
-  CheckCircle2, 
-  FileText,
-  Globe2,
-  Lock
-} from "lucide-react";
-import s from "../compliance-pages.module.css";
-import { 
-  LEGAL_ENTITY_NAME, 
-  TRADING_NAME, 
-  BUSINESS_ADDRESS, 
-  SUPPORT_EMAIL, 
-  LEGAL_CONTACT_EMAIL, 
-  TERMS_VERSION, 
-  LAST_LEGAL_UPDATE 
+import {
+  BUSINESS_ADDRESS,
+  LAST_LEGAL_UPDATE,
+  LEGAL_CONTACT_EMAIL,
+  LEGAL_ENTITY_NAME,
+  SUPPORT_EMAIL,
+  TERMS_VERSION,
+  TRADING_NAME
 } from "@/lib/site";
+import {
+  CheckCircle2,
+  FileText,
+  Globe2
+} from "lucide-react";
 import { Metadata } from "next";
+import Link from "next/link";
+import s from "../compliance-pages.module.css";
 
 export const metadata: Metadata = {
   title: "Global Terms of Service | TUTORERA",

@@ -1,24 +1,21 @@
-import type { Metadata } from "next";
-import Link from "next/link";
-import { notFound } from "next/navigation";
 import {
-  Globe2,
-  ShieldCheck,
-  Scale,
-  CreditCard,
-  FileCheck,
-  Building,
-  CheckCircle2,
-  ArrowRight,
-  AlertCircle
-} from "lucide-react";
-import s from "../../../compliance-pages.module.css";
-import {
-  LEGAL_OPERATOR,
   LEGAL_CONTACT_EMAIL,
+  LEGAL_OPERATOR,
   PRIVACY_CONTACT_EMAIL,
   TERMS_VERSION
 } from "@/lib/site";
+import {
+  ArrowRight,
+  Building,
+  FileCheck,
+  Globe2,
+  Scale,
+  ShieldCheck
+} from "lucide-react";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import s from "../../../compliance-pages.module.css";
 
 interface CountryScheduleData {
   code: string;

@@ -1,12 +1,12 @@
 "use client";
 import { UI_COLORS } from "@/lib/brand";
 // app/support/page.tsx
-import { useState, useEffect, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
 import DashboardLayout from "@/components/Dashboard/DashboardLayout";
+import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/axios";
-import { CheckCircle, MessageCircle, AlertTriangle } from "lucide-react";
+import { AlertTriangle,CheckCircle,MessageCircle } from "lucide-react";
+import { useRouter,useSearchParams } from "next/navigation";
+import { Suspense,useEffect,useState } from "react";
 
 const C = UI_COLORS;
 

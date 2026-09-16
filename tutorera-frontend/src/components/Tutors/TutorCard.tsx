@@ -1,13 +1,13 @@
 "use client";
 
-import Link from "next/link";
-import { Heart, Video } from "lucide-react";
-import type { TutorProfile } from "@/types/tutor";
-import StarRating from "./StarRating";
 import AvatarImage from "@/components/Common/AvatarImage";
+import MatchScoreBadge from "@/components/marketplace/MatchScoreBadge";
 import { useFavourites } from "@/hooks/useFavourites";
 import { tutorProfileHref } from "@/lib/tutor-directory";
-import MatchScoreBadge from "@/components/marketplace/MatchScoreBadge";
+import type { TutorProfile } from "@/types/tutor";
+import { Heart,Video } from "lucide-react";
+import Link from "next/link";
+import StarRating from "./StarRating";
 import styles from "./Tutorcard.module.css";
 
 interface TutorCardProps {

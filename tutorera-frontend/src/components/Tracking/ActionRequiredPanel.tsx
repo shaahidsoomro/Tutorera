@@ -1,8 +1,8 @@
 "use client";
 
+import { ActionRequired } from "@/types/tracking";
 import Link from "next/link";
 import s from "./tracking.module.css";
-import { ActionRequired } from "@/types/tracking";
 
 export function ActionRequiredPanel({ action, danger = false }: { action: ActionRequired; danger?: boolean }) {
   return (

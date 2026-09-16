@@ -1,7 +1,7 @@
 "use client";
 
-import s from "./tracking.module.css";
 import { EligibilityInfo } from "@/types/tracking";
+import s from "./tracking.module.css";
 
 export function MarketplaceStatusCard({ eligibility, title = "MARKETPLACE STATUS" }: { eligibility: EligibilityInfo; title?: string }) {
   const variant = eligibility.eligible ? "eligible" : "blocked";

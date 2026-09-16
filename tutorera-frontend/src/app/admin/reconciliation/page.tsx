@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { Calculator, ArrowLeft, RefreshCw, CheckCircle, AlertTriangle, Download, DollarSign } from "lucide-react";
 import api from "@/lib/axios";
+import { ArrowLeft,RefreshCw } from "lucide-react";
+import Link from "next/link";
+import { useCallback,useEffect,useState } from "react";
 
 interface ReconciliationSummary {
   totalGMV: number;
@@ -54,7 +54,7 @@ export default function ReconciliationPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.get(`/admin/finance/reconciliation${filter !== "all" ? `?status=${filter}` : ""}`);
@@ -66,11 +66,11 @@ export default function ReconciliationPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
 
   useEffect(() => {
     fetchData();
-  }, [filter]);
+  }, [fetchData]);
 
   return (
     <div style={{ padding: "1.75rem 2rem" }}>

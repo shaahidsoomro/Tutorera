@@ -1,6 +1,6 @@
 "use client";
-import { useEffect, useState } from "react";
-import { ShieldCheck, Users, BookOpen, Award } from "lucide-react";
+import { Award,BookOpen,ShieldCheck,Users } from "lucide-react";
+import { useEffect,useState } from "react";
 
 interface Stats {
   totalTutors: number;

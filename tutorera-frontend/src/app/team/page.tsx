@@ -1,9 +1,9 @@
 import { UI_COLORS } from "@/lib/brand";
+import { BRAND_NAME,LEGAL_OPERATOR,SUPPORT_EMAIL } from "@/lib/site";
+import { BookOpen,GraduationCap,Mail,ShieldCheck,Sparkles } from "lucide-react";
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import type { Metadata } from "next";
-import { BookOpen, GraduationCap, Mail, ShieldCheck, Sparkles } from "lucide-react";
-import { BRAND_NAME, LEGAL_OPERATOR, SUPPORT_EMAIL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Team | TUTORERA by MENTISERA",
