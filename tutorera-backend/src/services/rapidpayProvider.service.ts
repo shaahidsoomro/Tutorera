@@ -99,14 +99,6 @@ export const rapidpayProvider = {
       throw error;
     }
 
-    // Include our immutable marketplace reference in the per-transaction
-    // webhook URL as a fallback correlation key. Rapid Gateway normally sends
-    // merchantTransactionId in the webhook payload; the query parameter only
-    // fills the field if the provider omits it. The HMAC is still verified over
-    // the untouched raw request body before any payment state is changed.
-    const webhookTarget = new URL(webhookUrl);
-    webhookTarget.searchParams.set("reference", params.reference);
-
     try {
       const response = await axios.post(
         `${apiBaseUrl}/v1/payments`,
@@ -119,7 +111,7 @@ export const rapidpayProvider = {
             ...(phone ? { phone } : {}),
           },
           return_url: returnUrl,
-          webhook_url: webhookTarget.toString(),
+          webhook_url: webhookUrl,
         },
         {
           headers: {
