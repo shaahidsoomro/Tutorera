@@ -7,7 +7,7 @@ import { SocketProvider } from "@/context/SocketContext";
 import ConditionalLayout from "@/components/ConditionalLayout";
 import LazyWidgets from "@/components/LazyWidgets";
 import { Toaster } from "react-hot-toast";
-import { BUSINESS_ADDRESS, LEGAL_OPERATOR, PLATFORM_NAME, SITE_URL, SUPPORT_EMAIL, SUPPORT_PHONE } from "@/lib/site";
+import { LEGAL_OPERATOR, PLATFORM_NAME, SITE_URL, SUPPORT_EMAIL, SUPPORT_PHONE } from "@/lib/site";
 import SkipLink from "@/components/SkipLink";
 import LocaleBridge from "@/components/LocaleBridge";
 
@@ -18,10 +18,10 @@ export const metadata: Metadata = {
     default: "TUTORERA | Global Online & In-Person Tutoring Marketplace",
     template: "%s | TUTORERA",
   },
-  description: "Connect with verified tutors worldwide and locally. Post your tuition requirement with your preferred budget and currency, receive competitive tutor offers, and book with verified confidence.",
+  description: "Post a tutoring requirement with your preferred budget and currency, receive offers from eligible tutors, compare profile information, and choose online or locally available in-person tuition.",
   keywords: [
     "online tutors worldwide",
-    "find verified tutors",
+    "find tutors",
     "student demand tutoring marketplace",
     "home tuition",
     "O Level tutor",
@@ -59,10 +59,10 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://tutorera.ac.pk",
+    url: SITE_URL,
     siteName: "TUTORERA",
     title: "TUTORERA | Global Online & In-Person Tutoring Marketplace",
-    description: "Post your tuition requirement with your preferred budget and currency. Receive offers from qualified tutors locally or worldwide.",
+    description: "Post your tuition requirement with your preferred budget and currency. Receive offers from eligible tutors locally or worldwide and compare before choosing.",
     images: [
       {
         url: "/tutorera-logo-transparent.png",
@@ -75,7 +75,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "TUTORERA | Global Online & In-Person Tutoring Marketplace",
-    description: "Post your requirement, receive tutor offers, compare rates in your currency, and choose your verified tutor.",
+    description: "Post your requirement, receive tutor offers, compare rates in the relevant currency, and choose the tutor that fits your needs.",
     images: ["/tutorera-logo-transparent.png"],
   },
   robots: {
@@ -96,11 +96,7 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const structuredData = {
     "@context": "https://schema.org",
     "@graph": [
@@ -111,7 +107,7 @@ export default function RootLayout({
         legalName: LEGAL_OPERATOR,
         url: SITE_URL,
         logo: `${SITE_URL}/tutorera-logo-transparent.png`,
-        description: "Global student-led demand marketplace for online and in-person tutoring. Students post requirements with preferred budgets; verified tutors compete with offers.",
+        description: "Global student-led demand marketplace for online and in-person tutoring. Students post requirements with preferred budgets and eligible tutors can respond with offers.",
         address: {
           "@type": "PostalAddress",
           streetAddress: "House 387, Street 11, Phase 5-b, Ghauri Town",
@@ -135,19 +131,15 @@ export default function RootLayout({
           { "@type": "Country", name: "United Arab Emirates" },
           { "@type": "Country", name: "United Kingdom" },
         ],
-        sameAs: [
-          "https://mentisera.com",
-        ],
+        sameAs: ["https://mentisera.com"],
       },
       {
         "@type": "WebSite",
         "@id": `${SITE_URL}/#website`,
         url: SITE_URL,
         name: PLATFORM_NAME,
-        description: "Global student-led tutoring marketplace connecting learners and verified educators worldwide and locally.",
-        publisher: {
-          "@id": `${SITE_URL}/#organization`,
-        },
+        description: "Global student-led tutoring marketplace connecting learners with tutor profiles and offers across supported markets.",
+        publisher: { "@id": `${SITE_URL}/#organization` },
         potentialAction: {
           "@type": "SearchAction",
           target: `${SITE_URL}/tutors?search={search_term_string}`,
@@ -158,14 +150,9 @@ export default function RootLayout({
         "@type": "Service",
         "@id": `${SITE_URL}/#service`,
         serviceType: "Online & In-Person Tutoring Marketplace",
-        provider: {
-          "@id": `${SITE_URL}/#organization`,
-        },
-        description: "Student-led tutoring marketplace where students post requirements in their local currency and verified tutors respond with customized offers.",
-        areaServed: {
-          "@type": "Place",
-          name: "Worldwide",
-        },
+        provider: { "@id": `${SITE_URL}/#organization` },
+        description: "Student-led tutoring marketplace where students post requirements in the relevant market currency and eligible tutors can respond with customized offers.",
+        areaServed: { "@type": "Place", name: "Worldwide" },
       },
     ],
   };
@@ -173,11 +160,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
-        />
-        {/* Google Tag Manager */}
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
         <Script id="google-tag-manager" strategy="afterInteractive">
           {`
             (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
@@ -187,11 +170,7 @@ export default function RootLayout({
             })(window,document,'script','dataLayer','GTM-TDJ8C953');
           `}
         </Script>
-        {/* Google tag (gtag.js) */}
-        <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-7NF2DR8MG6"
-          strategy="afterInteractive"
-        />
+        <Script src="https://www.googletagmanager.com/gtag/js?id=G-7NF2DR8MG6" strategy="afterInteractive" />
         <Script id="google-analytics" strategy="afterInteractive">
           {`
             window.dataLayer = window.dataLayer || [];
@@ -203,21 +182,13 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <SkipLink />
-        {/* Google Tag Manager (noscript) */}
         <noscript>
-          <iframe
-            src="https://www.googletagmanager.com/ns.html?id=GTM-TDJ8C953"
-            height="0"
-            width="0"
-            style={{ display: "none", visibility: "hidden" }}
-          />
+          <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-TDJ8C953" height="0" width="0" style={{ display: "none", visibility: "hidden" }} />
         </noscript>
         <AuthProvider>
           <LocaleBridge>
             <SocketProvider>
-              <ConditionalLayout>
-                {children}
-              </ConditionalLayout>
+              <ConditionalLayout>{children}</ConditionalLayout>
               <LazyWidgets />
             </SocketProvider>
           </LocaleBridge>
@@ -227,17 +198,13 @@ export default function RootLayout({
           toastOptions={{
             duration: 4000,
             style: {
-              background: '#021550',
-              color: 'white',
-              fontSize: '0.875rem',
-              borderRadius: '0.5rem',
+              background: "#021550",
+              color: "white",
+              fontSize: "0.875rem",
+              borderRadius: "0.5rem",
             },
-            success: {
-              iconTheme: { primary: '#16a34a', secondary: 'white' },
-            },
-            error: {
-              iconTheme: { primary: '#ef4444', secondary: 'white' },
-            },
+            success: { iconTheme: { primary: "#16a34a", secondary: "white" } },
+            error: { iconTheme: { primary: "#ef4444", secondary: "white" } },
           }}
         />
       </body>
