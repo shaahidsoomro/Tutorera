@@ -5,14 +5,14 @@ import type { FiltersState } from "@/types/tutor";
 import { SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "Find Verified Online Tutors Worldwide | 1-on-1 Live Lessons",
+  title: "Find Online Tutors Worldwide | 1-on-1 Live Lessons",
   description:
-    "Connect with qualified, verified online tutors worldwide. Post your requirement, compare tutor rates in your currency, schedule flexible 1-on-1 sessions, and pay through authorized platform checkout.",
+    "Browse online tutor profiles worldwide. Post your requirement, compare published tutor information and rates in the relevant currency, and arrange flexible 1-on-1 sessions.",
   alternates: { canonical: "/online-tutors" },
   openGraph: {
-    title: "Find Verified Online Tutors Worldwide | TUTORERA",
+    title: "Find Online Tutors Worldwide | TUTORERA",
     description:
-      "Connect with qualified online tutors worldwide across Cambridge, IB, GCSE, and board curricula with transparent pricing.",
+      "Browse online tutor profiles across Cambridge, IB, GCSE, local-board and other curricula with transparent marketplace offers.",
     url: `${SITE_URL}/online-tutors`,
   },
 };
@@ -20,19 +20,19 @@ export const metadata: Metadata = {
 const onlineFaqs = [
   {
     q: "How does online tutoring work on TUTORERA?",
-    a: "Students post their subject, curriculum, timezone, and preferred budget. Verified online tutors submit customized offers. Once you accept an offer, 1-on-1 interactive lessons take place via live interactive video and collaborative whiteboards.",
+    a: "Students post their subject, curriculum, timezone, and preferred budget. Eligible matching tutors can submit customized offers. After accepting an offer, students and tutors arrange the agreed online lesson format through the supported booking flow.",
   },
   {
     q: "What curricula do online tutors cover?",
-    a: "TUTORERA educators support Cambridge O/A Levels, British GCSE/IGCSE, International Baccalaureate (IB DP/MYP), American AP, Matric, FSc, and standardized tests such as IELTS, SAT, and MDCAT.",
+    a: "Tutor profiles may list Cambridge O/A Levels, British GCSE/IGCSE, International Baccalaureate, American curricula, Matric, FSc, university subjects, languages, and standardized-test preparation. Availability depends on current tutor supply.",
   },
   {
     q: "In what currencies can I pay for online tutoring?",
-    a: "You can view and agree on rates in the request currency. Checkout availability is determined by the selected market: Pakistan currently supports checkout, while UAE and UK discovery beta supports discovery, offers, and negotiation only.",
+    a: "Requests and offers use the selected market currency. Checkout availability is market-specific: a market may support discovery and negotiation before checkout is enabled.",
   },
   {
     q: "What timezone scheduling is supported?",
-    a: "Tutors set flexible availability across Middle East (GST), UK (GMT/BST), Pakistan (PKT), North America (EST/PST), and global timezones.",
+    a: "Tutor profiles can list availability and timezone information. Students should confirm the agreed lesson time and timezone before booking.",
   },
 ];
 
@@ -72,25 +72,8 @@ export default async function OnlineTutorsPage({ searchParams }: Props) {
     12
   );
 
-  const faqSchema = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: onlineFaqs.map((item) => ({
-      "@type": "Question",
-      name: item.q,
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: item.a,
-      },
-    })),
-  };
-
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
-      />
       <TutorsExplorer
         initialTutors={result.tutors}
         initialPagination={{
@@ -100,11 +83,11 @@ export default async function OnlineTutorsPage({ searchParams }: Props) {
           limit: 12,
         }}
         initialFilters={initialFilters}
-        title="Find Verified Online Tutors Worldwide"
+        title="Find Online Tutors Worldwide"
         subtitle={
           result.total
-            ? `${result.total} verified online tutors ready for 1-on-1 virtual lessons`
-            : "Browse verified online educators across international curricula and subjects"
+            ? `${result.total} online tutor profiles available for 1-on-1 virtual lessons`
+            : "Browse online tutor profiles across international and local curricula"
         }
       />
       <section style={{ maxWidth: 1120, margin: "2rem auto 4rem", padding: "0 1.5rem" }}>
@@ -122,12 +105,8 @@ export default async function OnlineTutorsPage({ searchParams }: Props) {
                 padding: "1rem 1.25rem",
               }}
             >
-              <summary style={{ fontWeight: 700, color: "#021550", cursor: "pointer" }}>
-                {item.q}
-              </summary>
-              <p style={{ marginTop: "0.5rem", color: "#64748b", lineHeight: 1.6, fontSize: "0.95rem" }}>
-                {item.a}
-              </p>
+              <summary style={{ fontWeight: 700, color: "#021550", cursor: "pointer" }}>{item.q}</summary>
+              <p style={{ marginTop: "0.5rem", color: "#64748b", lineHeight: 1.6, fontSize: "0.95rem" }}>{item.a}</p>
             </details>
           ))}
         </div>
