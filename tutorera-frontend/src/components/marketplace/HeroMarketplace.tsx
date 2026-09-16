@@ -24,7 +24,6 @@ export default function HeroMarketplace() {
             marginBottom: "2.5rem",
           }}
         >
-          {/* Hero Copy */}
           <div>
             <div
               style={{
@@ -205,7 +204,6 @@ export default function HeroMarketplace() {
             </div>
           </div>
 
-          {/* Quick Request Visual / Guarantee Card */}
           <div>
             <div
               style={{
@@ -225,16 +223,16 @@ export default function HeroMarketplace() {
                 You Decide the Budget. Tutors Compete for You.
               </h3>
               <p style={{ fontSize: "0.85rem", color: "#475569", lineHeight: "1.5", margin: "0 0 1rem 0" }}>
-                Unlike traditional agencies, on TUTORERA students and parents propose their preferred rate. Verified tutors accept or counter transparently.
+                Unlike traditional agencies, on TUTORERA students and parents propose their preferred rate. Eligible matching tutors can accept or counter transparently.
               </p>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", fontSize: "0.78rem" }}>
                 <div style={{ background: "#f8fafc", padding: "0.6rem", borderRadius: "0.5rem", border: "1px solid #e2e8f0" }}>
                   <strong style={{ display: "block", color: "#021550" }}>Home Tuition</strong>
-                  <span style={{ color: "#64748b" }}>Local verified tutors</span>
+                  <span style={{ color: "#64748b" }}>Eligible local tutors where enabled</span>
                 </div>
                 <div style={{ background: "#f8fafc", padding: "0.6rem", borderRadius: "0.5rem", border: "1px solid #e2e8f0" }}>
                   <strong style={{ display: "block", color: "#021550" }}>Online Tuition</strong>
-                  <span style={{ color: "#64748b" }}>Worldwide 1-on-1 tutors</span>
+                  <span style={{ color: "#64748b" }}>Worldwide 1-on-1 tutor discovery</span>
                 </div>
               </div>
 
@@ -250,12 +248,9 @@ export default function HeroMarketplace() {
                 }}
               >
                 <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", color: "#166534", fontWeight: 700 }}>
-                  <ShieldCheck size={15} color="#16a34a" /> 100% Risk-Free First Session
+                  <ShieldCheck size={15} color="#16a34a" /> First-session protection where eligible
                 </span>
-                <Link
-                  href="/first-session-guarantee"
-                  style={{ color: "#0329b2", fontWeight: 700, textDecoration: "none" }}
-                >
+                <Link href="/first-session-guarantee" style={{ color: "#0329b2", fontWeight: 700, textDecoration: "none" }}>
                   Policy details →
                 </Link>
               </div>
@@ -263,12 +258,10 @@ export default function HeroMarketplace() {
           </div>
         </div>
 
-        {/* Ask Tutorera Natural Language Input */}
         <div style={{ marginBottom: "1.5rem" }}>
           <AskTutoreraInput />
         </div>
 
-        {/* 2. Embedded Quick Request Composer (Form-based alternative) */}
         <QuickRequestComposer />
       </div>
     </section>
