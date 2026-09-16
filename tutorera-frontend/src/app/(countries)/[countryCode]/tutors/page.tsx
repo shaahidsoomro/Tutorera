@@ -34,23 +34,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!country) return { title: "Tutors Directory", robots: { index: false, follow: true } };
 
   const title = `Find Tutors in ${market.countryName} | Online & Home Tuition`;
-  const description = `Post your tutoring requirement in ${market.countryName}, compare tutor offers, and browse approved tutors. Prices and budgets use ${market.currency}; online tuition is available worldwide${market.homeTuitionEnabled ? " and local home tuition is available where eligible" : ""}.`;
+  const description = `Post your tutoring requirement in ${market.countryName}, compare tutor offers, and browse tutor profiles. Prices and budgets use ${market.currency}; online tuition is available worldwide${market.homeTuitionEnabled ? " and local home tuition is available where eligible" : ""}.`;
   const canonical = `/${market.route}/tutors`;
+  const canonicalUrl = `${SITE_URL}${canonical}`;
+  const isLive = market.status === "LIVE";
 
   return {
     title,
     description,
-    alternates: {
-      canonical,
-      languages: {
-        [market.locale]: `${SITE_URL}${canonical}`,
-        "x-default": `${SITE_URL}/tutors`,
-      },
-    },
+    robots: { index: isLive, follow: true },
+    alternates: isLive
+      ? { canonical, languages: { [market.locale]: canonicalUrl, "x-default": `${SITE_URL}/tutors` } }
+      : { canonical },
     openGraph: {
       title,
       description,
-      url: `${SITE_URL}${canonical}`,
+      url: canonicalUrl,
       locale: market.locale.replace("-", "_"),
     },
   };
@@ -101,7 +100,7 @@ export default async function CountryTutorsPage({ params, searchParams }: Props)
     "@context": "https://schema.org",
     "@type": "CollectionPage",
     name: `Tutors in ${market.countryName}`,
-    description: `Browse approved tutors serving the ${market.countryName} market. Student budgets and offers use ${market.currency}.`,
+    description: `Browse tutor profiles serving the ${market.countryName} market. Student budgets and offers use ${market.currency}.`,
     url: canonicalUrl,
     inLanguage: market.locale,
     about: {
@@ -138,6 +137,7 @@ export default async function CountryTutorsPage({ params, searchParams }: Props)
           )}
         </div>
       </section>
+
       <TutorsExplorer
         initialTutors={result.tutors}
         initialPagination={{ total: result.total, page: result.page, pages: result.pages, limit: 12 }}
@@ -145,15 +145,14 @@ export default async function CountryTutorsPage({ params, searchParams }: Props)
         title={`Find Tutors in ${market.countryName}`}
         subtitle={
           result.total
-            ? `${result.total} approved educators available for the ${market.countryName} market · budgets and offers in ${market.currency}`
-            : `Browse educators for ${country.curricula.slice(0, 3).join(", ")} and other subjects · budgets and offers in ${market.currency}`
+            ? `${result.total} tutor profiles available for the ${market.countryName} market · budgets and offers in ${market.currency}`
+            : `Browse tutor profiles for ${country.curricula.slice(0, 3).join(", ")} and other subjects · budgets and offers in ${market.currency}`
         }
       />
+
       {market.homeTuitionEnabled && country.cities && country.cities.length > 0 && (
         <section style={{ maxWidth: 1120, margin: "2rem auto 4rem", padding: "0 1.5rem" }}>
-          <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "#021550", marginBottom: "1rem" }}>
-            Explore Home Tuition Cities in {market.countryName}
-          </h2>
+          <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "#021550", marginBottom: "1rem" }}>Explore Home Tuition Cities in {market.countryName}</h2>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.6rem" }}>
             {country.cities.map((city) => {
               const citySlug = city.name.toLowerCase().replace(/\s+/g, "-");
@@ -171,6 +170,7 @@ export default async function CountryTutorsPage({ params, searchParams }: Props)
           </div>
         </section>
       )}
+
       <section style={{ maxWidth: 1120, margin: "0 auto 4rem", padding: "0 1.5rem", fontSize: "0.9rem" }}>
         <Link href={market.legalSchedule}>View the {market.countryName} legal schedule</Link>
       </section>
