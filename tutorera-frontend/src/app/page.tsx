@@ -11,7 +11,7 @@ import s from "./page.module.css";
 export const metadata: Metadata = {
   title: "A Global Student-Led Tutoring Marketplace",
   description:
-    "Post your tutoring requirement with your preferred budget and currency. Receive offers from qualified tutors locally or worldwide. Choose online or home tuition, negotiate transparently, and book with verified confidence.",
+    "Post your tutoring requirement with your preferred budget and currency. Receive offers from eligible tutors locally or worldwide, compare profile information, and choose online or home tuition where available.",
   alternates: { canonical: "/" },
 };
 
@@ -27,28 +27,48 @@ const popularSubjects = [
 ];
 
 const popularCities = [
-  { name: "Pakistan", areas: "Online nationwide and local home tuition where available", href: "/pk/home-tutors/lahore" },
-  { name: "United Arab Emirates", areas: "Discovery beta for local and online tutor matching", href: "/ae/tutors" },
-  { name: "United Kingdom", areas: "Discovery beta for local and online tutor matching", href: "/gb/tutors" },
-  { name: "Online Worldwide", areas: "Learn across borders in a timezone and language that work for you", href: "/online-tutors" },
+  {
+    name: "Pakistan",
+    areas: "Live market: online nationwide and local home tuition where available",
+    href: "/pk",
+    postHref: "/post-tuition-request",
+  },
+  {
+    name: "United Arab Emirates",
+    areas: "Discovery beta: online tutor discovery is enabled; local home tuition and checkout are not yet live",
+    href: "/ae/tutors",
+    postHref: "/post-tuition-request",
+  },
+  {
+    name: "United Kingdom",
+    areas: "Discovery beta: online tutor discovery is enabled; local home tuition and checkout are not yet live",
+    href: "/uk/tutors",
+    postHref: "/post-tuition-request",
+  },
+  {
+    name: "Online Worldwide",
+    areas: "Learn across borders in a timezone and language that work for you",
+    href: "/online-tutors",
+    postHref: "/post-online-tuition-request",
+  },
 ];
 
 const blogPosts = [
   {
     title: "How to Find a Trusted Home Tutor in Pakistan",
     desc: "A practical guide for parents who want verification, safety, and better tutor-fit decisions.",
-    slug: "how-to-find-a-trusted-tutor-in-pakistan"
+    slug: "how-to-find-a-trusted-tutor-in-pakistan",
   },
   {
     title: "Online Tutoring vs. Home Tuition in Pakistan",
     desc: "Compare mode, cost, flexibility, and accountability before choosing your learning setup.",
-    slug: "online-vs-home-tuition-in-pakistan"
+    slug: "online-vs-home-tuition-in-pakistan",
   },
   {
     title: "Understanding Tutor Rates & Negotiation in Pakistan",
-    desc: "How student-proposed budgets and transparent counter-offers ensure fair market pricing.",
-    slug: "what-to-look-for-before-hiring-a-tutor-pakistan"
-  }
+    desc: "How student-proposed budgets and transparent counter-offers support fair market pricing.",
+    slug: "what-to-look-for-before-hiring-a-tutor-pakistan",
+  },
 ];
 
 export default function Home() {
@@ -70,10 +90,10 @@ export default function Home() {
             <Link href="/subjects" style={{ color: "#0329b2", fontWeight: 700, textDecoration: "none", fontSize: "0.9rem" }}>View all subjects →</Link>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: "1rem" }}>
-            {popularSubjects.map((sub) => (
-              <Link key={sub.name} href={sub.href} style={{ background: "white", borderRadius: "0.875rem", padding: "1.25rem", border: "1px solid #e2e8f0", textDecoration: "none", transition: "border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease-out", display: "block" }}>
-                <strong style={{ display: "block", color: "#021550", fontSize: "1rem", marginBottom: "0.25rem" }}>{sub.name}</strong>
-                <span style={{ fontSize: "0.75rem", color: "#64748b" }}>{sub.levels}</span>
+            {popularSubjects.map((subject) => (
+              <Link key={subject.name} href={subject.href} style={{ background: "white", borderRadius: "0.875rem", padding: "1.25rem", border: "1px solid #e2e8f0", textDecoration: "none", transition: "border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease-out", display: "block" }}>
+                <strong style={{ display: "block", color: "#021550", fontSize: "1rem", marginBottom: "0.25rem" }}>{subject.name}</strong>
+                <span style={{ fontSize: "0.75rem", color: "#64748b" }}>{subject.levels}</span>
               </Link>
             ))}
           </div>
@@ -84,19 +104,22 @@ export default function Home() {
         <div style={{ maxWidth: 1120, margin: "0 auto" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
             <div>
-              <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "#016ef8", textTransform: "uppercase", letterSpacing: "0.08em" }}>Cities & Localities</span>
-              <h2 style={{ fontSize: "1.75rem", fontWeight: 800, color: "#021550", margin: "0.25rem 0 0" }}>Global learning, local choice</h2>
+              <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "#016ef8", textTransform: "uppercase", letterSpacing: "0.08em" }}>Markets & Availability</span>
+              <h2 style={{ fontSize: "1.75rem", fontWeight: 800, color: "#021550", margin: "0.25rem 0 0" }}>Global learning, market-specific availability</h2>
             </div>
             <Link href="/locations" style={{ color: "#0329b2", fontWeight: 700, textDecoration: "none", fontSize: "0.9rem" }}>All locations →</Link>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1.25rem" }}>
-            {popularCities.map((city) => (
-              <div key={city.name} style={{ background: "#f8faff", borderRadius: "1rem", padding: "1.5rem", border: "1px solid #e2e8f0" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "#0329b2", marginBottom: "0.5rem" }}><MapPin size={18} /><h3 style={{ fontSize: "1.15rem", fontWeight: 800, margin: 0 }}>{city.name}</h3></div>
-                <p style={{ fontSize: "0.8rem", color: "#64748b", lineHeight: 1.5, marginBottom: "1rem" }}>{city.areas}</p>
+            {popularCities.map((market) => (
+              <div key={market.name} style={{ background: "#f8faff", borderRadius: "1rem", padding: "1.5rem", border: "1px solid #e2e8f0" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "#0329b2", marginBottom: "0.5rem" }}>
+                  <MapPin size={18} />
+                  <h3 style={{ fontSize: "1.15rem", fontWeight: 800, margin: 0 }}>{market.name}</h3>
+                </div>
+                <p style={{ fontSize: "0.8rem", color: "#64748b", lineHeight: 1.5, marginBottom: "1rem" }}>{market.areas}</p>
                 <div style={{ display: "flex", gap: "0.75rem" }}>
-                  <Link href={`/post-home-tuition-request?city=${city.name}`} style={{ background: "#0329b2", color: "white", padding: "0.45rem 0.85rem", borderRadius: "0.5rem", fontSize: "0.75rem", fontWeight: 700, textDecoration: "none" }}>Post a requirement</Link>
-                  <Link href={city.href} style={{ color: "#475569", padding: "0.45rem 0.75rem", fontSize: "0.75rem", fontWeight: 600, textDecoration: "none" }}>Browse tutors</Link>
+                  <Link href={market.postHref} style={{ background: "#0329b2", color: "white", padding: "0.45rem 0.85rem", borderRadius: "0.5rem", fontSize: "0.75rem", fontWeight: 700, textDecoration: "none" }}>Post a requirement</Link>
+                  <Link href={market.href} style={{ color: "#475569", padding: "0.45rem 0.75rem", fontSize: "0.75rem", fontWeight: 600, textDecoration: "none" }}>Browse tutors</Link>
                 </div>
               </div>
             ))}
@@ -130,10 +153,10 @@ export default function Home() {
         <div style={{ maxWidth: 960, margin: "0 auto", textAlign: "center" }}>
           <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "#08bffc", textTransform: "uppercase", letterSpacing: "0.1em" }}>Ready to Start?</span>
           <h2 style={{ fontSize: "clamp(1.75rem, 3.5vw, 2.5rem)", fontWeight: 900, margin: "0.5rem 0 1rem" }}>Stop Searching. Let Tutors Come to You.</h2>
-          <p style={{ color: "#94a3b8", fontSize: "1rem", maxWidth: 540, margin: "0 auto 2.5rem", lineHeight: 1.6 }}>Post your tuition requirement with your target budget in 2 minutes. Receive competitive offers from verified tutors and start learning.</p>
+          <p style={{ color: "#94a3b8", fontSize: "1rem", maxWidth: 540, margin: "0 auto 2.5rem", lineHeight: 1.6 }}>Post your tuition requirement with your target budget. Receive offers from eligible tutors, compare profile information, and choose the option that fits your needs.</p>
           <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
             <Link href="/post-tuition-request" style={{ background: "#016ef8", color: "white", padding: "0.95rem 2rem", borderRadius: "0.75rem", fontWeight: 800, fontSize: "1rem", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.5rem", boxShadow: "0 8px 24px rgba(1, 110, 248, 0.4)" }}>Post Tuition Request <ArrowRight size={18} /></Link>
-            <Link href="/become-a-tutor" style={{ background: "rgba(255,255,255,0.1)", color: "white", padding: "0.95rem 1.75rem", borderRadius: "0.75rem", fontWeight: 700, fontSize: "0.95rem", border: "1px solid rgba(255,255,255,0.2)", textDecoration: "none" }}>Become a Verified Tutor</Link>
+            <Link href="/become-a-tutor" style={{ background: "rgba(255,255,255,0.1)", color: "white", padding: "0.95rem 1.75rem", borderRadius: "0.75rem", fontWeight: 700, fontSize: "0.95rem", border: "1px solid rgba(255,255,255,0.2)", textDecoration: "none" }}>Become a Tutor</Link>
           </div>
         </div>
       </section>
