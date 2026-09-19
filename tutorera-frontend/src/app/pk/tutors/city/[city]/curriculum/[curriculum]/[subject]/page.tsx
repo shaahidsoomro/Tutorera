@@ -80,7 +80,7 @@ export default async function CurriculumTutorPage({ params }: Props) {
         <Link href="/pk">Pakistan tutors</Link>{" · "}
         <Link href={`/pk/tutors/city/${citySlug}`}>{city} tutors</Link>{" · "}
         <Link href={`/tutors/subject/${subjectSlug}`}>{subject} tutors</Link>{" · "}
-        <Link href={`/pk/tutors/city/${citySlug}/${curriculumSlug === "matric" ? "matric" : curriculumSlug === "intermediate-fsc" ? "intermediate" : curriculumSlug === "cambridge-o-a-levels" ? "o-level" : "university"}/${subjectSlug}`}>Related level results</Link>
+        <Link href={`/tutors/city/${citySlug}/${subjectSlug}`}>Other {subject} tutors in {city}</Link>
       </nav>
     </>
   );
