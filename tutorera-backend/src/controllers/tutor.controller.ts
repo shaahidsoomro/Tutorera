@@ -268,6 +268,59 @@ export const getAllTutors = async (
   });
 };
 
+// @desc    Get SEO facet availability for approved public tutor inventory
+// @route   GET /api/tutors/seo-facets
+// @access  Public
+export const getTutorSeoFacets = async (
+  _req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  const [result] = await TutorProfile.aggregate([
+    { $match: { verificationStatus: "approved" } },
+    {
+      $facet: {
+        countries: [
+          { $match: { countryCode: { $nin: [null, ""] } } },
+          { $group: { _id: "$countryCode", count: { $sum: 1 } } },
+        ],
+        cities: [
+          { $match: { countryCode: { $nin: [null, ""] }, city: { $nin: [null, ""] } } },
+          { $group: { _id: { countryCode: "$countryCode", city: "$city" }, count: { $sum: 1 } } },
+        ],
+        subjects: [
+          { $unwind: "$subjects" },
+          { $match: { subjects: { $nin: [null, ""] } } },
+          { $group: { _id: { countryCode: "$countryCode", subject: "$subjects" }, count: { $sum: 1 } } },
+        ],
+        levels: [
+          { $unwind: "$levels" },
+          { $match: { levels: { $nin: [null, ""] } } },
+          { $group: { _id: { countryCode: "$countryCode", level: "$levels" }, count: { $sum: 1 } } },
+        ],
+        citySubjects: [
+          { $unwind: "$subjects" },
+          { $match: { countryCode: { $nin: [null, ""] }, city: { $nin: [null, ""] }, subjects: { $nin: [null, ""] } } },
+          { $group: { _id: { countryCode: "$countryCode", city: "$city", subject: "$subjects" }, count: { $sum: 1 } } },
+        ],
+        cityLevelSubjects: [
+          { $unwind: "$subjects" },
+          { $unwind: "$levels" },
+          { $match: { countryCode: { $nin: [null, ""] }, city: { $nin: [null, ""] }, subjects: { $nin: [null, ""] }, levels: { $nin: [null, ""] } } },
+          { $group: { _id: { countryCode: "$countryCode", city: "$city", level: "$levels", subject: "$subjects" }, count: { $sum: 1 } } },
+        ],
+        cityCurriculumSubjects: [
+          { $unwind: "$subjects" },
+          { $unwind: "$curricula" },
+          { $match: { countryCode: { $nin: [null, ""] }, city: { $nin: [null, ""] }, subjects: { $nin: [null, ""] }, curricula: { $nin: [null, ""] } } },
+          { $group: { _id: { countryCode: "$countryCode", city: "$city", curriculum: "$curricula", subject: "$subjects" }, count: { $sum: 1 } } },
+        ],
+      },
+    },
+  ]);
+
+  res.status(200).json({ success: true, ...result });
+};
+
 // @desc    Get onboarding status
 // @route   GET /api/tutors/onboarding/status
 // @access  Private (tutor)
