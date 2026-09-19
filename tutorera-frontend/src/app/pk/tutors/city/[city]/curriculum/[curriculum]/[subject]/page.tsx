@@ -1,5 +1,5 @@
 import SeoTutorDirectory from "@/components/Tutors/SeoTutorDirectory";
-import { CITIES, SUBJECTS, fetchTutors, slugify } from "@/lib/tutor-directory";
+import { CITIES, SUBJECTS, fetchTutors } from "@/lib/tutor-directory";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
