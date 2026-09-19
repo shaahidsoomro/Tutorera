@@ -4,6 +4,7 @@ import {
   getMyProfile,
   getTutorById,
   getAllTutors,
+  getTutorSeoFacets,
   saveOnboardingStep,
   getOnboardingStatus,
 } from "../controllers/tutor.controller";
@@ -20,6 +21,7 @@ import { uploadVerification } from "../middlewares/upload.middleware";
 const router = Router();
 
 // Public
+router.get("/seo-facets", getTutorSeoFacets);
 router.get("/", getAllTutors);
 router.get("/:tutorUserId/availability", getTutorAvailability);
 router.get("/:id", getTutorById);
