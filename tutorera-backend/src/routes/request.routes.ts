@@ -3,7 +3,7 @@ import {
   createRequest, getAllRequests, getMyRequests,
   cancelRequest, placeBid, getBidsForRequest,
   createDirectBookingRequest, getMyDirectRequests, rejectBid,
-  getPublicRequestsPreview,
+  getPublicRequestsPreview, getRequestSeoFacets,
   saveRequestDraftProgress,
   extendRequest,
   repostRequest,
@@ -15,6 +15,7 @@ import { validate, createRequestSchema, placeBidSchema, createDirectBookingReque
 
 const router = Router();
 
+router.get("/seo-facets", getRequestSeoFacets);
 router.get("/public/preview", getPublicRequestsPreview);
 router.get("/", optionalAuth, getAllRequests);
 router.post("/direct", protect, authorize("student"), validate(createDirectBookingRequestSchema), createDirectBookingRequest);
