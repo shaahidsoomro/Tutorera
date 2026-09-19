@@ -174,6 +174,42 @@ export const saveRequestDraftProgress = async (req: AuthRequest, res: Response):
   res.status(200).json({ success: true, tracked: true, journeyId: journey._id });
 };
 
+// @desc    Get SEO facet availability for active, public tuition demand
+// @route   GET /api/requests/seo-facets
+// @access  Public
+export const getRequestSeoFacets = async (
+  _req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  const match = {
+    status: { $in: ["open", "published", "receiving_offers", "negotiating"] },
+    isDirect: { $ne: true },
+    expiresAt: { $gt: new Date() },
+    countryCode: { $nin: [null, ""] },
+    city: { $nin: [null, ""] },
+  };
+
+  const [result] = await Request.aggregate([
+    { $match: match },
+    {
+      $facet: {
+        citySubjects: [
+          { $group: { _id: { countryCode: "$countryCode", city: "$city", subject: "$subject" }, count: { $sum: 1 } } },
+        ],
+        cityLevels: [
+          { $group: { _id: { countryCode: "$countryCode", city: "$city", level: "$level" }, count: { $sum: 1 } } },
+        ],
+        cityCurriculaSubjects: [
+          { $match: { curriculum: { $nin: [null, ""] }, subject: { $nin: [null, ""] } } },
+          { $group: { _id: { countryCode: "$countryCode", city: "$city", curriculum: "$curriculum", subject: "$subject" }, count: { $sum: 1 } } },
+        ],
+      },
+    },
+  ]);
+
+  res.status(200).json({ success: true, ...result });
+};
+
 // @desc    Get all open requests (tutors browse)
 // @route   GET /api/requests
 // @access  Private
