@@ -57,6 +57,30 @@ export interface RequestDirectoryResponse {
   pages: number;
 }
 
+export interface RequestSeoFacets {
+  citySubjects: Array<{ _id: { countryCode: string; city: string; subject: string }; count: number }>;
+  cityLevels: Array<{ _id: { countryCode: string; city: string; level: string }; count: number }>;
+  cityCurriculaSubjects: Array<{ _id: { countryCode: string; city: string; curriculum: string; subject: string }; count: number }>;
+}
+
+export async function fetchRequestSeoFacets(): Promise<RequestSeoFacets | null> {
+  try {
+    const response = await fetch(`${API_URL}/requests/seo-facets`, {
+      next: { revalidate: 300, tags: ["request-seo-facets"] },
+    });
+    if (!response.ok) throw new Error(`Request SEO facets returned ${response.status}`);
+    const data = await response.json();
+    return {
+      citySubjects: data.citySubjects ?? [],
+      cityLevels: data.cityLevels ?? [],
+      cityCurriculaSubjects: data.cityCurriculaSubjects ?? [],
+    };
+  } catch (error) {
+    console.error("Unable to load request SEO facets", error);
+    return null;
+  }
+}
+
 export async function fetchRequests(filters: RequestFilters = {}, limit = 12): Promise<RequestDirectoryResponse> {
   const params = new URLSearchParams({ limit: String(limit), page: filters.page || "1" });
   const { subject, level, city, country, teachingMode, currency } = filters;
