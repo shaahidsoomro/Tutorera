@@ -31,6 +31,16 @@ export const LOCAL_SUBJECT_SLUGS = ["mathematics", "physics", "chemistry", "biol
 export type DirectoryKind = "subject" | "city" | "level";
 export type TutorSearchFilters = Partial<Record<DirectoryKind | "search" | "teachingMode" | "minPrice" | "maxPrice" | "minRating" | "countryCode" | "country", string>>;
 
+export interface TutorSeoFacets {
+  countries: Array<{ _id: string; count: number }>;
+  cities: Array<{ _id: { countryCode: string; city: string }; count: number }>;
+  subjects: Array<{ _id: { countryCode: string; subject: string }; count: number }>;
+  levels: Array<{ _id: { countryCode: string; level: string }; count: number }>;
+  citySubjects: Array<{ _id: { countryCode: string; city: string; subject: string }; count: number }>;
+  cityLevelSubjects: Array<{ _id: { countryCode: string; city: string; level: string; subject: string }; count: number }>;
+  cityCurriculumSubjects: Array<{ _id: { countryCode: string; city: string; curriculum: string; subject: string }; count: number }>;
+}
+
 export interface TutorDirectoryResponse {
   tutors: TutorProfile[];
   total: number;
@@ -39,6 +49,28 @@ export interface TutorDirectoryResponse {
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://tutorera-backend.onrender.com/api/v1";
+
+export async function fetchTutorSeoFacets(): Promise<TutorSeoFacets | null> {
+  try {
+    const response = await fetch(`${API_URL}/tutors/seo-facets`, {
+      next: { revalidate: 900, tags: ["tutor-seo-facets"] },
+    });
+    if (!response.ok) throw new Error(`Tutor SEO facets returned ${response.status}`);
+    const data = await response.json();
+    return {
+      countries: data.countries ?? [],
+      cities: data.cities ?? [],
+      subjects: data.subjects ?? [],
+      levels: data.levels ?? [],
+      citySubjects: data.citySubjects ?? [],
+      cityLevelSubjects: data.cityLevelSubjects ?? [],
+      cityCurriculumSubjects: data.cityCurriculumSubjects ?? [],
+    };
+  } catch (error) {
+    console.error("Unable to load tutor SEO facets", error);
+    return null;
+  }
+}
 
 export async function fetchTutors(filters: TutorSearchFilters = {}, limit = 24): Promise<TutorDirectoryResponse> {
   const params = new URLSearchParams({ limit: String(limit), page: "1" });
