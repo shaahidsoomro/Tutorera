@@ -53,8 +53,7 @@ describe("BE-07: concurrent bid acceptance is race-safe", () => {
     const bid = await Bid.create({
       request: requestDoc._id,
       tutor: tutor._id,
-      amount: 1000,
-      message: "I can help",
+      amount: 1000,\n      initialStudentRate: 1000,\n      expiresAt: new Date(Date.now() + 60 * 60 * 1000),\n      status: "pending",\n      message: "I can help",
     });
 
     const makeReq = () =>
@@ -108,8 +107,8 @@ describe("BE-07: concurrent bid acceptance is race-safe", () => {
       schedule: "Mornings",
       status: "open",
     });
-    const bidA = await Bid.create({ request: requestDoc._id, tutor: tutorA._id, amount: 1500, message: "A" });
-    const bidB = await Bid.create({ request: requestDoc._id, tutor: tutorB._id, amount: 1400, message: "B" });
+    const bidA = await Bid.create({ request: requestDoc._id, tutor: tutorA._id, amount: 1500, initialStudentRate: 1500, expiresAt: new Date(Date.now() + 60 * 60 * 1000), status: "pending", message: "A" });
+    const bidB = await Bid.create({ request: requestDoc._id, tutor: tutorB._id, amount: 1400, initialStudentRate: 1500, expiresAt: new Date(Date.now() + 60 * 60 * 1000), status: "pending", message: "B" });
 
     const reqA = mockAuthRequest({
       params: { id: requestDoc._id.toString(), bidId: bidA._id.toString() },
