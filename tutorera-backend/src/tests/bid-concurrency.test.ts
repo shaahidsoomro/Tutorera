@@ -53,7 +53,11 @@ describe("BE-07: concurrent bid acceptance is race-safe", () => {
     const bid = await Bid.create({
       request: requestDoc._id,
       tutor: tutor._id,
-      amount: 1000,\n      initialStudentRate: 1000,\n      expiresAt: new Date(Date.now() + 60 * 60 * 1000),\n      status: "pending",\n      message: "I can help",
+      amount: 1000,
+      initialStudentRate: 1000,
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      status: "pending",
+      message: "I can help",
     });
 
     const makeReq = () =>
