@@ -67,8 +67,7 @@ describe("BE-01: cross-request bid substitution", () => {
     const otherBid = await Bid.create({
       request: otherRequest._id,
       tutor: tutor._id,
-      amount: 2000,
-      message: "I can help",
+      amount: 2000,\n      initialStudentRate: 2000,\n      expiresAt: new Date(Date.now() + 60 * 60 * 1000),\n      status: "pending",\n      message: "I can help",
     });
 
     // Attack: attacker's own request ID + the unrelated bid's ID.
@@ -121,8 +120,7 @@ describe("BE-01: cross-request bid substitution", () => {
     const otherBid = await Bid.create({
       request: otherRequest._id,
       tutor: tutor._id,
-      amount: 1800,
-      message: "I can help",
+      amount: 1800,\n      initialStudentRate: 1800,\n      expiresAt: new Date(Date.now() + 60 * 60 * 1000),\n      status: "pending",\n      message: "I can help",
     });
 
     const req = mockAuthRequest({
@@ -158,8 +156,7 @@ describe("BE-01: cross-request bid substitution", () => {
     const bid = await Bid.create({
       request: request._id,
       tutor: tutor._id,
-      amount: 1200,
-      message: "I can help",
+      amount: 1200,\n      initialStudentRate: 1200,\n      expiresAt: new Date(Date.now() + 60 * 60 * 1000),\n      status: "pending",\n      message: "I can help",
     });
 
     const req = mockAuthRequest({
