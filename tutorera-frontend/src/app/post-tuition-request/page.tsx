@@ -51,9 +51,17 @@ function PostTuitionRequestContent() {
   );
 }
 
-export default function PostTuitionRequestPage() {
+function PostTuitionRequestContent() {
   return (
     <Suspense fallback={null}>
+      <PostTuitionRequestContent />
+    </Suspense>
+  );
+}
+
+export default function PostTuitionRequestPage() {
+  return (
+    <Suspense fallback={<main style={{ minHeight: "100vh", background: "#f8faff" }} />}>
       <PostTuitionRequestContent />
     </Suspense>
   );
