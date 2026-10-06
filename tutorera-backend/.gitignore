@@ -27,7 +27,7 @@ logs/
 *.tsbuildinfo
 
 # NPM
-package-lock.json
+# Keep package-lock.json committed for deterministic npm ci builds.
 
 # Yarn
 yarn-error.log
