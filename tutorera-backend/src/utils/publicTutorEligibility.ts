@@ -16,7 +16,7 @@ export const PUBLIC_TUTOR_ELIGIBILITY_FILTER = {
   marketplaceEligible: true,
   suspendedAt: { $exists: false },
   reVerificationRequired: { $ne: true },
-};
+} as const;
 
 export const isPublicTutorEligible = (profile: Partial<ITutorProfile>): boolean =>
   profile.verificationStatus === "approved" &&
