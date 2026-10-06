@@ -1,4 +1,4 @@
-import { FilterQuery } from "mongoose";
+import { RootFilterQuery } from "mongoose";
 import { ITutorProfile } from "../models/TutorProfile.model";
 
 /**
@@ -6,7 +6,7 @@ import { ITutorProfile } from "../models/TutorProfile.model";
  * Keep public directory, profile, SEO facets, sitemap and matching discovery aligned
  * by importing this rule instead of checking verificationStatus independently.
  */
-export const PUBLIC_TUTOR_ELIGIBILITY_FILTER: FilterQuery<ITutorProfile> = {
+export const PUBLIC_TUTOR_ELIGIBILITY_FILTER: RootFilterQuery<ITutorProfile> = {
   verificationStatus: "approved",
   isVerified: true,
   onboardingComplete: true,
