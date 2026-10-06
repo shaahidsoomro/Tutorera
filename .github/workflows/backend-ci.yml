@@ -1,0 +1,51 @@
+name: Backend CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "tutorera-backend/**"
+      - ".github/workflows/backend-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "tutorera-backend/**"
+      - ".github/workflows/backend-ci.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-validate:
+    name: Backend validate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tutorera-backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tutorera-backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript build
+        run: npm run build
+
+      - name: Unit and integration tests
+        run: npm test
+
+      - name: Marketplace tests
+        run: npm run test:marketplace
