@@ -43,6 +43,8 @@ export interface TutorProfile {
   averageResponseMinutes?: number;
   responseTimeFormatted?: string;
   lastActiveAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface FiltersState {
