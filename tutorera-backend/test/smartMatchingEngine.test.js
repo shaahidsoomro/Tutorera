@@ -57,7 +57,7 @@ test("Home tuition requires mandatory police certificate verification", async ()
   const result = await MatchingService.calculateMatchScore(request, unverifiedTutor);
   assert.equal(result.score, 0);
   assert.ok(result.tier === "fair" || result.tier === "other");
-  assert.ok(result.reasons[0].includes("Police certificate"));
+  assert.ok(result.reasons[0].includes("Background and safety verification"));
 });
 
 test("Matching engine awards high compatibility score for matching credentials and availability", async () => {
