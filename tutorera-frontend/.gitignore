@@ -20,6 +20,7 @@
 /out/
 /.open-next/
 /_worker.js
+/.wrangler/
 
 # production
 /build
