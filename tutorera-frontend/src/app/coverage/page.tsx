@@ -1,3 +1,4 @@
+import { fetchTutors } from "@/lib/tutor-directory";
 import { UI_COLORS } from "@/lib/brand";
 import { MapPin,Wifi } from "lucide-react";
 import Link from "next/link";
@@ -15,7 +16,15 @@ const cities = [
   { name: "Faisalabad", areas: ["Peoples Colony", "Gulshan Iqbal", "Madina Town"] },
 ];
 
-export default function CoveragePage() {
+export default async function CoveragePage() {
+  const availability = await Promise.all(cities.map(async (city) => {
+    try {
+      const result = await fetchTutors({ countryCode: "PK", city: city.name, teachingMode: "in-person" }, 1);
+      return { ...city, verifiedCount: result.total };
+    } catch {
+      return { ...city, verifiedCount: null };
+    }
+  }));
   return (
     <div style={{ backgroundColor: 'white' }}>
       <section style={{ backgroundColor: C.primary, padding: '5rem 1.5rem', textAlign: 'center' }}>
@@ -50,12 +59,15 @@ export default function CoveragePage() {
             Pakistan Home-Tuition Coverage
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.5rem' }}>
-            {cities.map(city => (
+            {availability.map(city => (
               <div key={city.name} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.75rem', border: '1px solid #e5e7eb' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
                   <MapPin size={20} color={C.accent} />
                   <h3 style={{ fontWeight: '700', color: C.primary, fontSize: '1.05rem' }}>{city.name}</h3>
                 </div>
+                <p style={{ fontSize: "0.85rem", color: C.gray500, marginBottom: "0.75rem" }}>
+                  {city.verifiedCount === null ? "Live availability temporarily unavailable" : city.verifiedCount === 0 ? "No currently listed in-person tutors; explore requests or check back" : `${city.verifiedCount} currently listed in-person tutor${city.verifiedCount === 1 ? "" : "s"}`}
+                </p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
                   {city.areas.map(area => (
                     <span key={area} style={{ backgroundColor: C.gray50, color: C.gray500, fontSize: '0.78rem', padding: '0.25rem 0.6rem', borderRadius: '999px', border: '1px solid #e5e7eb' }}>
@@ -64,7 +76,7 @@ export default function CoveragePage() {
                   ))}
                 </div>
                 <Link href={`/tutors?city=${city.name}`} style={{ display: 'inline-block', marginTop: '1rem', color: C.accent, fontSize: '0.8rem', fontWeight: '600', textDecoration: 'none' }}>
-                  Find tutors in {city.name} →
+                  {city.verifiedCount === 0 ? "Explore tutoring options" : `Find tutors in ${city.name}`} →
                 </Link>
               </div>
             ))}
