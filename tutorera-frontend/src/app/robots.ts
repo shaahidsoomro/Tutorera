@@ -7,7 +7,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: [{
       userAgent: "*",
       allow: "/",
-      disallow: SEO_PRIVATE_PATHS.map((p) => `${p}/`),
+      disallow: SEO_PRIVATE_PATHS.flatMap((p) => [p, `${p}/`]),
     }],
     sitemap: `${SITE_URL}/sitemap.xml`,
     host: SITE_URL,
