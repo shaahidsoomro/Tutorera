@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { requestAgeReview, getMyAgeReviewRequest } from "../controllers/ageReview.controller";
 import { register, login, logout, getMe, updateProfile, changePassword, googleAuth, selectRole, forgotPassword, resetPassword, exportData, deleteAccount, updateConsent } from "../controllers/auth.controller";
 import { protect } from "../middlewares/auth.middleware";
 import { resendGuardianConsent, listGuardianConsentRequests, approveGuardianConsent } from "../controllers/guardianConsent.controller";
@@ -16,6 +17,8 @@ router.post("/guardian-consent/resend", protect, otpRequestLimiter, resendGuardi
 router.get("/guardian-consent/pending", protect, listGuardianConsentRequests);
 router.post("/guardian-consent/verify", protect, otpVerifyLimiter, approveGuardianConsent);
 router.get("/me", protect, getMe);
+router.post("/me/age-review/request", protect, otpRequestLimiter, requestAgeReview);
+router.get("/me/age-review/request", protect, getMyAgeReviewRequest);
 router.get("/me/export", protect, exportData);
 router.post("/me/delete-account", protect, deleteAccount);
 router.patch("/me/consent", protect, updateConsent);
