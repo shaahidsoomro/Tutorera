@@ -18,6 +18,7 @@ const needsLegacyAgeReview = (user: { role: UserRole; dateOfBirth?: Date | null 
 const legacyAccountPaths = new Set([
   "/api/v1/auth/me", "/api/v1/auth/logout",
   "/api/v1/auth/me/export", "/api/v1/auth/me/delete-account",
+  "/api/v1/auth/me/age-review/request",
 ]);
 
 export const protect = async (
