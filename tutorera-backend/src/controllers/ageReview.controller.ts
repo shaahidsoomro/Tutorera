@@ -36,3 +36,35 @@ export const getMyAgeReviewRequest = async (req: AuthRequest, res: Response): Pr
   res.setHeader("Cache-Control", "no-store");
   res.json({ success: true, review: review || null });
 };
+
+export const listPendingAgeReviews = async (req: AuthRequest, res: Response): Promise<void> => {
+  const limit = Math.min(Math.max(Number(req.query.limit) || 25, 1), 50);
+  const reviews = await AgeReviewRequest.find({ status: "pending" })
+    .sort({ createdAt: 1 }).limit(limit)
+    .select("student reason status createdAt").lean();
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ success: true, reviews });
+};
+
+// Administrative triage closes an intake case; it is not proof of identity,
+// age, adulthood, legal guardianship or permission to access tutoring.
+// A separate reviewed verification service must control those changes.
+export const closeAgeReview = async (req: AuthRequest, res: Response): Promise<void> => {
+  const id = req.params.id;
+  if (typeof id !== "string" || !/^[a-fA-F0-9]{24}$/.test(id)) {
+    res.status(400).json({ success: false, code: "INVALID_REVIEW_ID" }); return;
+  }
+  if (req.body?.resolution !== "referred_to_support" && req.body?.resolution !== "duplicate_request") {
+    res.status(400).json({ success: false, code: "INVALID_REVIEW_RESOLUTION" }); return;
+  }
+  const closed = await AgeReviewRequest.findOneAndUpdate(
+    { _id: id, status: "pending" }, { $set: { status: "closed" } }, { new: true });
+  if (!closed) {
+    res.status(409).json({ success: false, code: "REVIEW_ALREADY_CLOSED_OR_MISSING" }); return;
+  }
+  await logAudit({ action: "student_age_review_triaged", actor: req.user?.name || "Admin",
+    actorId: req.user?._id.toString(), entity: "AgeReviewRequest",
+    targetId: closed._id.toString(), metadata: { resolution: req.body.resolution } });
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ success: true, status: "closed" });
+};
