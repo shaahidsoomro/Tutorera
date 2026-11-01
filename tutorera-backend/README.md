@@ -8,11 +8,20 @@ REST API for TUTORERA's student-led tutoring marketplace.
 - JWT Authentication
 - Cloudinary (file uploads)
 - Nodemailer / Resend (emails)
-- Switch (payments)
-- Deployed on Render
+- RapidPay (payments)
+- Node.js-compatible hosted runtime
 
-## Live API
-https://tutorera-backend.onrender.com
+## Canonical API URL
+
+The frontend is configured to use:
+
+```text
+https://api.tutorera.ac.pk/api/v1
+```
+
+This is the canonical API hostname target, not deployment proof. Verify the
+current DNS/origin and health endpoints before treating it as the active
+production deployment. Do not use the legacy Render URL as the source of truth.
 
 ## Local Setup
 
@@ -28,25 +37,58 @@ npm ci
 ```
 
 ### 3. Configure environment variables
-Set the required application variables, including the Switch server-side credentials:
+Set the required application variables, including the RapidPay server-side credentials,
+in the selected hosting provider's secret manager:
 
 ```bash
-SWICH_CLIENT_ID=<Switch merchant client id>
-SWICH_CLIENT_SECRET=<Switch merchant client secret>
-SWICH_MODE=live
-SWICH_AUTH_BASE_URL=<merchant-provided live OAuth base URL>
-SWICH_API_BASE_URL=<merchant-provided live PayIN API base URL>
-SWICH_CALLBACK_URL=https://tutorera-backend.onrender.com/api/v1/payments/swich/callback
-SWICH_CALLBACK_SECRET=<merchant-provided PayIN callback signing secret>
-SWICH_PWA_BASE_URL=https://payin-pwa.swichnow.com
-SWICH_SUPPORTED_MARKETS=PK,AE,GB,US,SA,IN
-SWICH_SUPPORTED_CURRENCIES=USD
+# Required by src/config/env.ts
+MONGO_URI=<MongoDB connection string>
+JWT_SECRET=<long random secret>
+PORT=5000
+JWT_EXPIRES_IN=<JWT duration>
+CLIENT_URL=https://tutorera.ac.pk
+RESEND_API_KEY=<Resend API key>
+CLOUDINARY_CLOUD_NAME=<Cloudinary cloud name>
+CLOUDINARY_API_KEY=<Cloudinary API key>
+CLOUDINARY_API_SECRET=<Cloudinary API secret>
+GROQ_API_KEY=<Groq API key>
+GOOGLE_CLIENT_ID=<Google client ID>
+GOOGLE_CLIENT_SECRET=<Google client secret>
+
+# RapidPay
+RAPIDPAY_API_KEY=<RapidPay API key>
+RAPIDPAY_MERCHANT_ID=<RapidPay merchant ID>
+RAPIDPAY_BASE_URL=<RapidPay HTTPS API base URL>
+RAPIDPAY_WEBHOOK_SECRET=<RapidPay webhook signing secret>
+RAPIDPAY_SUPPORTED_MARKETS=PK
 ```
 
-Switch credentials must stay on the backend. They must never be exposed through `NEXT_PUBLIC_*`, browser JavaScript, or the frontend repository. Do not add a market or currency to `SWICH_SUPPORTED_*` until Switch has confirmed merchant onboarding, settlement, payout and compliance support for that market.
+RapidPay credentials and webhook secrets must stay on the backend. They must
+never be exposed through `NEXT_PUBLIC_*`, browser JavaScript, or the frontend
+repository. Configure only markets and currencies that RapidPay has approved
+for the merchant account.
 
-Register `SWICH_CALLBACK_URL` in the Swich merchant portal. TUTORERA verifies
-PayIN callbacks with `HMAC-SHA256("SWCallback:CustomerTransactionId:OrderId:Amount:Status", SWICH_CALLBACK_SECRET)` before a booking or offer is settled. The callback signing secret is separate from the OAuth client secret.
+Optional server-side enrichment and validation variables:
+
+```bash
+# BigDataCloud IP personalization and contact validation
+BIGDATACLOUD_API_KEY=<server-side BigDataCloud API key>
+# Optional override for the phone validation endpoint
+BIGDATACLOUD_PHONE_VALIDATION_URL=https://api-bdc.net/data/phone-number-validate
+
+# Zipcodebase postal-code and city lookup
+ZIPCODEBASE_API_KEY=<server-side Zipcodebase API key>
+```
+
+The BigDataCloud key must also remain server-side. `GET /api/v1/geo/visitor-market`
+uses the request IP for configured-market personalization, while
+`POST /api/v1/auth/validate-contacts` checks email and optional phone details
+before registration. If the provider is unavailable, registration continues
+without treating the external check as proof of identity.
+
+When configured, `GET /api/v1/geo/postal-lookup?q=<postal-code-or-city>&country=<ISO2>`
+uses Zipcodebase for postal and city lookups. GeoNames remains the fallback when
+the key or country is unavailable.
 
 ### 4. Run development server
 ```bash
@@ -55,15 +97,23 @@ npm run dev
 
 ## Payment Architecture
 
-TUTORERA has one payment authority: the Render backend. Checkout creation is sent directly from the backend to Switch over its REST API. The browser receives only the hosted checkout URL. Payment completion is verified by the backend against the Switch payment-session endpoint and then checked against the booking/offer amount and currency before marketplace state is finalized.
+TUTORERA has one payment authority: the backend service. Checkout creation is
+sent from the backend to RapidPay. The browser receives only the gateway
+checkout/session data and never receives merchant credentials. Payment status
+is verified by the backend before the booking or offer is finalized, and
+payment records are stored in the `PaymentLedger` model.
 
-There is no payment Cloudflare Worker and no direct database write path outside the backend payment services.
+The active provider is `rapidpay` in
+[`src/services/paymentProvider.service.ts`](src/services/paymentProvider.service.ts).
+The repository still contains legacy Swich compatibility code and migration
+tests, but Swich is not mounted as the active checkout provider.
 
 ## API Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | /api/v1/auth/register | Register user |
+| POST | /api/v1/auth/validate-contacts | Validate email and optional phone details |
 | POST | /api/v1/auth/login | Login user |
 | GET | /api/v1/auth/me | Get current user |
 | GET | /api/v1/tutors | Get all tutors |
@@ -76,13 +126,16 @@ There is no payment Cloudflare Worker and no direct database write path outside 
 | POST | /api/v1/requests | Create tuition request |
 | POST | /api/v1/requests/:id/bids | Place bid |
 | GET | /api/v1/bookings | Get my bookings |
-| POST | /api/v1/payments/booking/:bookingId/checkout | Create Swich checkout |
-| POST | /api/v1/payments/swich/confirm | Confirm a Switch payment session |
+| POST | /api/v1/payments/booking/:bookingId/checkout | Create RapidPay checkout |
+| GET | /api/v1/payments/status/:kind/:id | Get verified payment status |
 | GET | /api/v1/payments/history | Get payment history |
+| POST | /api/v1/payments/webhook | Receive verified RapidPay webhook |
 | POST | /api/v1/reviews/:tutorId | Create review |
 | GET | /api/v1/blogs | Get all blogs |
 | POST | /api/v1/contact | Submit contact form |
 | POST | /api/v1/upload/avatar | Upload avatar |
+| GET | /api/v1/geo/visitor-market | Detect visitor market from request IP |
+| GET | /api/v1/geo/postal-lookup | Search postal codes or cities |
 
 ### Administrative approval exemption
 
