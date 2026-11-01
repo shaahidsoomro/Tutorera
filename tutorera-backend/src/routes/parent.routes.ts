@@ -10,7 +10,6 @@ import {
   removeChildAccount,
   updateParentSettings,
   getPendingBookingApprovals,
-  decideBookingApproval,
   saveParentOnboarding,
 } from "../controllers/parent.controller";
 

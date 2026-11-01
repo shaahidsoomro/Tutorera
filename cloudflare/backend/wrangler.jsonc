@@ -44,7 +44,8 @@
         "RAPIDPAY_SUPPORTED_MARKETS": "PK,AE,GB,US,SA,IN",
         "SCHEDULER_MODE": "disabled",
         "CLOUDFLARE_NATIVE_RUNTIME": "true",
-        "ENABLE_SCHEDULED_JOBS": "true"
+        "ENABLE_SCHEDULED_JOBS": "true",
+        "PREVIEW_READ_ONLY": "false"
       },
       "triggers": { "crons": ["*/5 * * * *", "*/10 * * * *", "*/15 * * * *", "0 * * * *", "0 4 * * *"] }
     }

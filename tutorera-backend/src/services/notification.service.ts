@@ -96,6 +96,7 @@ export class NotificationService {
 
     } catch (err) {
       console.error(`[NotificationService] Failed to publish event ${eventName}:`, err);
+      throw err;
     }
   }
 

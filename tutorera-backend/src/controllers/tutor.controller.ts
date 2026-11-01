@@ -1,4 +1,4 @@
-import { Response } from "express";
+import { Response, NextFunction } from "express";
 import { AuthRequest } from "../types";
 import TutorProfile, { ITutorProfile } from "../models/TutorProfile.model";
 import User from "../models/User.model";
@@ -45,11 +45,7 @@ export const getOnboardingFinancialPreview = async (req: AuthRequest, res: Respo
     return;
   }
   const profile = await TutorProfile.findOne({ user: req.user?._id }).select("countryCode currency teachingMode").lean();
-  const fees = await calculateMarketplaceFees(rate, {
-    countryCode: profile?.countryCode || req.user?.countryCode || "PK",
-    currency: profile?.currency || req.user?.currency || "USD",
-    teachingMode: (profile?.teachingMode || "online") as "online" | "in-person" | "both",
-  });
+  const fees = await calculateMarketplaceFees(rate, profile?.countryCode || req.user?.countryCode || "PK");
   res.status(200).json({ success: true, fees });
 };
 
@@ -608,8 +604,10 @@ export const getOnboardingStatus = async (
 // @access  Private (tutor)
 export const saveOnboardingStep = async (
   req: AuthRequest,
-  res: Response
+  res: Response,
+  next: NextFunction
 ): Promise<void> => {
+  try {
   const { step, data } = req.body;
   const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
@@ -637,6 +635,7 @@ export const saveOnboardingStep = async (
 
   if (stepNum === 1) {
     // Personal Info & Global Location
+    console.log("[TutorOnboarding] step1 start, userId:", req.user?._id, "countryCode:", parsedData.countryCode);
     const market = await resolveMarket(parsedData.countryCode || "PK");
     if (!market || !market.isActive || !market.tutorRegistration) {
       res.status(422).json({ success: false, code: "MARKET_UNAVAILABLE", message: "Tutor onboarding is not available in the selected market." });
@@ -705,8 +704,10 @@ export const saveOnboardingStep = async (
       ...(resubmitAvatar && { avatarRejectionReason: "" }),
     };
     Object.assign(profile, updateData);
+    console.log("[TutorOnboarding] step1 slug assign start");
     await assignUniqueTutorSlug(profile);
     Object.assign(updateData, { slug: profile.slug, countrySlug: profile.countrySlug });
+    console.log("[TutorOnboarding] step1 user update start, slug:", profile.slug);
     await User.findByIdAndUpdate(req.user?._id, {
       name: parsedData.fullName,
       phone: parsedData.phone,
@@ -1084,6 +1085,7 @@ export const saveOnboardingStep = async (
   }
 
   // Save to DB
+  console.log("[TutorOnboarding] findOneAndUpdate start, step:", stepNum, "updateData keys:", Object.keys(updateData));
   const updated = await TutorProfile.findOneAndUpdate(
     { user: req.user?._id },
     updateData,
@@ -1252,4 +1254,8 @@ export const saveOnboardingStep = async (
     message: `Step ${stepNum} saved successfully`,
     profile: updated,
   });
+  } catch (err) {
+    console.error("[TutorOnboarding] saveOnboardingStep unhandled error:", err);
+    next(err);
+  }
 };

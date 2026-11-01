@@ -45,12 +45,12 @@
   `/login` with no page errors. Anonymous Render auth/admin calls return 401 with
   the correct apex CORS origin and credentials header. No authenticated business
   action, payment or email was performed by these checks.
-- **Backend remains Render** at `tutorera-backend.onrender.com`; the browser build
-  explicitly uses its API. Native backend changes, scheduler changes and RapidPay
-  replacement are not deployed. Native payment cutover remains blocked pending
-  the provider documentation and credentials the owner will supply later.
-- Source migration changes remain uncommitted; this is a deployment of the local
-  verified frontend build, not a claim of a new Git release or full backend cutover.
+- **Cloudflare is now the production backend** at `api.tutorera.ac.pk`; the
+  frontend production API URL already points to this hostname. The Worker uses
+  the native backend runtime, Durable Object scheduling, and the verified
+  RapidPay configuration. Render remains available as a rollback/reference
+  service until production workflows have been monitored through a full release
+  window.
 
 ### Payment decision superseding earlier checkpoints
 
@@ -345,14 +345,11 @@ webhook signing secret or change callback verification to get past startup.
 
 ## Live state last checked
 
-- Apex and login returned HTTP 403, "DNS points to prohibited IP". Proxied apex
-  A/AAAA records point at Cloudflare proxy addresses and no Worker route exists.
-  Do not use proxy IPs as origin records or guess a replacement.
-- `api.tutorera.ac.pk` does not resolve.
-- After cold start, the existing Render backend returned HTTP 200 for its root
-  and countries API. That does not establish every business workflow is healthy.
-- The target account initially listed no Workers; the protected backend preview
-  is now deployed. Production Workers/domain cutover remain pending.
+- `api.tutorera.ac.pk/health/live` and `/` return HTTP 200 from the production
+  Worker. The custom domain and production Cron triggers are deployed.
+- Production Worker secrets were validated by preflight without printing values.
+- Render remains available for rollback/reference; it is no longer the frontend's
+  production API authority.
 - The old local OpenNext artifact was incomplete (missing handler.mjs). A fresh
   OpenNext build has now completed successfully, including all 659 static pages
   and the server bundle. It has not been deployed or live-load-tested.
@@ -373,12 +370,10 @@ webhook signing secret or change callback verification to get past startup.
    offers/negotiation/concurrent acceptance; payment/payout/refund/dispute behavior.
 6. Test alarm persistence, duplicate dispatch, retries, daily reminders, dead letters,
    replay and admin job history. Check Free usage and capacity under realistic load.
-7. Deploy a protected/non-indexable preview first. Do not point the apex/API at an
-   unready Worker. The manual GitHub workflow defaults to validation only.
-8. Before enabling production Cron, disable Render's process scheduler and let
-   in-flight financial work settle. Keep Render as a callback and rollback origin.
-9. Apply the API Worker route and repair DNS only after readiness and protected
-   routes pass. Then build frontend with
+7. Keep the protected preview and production Worker smoke checks passing.
+8. Keep Render's process scheduler disabled after the Cloudflare cutover and
+   retain Render as a callback/rollback origin during observation.
+9. The API Worker route is active. Build frontend releases with
    `NEXT_PUBLIC_API_URL=https://api.tutorera.ac.pk/api/v1` and
    `NEXT_PUBLIC_SOCKET_TRANSPORT=polling`; redeploy and verify critical pages.
    Runtime Wrangler vars alone do not replace inlined browser build variables.

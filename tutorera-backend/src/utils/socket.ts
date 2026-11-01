@@ -16,13 +16,14 @@ const connectedUsers: ConnectedUsers = {};
 let _ioInstance: Server | undefined;
 export { _ioInstance as ioInstance };
 
-export const initSocket = (httpServer: HttpServer): Server => {
+export const initSocket = (httpServer: HttpServer, options?: { pollingOnly?: boolean }): Server => {
   const io = new Server(httpServer, {
     cors: {
       origin: process.env.CLIENT_URL,
       methods: ["GET", "POST"],
       credentials: true,
     },
+    ...(options?.pollingOnly ? { transports: ["polling"] } : {}),
   });
 
   // Auth middleware — verify token AND confirm the user still exists and is active

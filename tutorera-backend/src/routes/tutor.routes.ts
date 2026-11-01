@@ -35,6 +35,7 @@ router.get("/availability/me", protect, authorize("tutor"), getMyAvailability);
 // Onboarding
 router.get("/onboarding/status", protect, authorize("tutor"), getOnboardingStatus);
 router.post("/onboarding/step", protect, authorize("tutor"), uploadVerification.fields([
+  { name: "avatar", maxCount: 1 },
   { name: "degreeDoc", maxCount: 1 },
   { name: "cnicFront", maxCount: 1 },
   { name: "cnicBack", maxCount: 1 },

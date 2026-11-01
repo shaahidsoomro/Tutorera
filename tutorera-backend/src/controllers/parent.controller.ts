@@ -12,7 +12,6 @@ import Bid from "../models/Bid.model";
 import RequestModel from "../models/Request.model";
 import sendEmail from "../utils/sendEmail";
 import crypto from "crypto";
-import mongoose from "mongoose";
 import { escapeHtml } from "../utils/escapeHtml";
 import GuardianConsent from "../models/GuardianConsent.model";
 import { resolveMarketplaceFees } from "../services/pricing.service";

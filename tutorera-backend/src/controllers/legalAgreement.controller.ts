@@ -59,11 +59,7 @@ export const getCurrentTutorAgreement = async (req: AuthRequest, res: Response):
     return;
   }
 
-  const feeSnapshot = await calculateMarketplaceFees(1000, {
-    countryCode: country,
-    currency: profile.currency || "USD",
-    teachingMode: profile.teachingMode || "online",
-  });
+  const feeSnapshot = await calculateMarketplaceFees(1000, country);
 
   const existingAcceptance = await TutorAgreementAcceptance.findOne({
     tutor: req.user._id,

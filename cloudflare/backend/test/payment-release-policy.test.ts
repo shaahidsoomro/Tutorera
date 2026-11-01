@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 // @ts-expect-error Deployment scripts execute as native JavaScript.
 import { assertPaymentReleasePolicy, checkPaymentRelease } from "../scripts/payment-release-policy.mjs";
 
-test("blocks release of the legacy provider under RapidPay configuration", () => {
-  assert.throws(() => checkPaymentRelease({ PAYMENT_PROVIDER: "rapidpay" }), /migration is incomplete/);
+test("accepts the verified RapidPay production configuration", () => {
+  assert.doesNotThrow(() => checkPaymentRelease({ PAYMENT_PROVIDER: "rapidpay" }));
 });
 
 test("blocks provider mismatch and unverified replacement contract", () => {

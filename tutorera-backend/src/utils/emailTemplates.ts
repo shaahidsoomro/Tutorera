@@ -64,6 +64,63 @@ export const welcomeEmail = (name: string) => {
   return { subject: "Welcome to TUTORERA®!", html };
 };
 
+export const studentWelcomeEmail = (name: string) => welcomeEmail(name);
+
+export const parentWelcomeEmail = (name: string) => {
+  const subject = "Welcome to TUTORERA®";
+  const html = renderTransactionalEmail({
+    subject,
+    emailCategory: "Welcome",
+    emailHeading: "Welcome to TUTORERA®",
+    emailSubheading: "Safe, structured tutoring for your family.",
+    firstName: name,
+    openingMessage: "Thanks for creating a parent account on TUTORERA®.",
+    mainMessage: "You can now manage learner details, review tutor options, and approve bookings from your dashboard.",
+    cta: { label: "Open Dashboard", url: "https://tutorera.ac.pk/dashboard" },
+    includeSecurityNotice: true,
+    deliverability: "This transactional notification was sent after your TUTORERA account was created.",
+  });
+  return { subject, html };
+};
+
+export const tutorWelcomeApplicationEmail = (name: string, applicationId: string, trackingUrl?: string) => {
+  const subject = "TUTORERA® — Your Tutor Application Was Received";
+  const html = renderTransactionalEmail({
+    subject,
+    emailCategory: "Tutor Application",
+    emailHeading: "Application Received",
+    emailSubheading: "Our team will review your profile and documents.",
+    firstName: name,
+    openingMessage: "Thanks for applying to become a TUTORERA tutor.",
+    mainMessage: "Your application is now under review. We will notify you when there is an update.",
+    detailsCard: {
+      title: "Application Details",
+      rows: [{ label: "Application ID", value: applicationId, highlight: true }],
+    },
+    cta: { label: "Track Application", url: trackingUrl || "https://tutorera.ac.pk/tutor/application-status" },
+    includeSecurityNotice: true,
+    deliverability: "This transactional notification was sent after your TUTORERA tutor application was submitted.",
+  });
+  return { subject, html };
+};
+
+export const passwordResetOtpEmail = (name: string, otp: string) => {
+  const subject = "TUTORERA® — Password Reset Code";
+  const html = renderTransactionalEmail({
+    subject,
+    emailCategory: "Account Security",
+    emailHeading: "Reset Your Password",
+    emailSubheading: "Use the verification code below to continue.",
+    firstName: name,
+    openingMessage: "We received a request to reset your TUTORERA password.",
+    mainMessage: "Enter this one-time code in the password reset form. It expires in 10 minutes.",
+    highlightCode: { code: otp, label: "Password reset code", expiresIn: "10 minutes" },
+    includeSecurityNotice: true,
+    deliverability: "This transactional security email was sent because a password reset was requested for your account.",
+  });
+  return { subject, html };
+};
+
 export const tutorPendingEmail = (name: string) => {
   const html = renderTransactionalEmail({
     subject: "TUTORERA® — Your Application is Under Review",
@@ -378,6 +435,50 @@ ${data.applicationId ? `• Tutor Application ID: ${data.applicationId}` : ""}`,
     includeSecurityNotice: true,
   });
   return { subject: `[TUTORERA Admin] New ${roleLabel} Sign Up: ${data.name}`, html };
+};
+
+export const adminTutorApplicationSubmittedEmail = (data: {
+  tutorName: string;
+  tutorEmail: string;
+  applicationId?: string;
+  teachingMode?: string;
+}) => {
+  const subject = `[TUTORERA Admin] New tutor application: ${data.tutorName}`;
+  const html = renderTransactionalEmail({
+    subject,
+    emailCategory: "Platform Alert",
+    emailHeading: "New Tutor Application",
+    emailSubheading: "A tutor application is ready for review.",
+    firstName: "Admin Team",
+    openingMessage: `${data.tutorName} has completed tutor onboarding and submitted an application.`,
+    mainMessage: `Tutor email: ${data.tutorEmail}\nApplication ID: ${data.applicationId || "Not assigned"}\nTeaching mode: ${data.teachingMode || "Not specified"}`,
+    cta: { label: "Review Applications", url: "https://tutorera.ac.pk/admin/applications" },
+    includeSecurityNotice: true,
+    deliverability: "This transactional alert was sent because a tutor application was submitted.",
+  });
+  return { subject, html };
+};
+
+export const adminTutorDocumentResubmittedEmail = (data: {
+  tutorName: string;
+  tutorEmail: string;
+  applicationId?: string;
+  documentLabel?: string;
+}) => {
+  const subject = `[TUTORERA Admin] Tutor document resubmitted: ${data.tutorName}`;
+  const html = renderTransactionalEmail({
+    subject,
+    emailCategory: "Platform Alert",
+    emailHeading: "Tutor Document Resubmitted",
+    emailSubheading: "A tutor verification item needs re-review.",
+    firstName: "Admin Team",
+    openingMessage: `${data.tutorName} resubmitted ${data.documentLabel || "a document"} for review.`,
+    mainMessage: `Tutor email: ${data.tutorEmail}\nApplication ID: ${data.applicationId || "Not assigned"}\nDocument: ${data.documentLabel || "Not specified"}`,
+    cta: { label: "Review Applications", url: "https://tutorera.ac.pk/admin/applications" },
+    includeSecurityNotice: true,
+    deliverability: "This transactional alert was sent because a tutor verification document was resubmitted.",
+  });
+  return { subject, html };
 };
 
 export const adminNewTuitionRequestEmail = (data: {

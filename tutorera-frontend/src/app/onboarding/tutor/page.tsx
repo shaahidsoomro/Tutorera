@@ -76,6 +76,10 @@ export default function TutorOnboardingPage() {
     dateOfBirth: "",
   });
 
+  // Step 1 avatar
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string>("");
+
   // Step 2
   const [step2, setStep2] = useState({ degree: "", institution: "", year: "" });
   const [degreeDoc, setDegreeDoc] = useState<File | null>(null);
@@ -138,6 +142,10 @@ export default function TutorOnboardingPage() {
               gender: p.gender || "male",
               dateOfBirth: p.dateOfBirth ? p.dateOfBirth.slice(0, 10) : "",
             });
+
+            if (p.user?.avatar || p.avatar) {
+              setAvatarPreview(p.user?.avatar || p.avatar || "");
+            }
 
             if (p.education?.[0]) {
               setStep2({
@@ -259,7 +267,11 @@ export default function TutorOnboardingPage() {
         if (!step1.fullName || !step1.phone || !step1.city) {
           setError("Please fill all required fields."); setSaving(false); return;
         }
+        if (!avatarFile && !avatarPreview) {
+          setError("Please upload a profile photo to continue."); setSaving(false); return;
+        }
         formData.append("data", JSON.stringify(step1));
+        if (avatarFile) formData.append("avatar", avatarFile);
       }
 
       else if (currentStep === 2) {
@@ -497,7 +509,37 @@ export default function TutorOnboardingPage() {
                   />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem' }}>
+                {/* Profile Photo */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Profile Photo *</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{ width: 72, height: 72, borderRadius: '50%', overflow: 'hidden', border: `2px solid ${C.accent}`, flexShrink: 0, background: C.gray50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {avatarPreview ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={avatarPreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <span style={{ color: '#9ca3af', fontSize: '1.5rem' }}>👤</span>
+                    )}
+                  </div>
+                  <div>
+                    <button type="button" onClick={() => document.getElementById('avatarUpload')?.click()}
+                      style={{ padding: '0.5rem 1rem', border: `1.5px solid ${C.accent}`, borderRadius: '0.5rem', background: 'white', color: C.accent, fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer' }}>
+                      {avatarPreview ? 'Change Photo' : 'Upload Photo'}
+                    </button>
+                    <p style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.25rem' }}>JPG, PNG, WebP (max 2MB)</p>
+                  </div>
+                </div>
+                <input id="avatarUpload" type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }}
+                  onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setAvatarFile(file);
+                      setAvatarPreview(URL.createObjectURL(file));
+                    }
+                  }} />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Phone *</label>
                     <input value={step1.phone} onChange={e => setStep1({ ...step1, phone: e.target.value })} placeholder="e.g. +92 300 1234567"
