@@ -61,6 +61,9 @@ export interface TutorProfile {
   cnicVerificationStatus?: string;
   demoVideoStatus?: string;
   homeTuitionEligible?: boolean;
+  sessionRate?: number;
+  monthlyRate?: number;
+  sessionPackages?: { sessions: number; totalPrice: number; label?: string; currency?: string }[];
   badges?: {
     identityVerified?: boolean;
     credentialsVerified?: boolean;

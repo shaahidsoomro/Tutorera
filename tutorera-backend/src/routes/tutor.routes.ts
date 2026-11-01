@@ -4,6 +4,7 @@ import {
   getMyProfile,
   saveOnboardingStep,
   getOnboardingStatus,
+  saveSessionPackages,
 } from "../controllers/tutor.controller";
 import {
   getPublicTutorById,
@@ -41,6 +42,7 @@ router.post("/onboarding/step", protect, authorize("tutor"), uploadVerification.
 // Profile
 router.post("/profile", protect, authorize("tutor"), validate(tutorProfileSchema), createOrUpdateProfile);
 router.get("/profile/me", protect, authorize("tutor"), getMyProfile);
+router.patch("/profile/packages", protect, authorize("tutor"), saveSessionPackages);
 router.get("/school-offerings/me", protect, authorize("tutor"), getMySchoolOfferings);
 router.put("/school-offerings/me", protect, authorize("tutor"), updateMySchoolOfferings);
 

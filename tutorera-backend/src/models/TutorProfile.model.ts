@@ -130,6 +130,12 @@ export interface ITutorProfile extends Document {
   currency: string;
   sessionRate?: number;              // rate per session (optional override)
   monthlyRate?: number;              // rate per month (optional override)
+  sessionPackages?: {
+    sessions: number;               // e.g. 5 or 10
+    totalPrice: number;             // total charged (already discounted)
+    label?: string;                 // e.g. "Starter Pack"
+    currency?: string;
+  }[];
   teachingMode: "online" | "in-person" | "both";
   serviceAreas?: string[];
   travelRadiusKm?: number;
@@ -353,6 +359,12 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
     currency: { type: String, uppercase: true, trim: true },
     sessionRate: { type: Number, min: 0 },
     monthlyRate: { type: Number, min: 0 },
+    sessionPackages: [{
+      sessions: { type: Number, required: true, min: 2, max: 100 },
+      totalPrice: { type: Number, required: true, min: 0 },
+      label: { type: String, trim: true, maxlength: 60 },
+      currency: { type: String, uppercase: true, trim: true },
+    }],
     teachingMode: { type: String, enum: ["online", "in-person", "both"], default: "both" },
     serviceAreas: [{ type: String, trim: true }],
     travelRadiusKm: { type: Number, default: 10, min: 0, max: 100 },

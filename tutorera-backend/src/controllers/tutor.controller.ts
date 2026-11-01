@@ -238,6 +238,30 @@ export const getMyProfile = async (
   res.status(200).json({ success: true, profile });
 };
 
+// @desc    Save/replace session packages for the authenticated tutor
+// @route   PATCH /api/tutors/profile/packages
+// @access  Private (tutor)
+export const saveSessionPackages = async (req: AuthRequest, res: Response): Promise<void> => {
+  const packages = req.body.sessionPackages;
+  if (!Array.isArray(packages)) {
+    res.status(400).json({ success: false, message: "sessionPackages must be an array." });
+    return;
+  }
+  for (const pkg of packages) {
+    if (!pkg.sessions || pkg.sessions < 2 || !pkg.totalPrice || pkg.totalPrice < 0) {
+      res.status(400).json({ success: false, message: "Each package needs sessions ≥ 2 and a totalPrice ≥ 0." });
+      return;
+    }
+  }
+  const profile = await TutorProfile.findOneAndUpdate(
+    { user: req.user?._id },
+    { $set: { sessionPackages: packages.slice(0, 5) } },
+    { new: true, runValidators: true }
+  );
+  if (!profile) { res.status(404).json({ success: false, message: "Profile not found." }); return; }
+  res.status(200).json({ success: true, sessionPackages: profile.sessionPackages });
+};
+
 // @desc    Get tutor by ID (public)
 // @route   GET /api/tutors/:id
 // @access  Public

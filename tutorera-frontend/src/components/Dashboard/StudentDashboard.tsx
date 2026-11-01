@@ -131,6 +131,10 @@ function BookingCard({ booking, onClaimSubmitted }: {
   const router = useRouter();
   const [paying, setPaying] = useState(false);
   const [rebooking, setRebooking] = useState(false);
+  const [showDisputeForm, setShowDisputeForm] = useState(false);
+  const [disputeReason, setDisputeReason] = useState("");
+  const [submittingDispute, setSubmittingDispute] = useState(false);
+  const [disputeRaised, setDisputeRaised] = useState(booking.paymentStatus === "disputed");
 
   const handlePay = async () => {
     setPaying(true);
@@ -196,6 +200,22 @@ function BookingCard({ booking, onClaimSubmitted }: {
     showSuccess("Thank you for your feedback!");
     } catch (err) {
       showError(err, "Failed to submit rating. Please try again.");
+    }
+  };
+
+  const handleDisputeSubmit = async () => {
+    if (disputeReason.trim().length < 10) { showError("Please describe the issue (min 10 characters)."); return; }
+    setSubmittingDispute(true);
+    try {
+      await axiosInstance.post(`/bookings/${booking._id}/dispute`, { reason: disputeReason });
+      setDisputeRaised(true);
+      setShowDisputeForm(false);
+      showSuccess("Dispute raised. Our team will review it within 24–48 hours.");
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      showError(e.response?.data?.message || "Failed to raise dispute. Please try again.");
+    } finally {
+      setSubmittingDispute(false);
     }
   };
 
@@ -292,7 +312,45 @@ function BookingCard({ booking, onClaimSubmitted }: {
             😕 Not Satisfied?
           </button>
         )}
+
+        {/* ── Raise Dispute — completed or confirmed upcoming bookings ── */}
+        {["completed", "upcoming", "ongoing"].includes(booking.status) && booking.paymentStatus === "confirmed" && !disputeRaised && (
+          <button type="button" onClick={() => setShowDisputeForm(!showDisputeForm)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', backgroundColor: showDisputeForm ? '#fef2f2' : '#fff7ed', color: '#b45309', borderRadius: '0.5rem', border: '1px solid #fed7aa', fontSize: '0.8rem', fontWeight: '600', cursor: 'pointer' }}>
+            ⚠️ Raise Dispute
+          </button>
+        )}
+        {disputeRaised && (
+          <span style={{ fontSize: '0.8rem', color: '#b45309', fontWeight: 600, padding: '0.5rem 0' }}>⚠️ Dispute Raised</span>
+        )}
       </div>
+
+      {/* ── Dispute inline form ── */}
+      {showDisputeForm && !disputeRaised && (
+        <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '0.75rem', padding: '1rem', marginBottom: '0.75rem' }}>
+          <p style={{ margin: '0 0 0.5rem', fontWeight: 700, fontSize: '0.85rem', color: '#92400e' }}>⚠️ Raise a Dispute</p>
+          <p style={{ margin: '0 0 0.75rem', fontSize: '0.75rem', color: '#78350f', lineHeight: 1.5 }}>
+            Describe the issue (e.g. tutor no-show, session quality, billing problem). Our team reviews within 24–48 hours.
+          </p>
+          <textarea
+            value={disputeReason}
+            onChange={e => setDisputeReason(e.target.value)}
+            placeholder="Describe the issue in detail (min 10 characters)…"
+            rows={3}
+            style={{ width: '100%', padding: '0.625rem', border: '1px solid #fcd34d', borderRadius: '0.5rem', fontSize: '0.85rem', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }}
+          />
+          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+            <button type="button" onClick={handleDisputeSubmit} disabled={submittingDispute || disputeReason.trim().length < 10}
+              style={{ padding: '0.5rem 1.25rem', background: submittingDispute ? '#e5e7eb' : '#b45309', color: submittingDispute ? '#9ca3af' : '#fff', border: 'none', borderRadius: '0.5rem', fontSize: '0.85rem', fontWeight: 700, cursor: submittingDispute ? 'not-allowed' : 'pointer' }}>
+              {submittingDispute ? 'Submitting…' : 'Submit Dispute'}
+            </button>
+            <button type="button" onClick={() => setShowDisputeForm(false)}
+              style={{ padding: '0.5rem 1rem', background: '#fff', border: '1px solid #d1d5db', borderRadius: '0.5rem', fontSize: '0.85rem', cursor: 'pointer' }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {booking.status === "completed" && (
         <div style={{ background: "linear-gradient(135deg, #EEF5FF 0%, #F8FAFF 100%)", border: "1px solid #bfdbfe", borderRadius: "0.75rem", padding: "0.9rem", marginBottom: "0.75rem" }}>

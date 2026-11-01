@@ -17,6 +17,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback,useEffect,useState } from "react";
 import AvailabilityManager from "./AvailabilityManager";
+import SessionPackagesEditor from "./SessionPackagesEditor";
 import CommissionCalculator from "./CommissionCalculator";
 import PlaceBidModal from "./PlaceBidModal";
 import RatingModal from "./RatingModal";
@@ -576,6 +577,10 @@ function ProfileSection({ profile }: { profile: TutorProfileData }) {
         <div className={s.profileCard} style={{ gridColumn: '1 / -1' }}>
           <p className={s.profileCardTitle}>Availability</p>
           <AvailabilityManager />
+        </div>
+        <div className={s.profileCard} style={{ gridColumn: '1 / -1' }}>
+          <p className={s.profileCardTitle}>Session Packages</p>
+          <SessionPackagesEditor tutorCurrency={profile.currency} hourlyRate={profile.hourlyRate} />
         </div>
       </div>
     </div>

@@ -748,6 +748,39 @@ export async function TutorProfilePageBody({ tutor }: { tutor: TutorProfile | nu
             </div>
           </div>
 
+          {/* Session packages */}
+          {tutor.sessionPackages && tutor.sessionPackages.length > 0 && (
+            <div style={{ marginTop: "1.25rem" }}>
+              <p style={{ margin: "0 0 0.6rem", fontSize: "0.85rem", fontWeight: 700, color: "#021550" }}>
+                📦 Session Packages
+              </p>
+              <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+                {tutor.sessionPackages.map((pkg, i) => {
+                  const perSession = pkg.totalPrice / pkg.sessions;
+                  const fullPrice = perSession * pkg.sessions;
+                  const savePct = tutor.hourlyRate
+                    ? Math.round((1 - perSession / tutor.hourlyRate) * 100)
+                    : 0;
+                  const currency = pkg.currency || tutor.currency || "PKR";
+                  return (
+                    <div key={i} style={{ background: "#eff6ff", border: "1.5px solid #bfdbfe", borderRadius: 10, padding: "0.75rem 1rem", minWidth: 140 }}>
+                      <p style={{ margin: "0 0 2px", fontSize: "0.8rem", fontWeight: 800, color: "#0329b2" }}>
+                        {pkg.label || `${pkg.sessions}-Session Pack`}
+                      </p>
+                      <p style={{ margin: "0 0 2px", fontSize: "1.1rem", fontWeight: 800, color: "#021550" }}>
+                        {currency} {pkg.totalPrice.toLocaleString()}
+                      </p>
+                      <p style={{ margin: 0, fontSize: "0.72rem", color: "#64748b" }}>
+                        {currency} {Math.round(perSession).toLocaleString()}/session
+                        {savePct > 0 && <span style={{ marginLeft: 6, color: "#059669", fontWeight: 700 }}>Save {savePct}%</span>}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Integrated Teaching Overview Statement (replacing raw SEO paragraph) */}
           <div
             style={{
