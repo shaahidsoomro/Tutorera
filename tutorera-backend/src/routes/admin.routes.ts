@@ -73,7 +73,6 @@ import promoCodeAdminRoutes from "./admin/promoCode.routes";
 import emailTemplateAdminRoutes from "./admin/emailTemplate.routes";
 import academicFrameworkAdminRoutes from "./admin/academicFramework.routes";
 import verificationAdminRoutes from "./admin/verification.routes";
-import payoutAdminRoutes from "./admin/payout.routes";
 import subjectAdminRoutes from "./admin/subject.routes";
 import disciplineSubjectMapAdminRoutes from "./admin/disciplineSubjectMap.routes";
 import {
@@ -131,7 +130,6 @@ router.use("/promo-codes", promoCodeAdminRoutes);
 router.use("/email-templates", emailTemplateAdminRoutes);
 router.use("/academic-framework", academicFrameworkAdminRoutes);
 router.use("/verification", verificationAdminRoutes);
-router.use("/payouts-admin", payoutAdminRoutes);
 router.use("/subjects", subjectAdminRoutes);
 router.use("/discipline-subject-maps", disciplineSubjectMapAdminRoutes);
 
