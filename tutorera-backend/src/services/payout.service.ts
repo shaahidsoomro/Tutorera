@@ -26,7 +26,7 @@ export async function listPayouts(opts: {
   const skip = (opts.page - 1) * opts.limit;
   const [payouts, total] = await Promise.all([
     Booking.find(filter)
-      .select("_id tutor student payoutStatus payoutRequestedAt payoutProcessedAt transferRef adminNote totalAmount currency")
+      .select("_id tutor student payoutStatus payoutRequestedAt payoutPaidAt payoutSettlementReference payoutNote amount currency")
       .sort({ payoutRequestedAt: -1 })
       .skip(skip)
       .limit(opts.limit)
@@ -46,9 +46,9 @@ export async function markPayoutComplete(opts: {
   if (!booking) throw Object.assign(new Error("Payout not found for transferRef"), { statusCode: 404 });
   if (booking.payoutStatus === "paid") throw Object.assign(new Error("Payout already marked complete"), { statusCode: 409 });
   booking.payoutStatus = "paid";
-  booking.payoutProcessedAt = new Date();
-  (booking as any).evidenceRef = opts.evidenceRef;
-  (booking as any).adminNote = opts.adminNote || "";
+  booking.payoutPaidAt = new Date();
+  booking.payoutEvidenceReference = opts.evidenceRef;
+  booking.payoutNote = opts.adminNote || "";
   await booking.save();
   logger.info({ transferRef: opts.transferRef, adminId: opts.adminId }, "Payout marked complete");
 }
@@ -61,7 +61,7 @@ export async function markPayoutFailed(opts: {
   const booking = await Booking.findOne({ transferRef: opts.transferRef });
   if (!booking) throw Object.assign(new Error("Payout not found for transferRef"), { statusCode: 404 });
   booking.payoutStatus = "pending";
-  (booking as any).adminNote = opts.adminNote;
+  booking.payoutNote = opts.adminNote;
   await booking.save();
   logger.warn({ transferRef: opts.transferRef, adminId: opts.adminId }, "Payout marked failed, returned to pending");
 }

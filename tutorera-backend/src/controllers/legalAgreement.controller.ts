@@ -285,11 +285,7 @@ export const acceptTutorAgreement = async (req: AuthRequest, res: Response): Pro
   }
 
   // 9. Fee disclosure snapshot
-  const feeCalculation = await calculateMarketplaceFees(1000, {
-    countryCode: profile.countryCode || "PK",
-    currency: profile.currency || "USD",
-    teachingMode: profile.teachingMode || "online",
-  });
+  const feeCalculation = await calculateMarketplaceFees(1000, profile.countryCode || "PK");
 
   const now = new Date();
   const session = await mongoose.startSession();
@@ -328,7 +324,7 @@ export const acceptTutorAgreement = async (req: AuthRequest, res: Response): Pro
   );
 
   // 11. Create Immutable Acceptance Record
-  const [acceptance] = await TutorAgreementAcceptance.create([{
+  const createdAcceptance = new TutorAgreementAcceptance({
     tutor: req.user!._id,
     tutorProfile: profile._id,
     legalAgreement: agreement._id,
@@ -367,7 +363,9 @@ export const acceptTutorAgreement = async (req: AuthRequest, res: Response): Pro
       contactEmail: agreement.companyDetails?.contactEmail || "hello@mentisera.pk",
     },
     acceptanceStatus: "active",
-  }], { session });
+  });
+  await createdAcceptance.save({ session });
+  acceptance = createdAcceptance;
 
   // 12. Maintain the legacy contract in the same transaction.
     await TutorAgreement.findOneAndUpdate(

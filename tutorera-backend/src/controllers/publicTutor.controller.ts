@@ -108,7 +108,7 @@ export const getPublicTutors = async (req: AuthRequest, res: Response): Promise<
     const matchRequest = await Request.findById(matchRequestId).lean();
     if (matchRequest) {
       const ranked = await MatchingService.rankTutors(matchRequest as any, tutorsWithResponse as any[]);
-      const scoreMap = new Map(ranked.map((s) => [s.tutor._id.toString(), s.matchScore]));
+      const scoreMap = new Map(ranked.map((s) => [String(s.tutor._id), s.matchScore]));
       tutorsWithResponse.forEach((t: any) => {
         t.matchScore = scoreMap.get(t._id.toString()) ?? null;
       });

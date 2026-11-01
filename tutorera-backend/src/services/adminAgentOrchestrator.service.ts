@@ -11,16 +11,16 @@ import {
   ADMIN_AGENT_REGISTRY,
   planAdminAgentTasks,
   type AdminAgentId,
-  type AgentTask,
+  type AdminAgentTask,
 } from "./adminAgentSupervisor.service";
-import { readAdminAgentSummary, type AgentSummary } from "./adminAgentRead.service";
+import { readAdminAgentSummary, type AgentReadResult } from "./adminAgentRead.service";
 
 export interface AgentExecutionResult {
   agentId: AdminAgentId;
   label: string;
   rationale: string;
   status: "success" | "error";
-  summary?: AgentSummary;
+  summary?: AgentReadResult;
   error?: string;
   durationMs: number;
 }
@@ -51,20 +51,20 @@ export async function executeAdminSupervisor(
 
   // Filter to tasks the caller is authorised for
   const registryMap = Object.fromEntries(ADMIN_AGENT_REGISTRY.map((a) => [a.id, a]));
-  const authorisedTasks: AgentTask[] = rawTasks.filter((t) => {
-    const d = registryMap[t.agentId];
-    return d && hasPermission(adminRole as AdminRole, adminPermissions, d.requiredPermission);
+  const authorisedTasks: AdminAgentTask[] = rawTasks.filter((t) => {
+    const d = registryMap[t.id];
+    return d && hasPermission(adminRole as AdminRole, adminPermissions, d.permission);
   });
 
   // Fan-out: execute all agents in parallel
   const settled = await Promise.allSettled(
     authorisedTasks.map(async (task): Promise<AgentExecutionResult> => {
       const agentStart = Date.now();
-      const summary = await readAdminAgentSummary(task.agentId);
+      const summary = await readAdminAgentSummary(task.id);
       return {
-        agentId: task.agentId,
-        label: task.label,
-        rationale: task.rationale,
+        agentId: task.id,
+        label: task.description,
+        rationale: task.endpoint,
         status: "success",
         summary,
         durationMs: Date.now() - agentStart,
@@ -76,9 +76,9 @@ export async function executeAdminSupervisor(
     if (r.status === "fulfilled") return r.value;
     const task = authorisedTasks[i];
     return {
-      agentId: task.agentId,
-      label: task.label,
-      rationale: task.rationale,
+      agentId: task.id,
+      label: task.description,
+      rationale: task.endpoint,
       status: "error",
       error: r.reason instanceof Error ? r.reason.message : String(r.reason),
       durationMs: 0,

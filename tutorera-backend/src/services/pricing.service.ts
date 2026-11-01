@@ -12,6 +12,7 @@ export interface MarketplaceFeeQuote {
   tax: number;
   studentTotal: number;
   tutorNet: number;
+  currency?: string;
   feeConfig: Record<string, unknown>;
 }
 
@@ -45,7 +46,7 @@ export async function resolveMarketplaceFees(amount: number, countryCode = "PK")
   if (!config) {
     // Existing production rates until an admin actively publishes a version.
     const fallback = calculateMarketplaceFees(amount);
-    return { ...fallback, feeConfig: { ...MARKETPLACE_FEES, version: "legacy-2026-08-30", countryCode: code } };
+    return { ...fallback, currency: MARKETPLACE_FEES.currency, feeConfig: { ...MARKETPLACE_FEES, version: "legacy-2026-08-30", countryCode: code } };
   }
   const cap = config.maximumFee;
   const charge = (rate: number) => Math.min(cap, Math.max(config.minimumFee, Math.round(amount * rate / 100)));
@@ -59,6 +60,7 @@ export async function resolveMarketplaceFees(amount: number, countryCode = "PK")
   return {
     subtotal: amount, studentFee, tutorFee, tax,
     studentTotal: amount + studentFee, tutorNet,
+    currency: config.currency,
     feeConfig: { version: config.version, countryCode: config.countryCode, currency: config.currency,
       studentFeePercent: config.studentFeePercent, tutorFeePercent: config.tutorFeePercent,
       minimumFee: config.minimumFee, maximumFee: config.maximumFee, taxPercent: config.taxPercent,

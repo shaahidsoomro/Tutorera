@@ -147,17 +147,18 @@ export async function recordPaymentLedger(args: {
   // Ledger values use the agreed checkout/booking quote, never today's rates.
   let fees: MarketplaceFeeQuote | undefined = args.feeSnapshot;
   if (!fees && args.bookingId) {
-    const booking = await Booking.findById(args.bookingId).select("subtotal studentFee tutorFee tax studentTotal tutorNet feeConfig").lean();
+    const booking = await Booking.findById(args.bookingId).select("subtotal studentFee tutorFee tax studentTotal tutorNet currency feeConfig").lean();
     if (booking) fees = { subtotal: booking.subtotal, studentFee: booking.studentFee, tutorFee: booking.tutorFee,
-      tax: booking.tax, studentTotal: booking.studentTotal, tutorNet: booking.tutorNet, feeConfig: booking.feeConfig };
+      tax: booking.tax, studentTotal: booking.studentTotal, tutorNet: booking.tutorNet,
+      currency: booking.currency, feeConfig: booking.feeConfig };
   }
   if (!fees && args.bidId) {
     const bid = await Bid.findById(args.bidId).select("feeQuote").lean();
     if (bid?.feeQuote) fees = bid.feeQuote;
   }
   // Backwards compatibility for old transactions without an archived quote.
-  if (!fees) fees = calculateMarketplaceFees(args.amount);
-  const platformNet = fees.studentFee + fees.tutorFee;
+  const resolvedFees = fees || calculateMarketplaceFees(args.amount);
+  const platformNet = resolvedFees.studentFee + resolvedFees.tutorFee;
   const settlementStatus: "expected" | "unsettled" = args.status === "succeeded" ? "expected" : "unsettled";
   // Legacy compound unique index includes the always-present provider field;
   // missing providerEventId was indexed as null and blocked second checkouts.
@@ -171,13 +172,13 @@ export async function recordPaymentLedger(args: {
     status: args.status,
     grossAmount: args.amount,
     currency: args.currency || "PKR",
-    studentPayment: fees.studentTotal,
-    studentFee: fees.studentFee,
-    tutorFee: fees.tutorFee,
-    tax: fees.tax,
+    studentPayment: resolvedFees.studentTotal,
+    studentFee: resolvedFees.studentFee,
+    tutorFee: resolvedFees.tutorFee,
+    tax: resolvedFees.tax,
     gatewayFee: 0,
     refundAmount: args.eventType === "payment.refunded" ? args.amount : 0,
-    tutorPayable: fees.tutorNet,
+    tutorPayable: resolvedFees.tutorNet,
     platformNet,
     settlementStatus,
     booking: args.bookingId ? new Types.ObjectId(args.bookingId) : undefined,

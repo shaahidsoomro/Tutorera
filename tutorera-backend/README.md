@@ -23,6 +23,11 @@ This is the canonical API hostname target, not deployment proof. Verify the
 current DNS/origin and health endpoints before treating it as the active
 production deployment. Do not use the legacy Render URL as the source of truth.
 
+Production releases are triggered by pushes to `main` through GitHub Actions.
+The backend and frontend Cloudflare workflows require the repository or
+environment secret `CLOUDFLARE_API_TOKEN`; without it, CI intentionally stops
+before deployment.
+
 ## Local Setup
 
 ### 1. Clone the repo

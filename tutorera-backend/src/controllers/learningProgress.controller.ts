@@ -86,7 +86,7 @@ export const getProgressReports = async (req: AuthRequest, res: Response): Promi
 
   // Tutors see their own full notes; students/parents get redacted tutor-only internal notes
   const sanitized = reports.map(r => {
-    const obj = r.toObject() as Record<string, unknown>;
+    const obj = r.toObject() as unknown as Record<string, unknown>;
     if (role !== "tutor") delete obj.tutorNotes;
     return obj;
   });

@@ -9,6 +9,7 @@ export interface IFeeConfig extends Document {
   tutorFeePercent: number;
   minimumFee: number;
   maximumFee: number;
+  taxPercent: number;
   // Payment gateway processing cost (Switch's own cut) - a
   // real cost of accepting the payment, distinct from TutorEra's own
   // commission (studentFeePercent/tutorFeePercent) and from government tax
@@ -34,6 +35,7 @@ const feeConfigSchema = new Schema<IFeeConfig>(
     tutorFeePercent: { type: Number, default: 20, min: 0, max: 100 },
     minimumFee: { type: Number, default: 0, min: 0 },
     maximumFee: { type: Number, default: 5000, min: 0 },
+    taxPercent: { type: Number, default: 15, min: 0, max: 100 },
     gatewayFeePercent: { type: Number, default: 2.9, min: 0, max: 100 },
     gatewayFixedFee: { type: Number, default: 0, min: 0 },
     effectiveDate: { type: Date, default: Date.now },

@@ -551,8 +551,6 @@ export const getMarketConfigs = async (req: AuthRequest, res: Response): Promise
         onlineEnabled: true,
         homeTuitionEnabled: true,
         backgroundCheckRequired: true,
-        platformFeePercent: 15,
-        taxPercent: 0,
         isActive: true,
         launchStatus: "live",
         supportedCities: ["Lahore", "Karachi", "Islamabad", "Rawalpindi", "Faisalabad"],
@@ -566,8 +564,6 @@ export const getMarketConfigs = async (req: AuthRequest, res: Response): Promise
         onlineEnabled: true,
         homeTuitionEnabled: true,
         backgroundCheckRequired: true,
-        platformFeePercent: 15,
-        taxPercent: 15,
         isActive: true,
         launchStatus: "live",
         supportedCities: ["Riyadh", "Jeddah", "Dammam", "Mecca", "Medina"],
@@ -581,8 +577,6 @@ export const getMarketConfigs = async (req: AuthRequest, res: Response): Promise
         onlineEnabled: true,
         homeTuitionEnabled: true,
         backgroundCheckRequired: true,
-        platformFeePercent: 15,
-        taxPercent: 5,
         isActive: true,
         launchStatus: "live",
         supportedCities: ["Dubai", "Abu Dhabi", "Sharjah"],
@@ -596,8 +590,6 @@ export const getMarketConfigs = async (req: AuthRequest, res: Response): Promise
         onlineEnabled: true,
         homeTuitionEnabled: false,
         backgroundCheckRequired: true,
-        platformFeePercent: 12,
-        taxPercent: 20,
         isActive: true,
         launchStatus: "beta",
         supportedCities: ["London", "Manchester", "Birmingham"],
@@ -613,7 +605,7 @@ export const updateMarketConfig = async (req: AuthRequest, res: Response): Promi
   const current = await MarketConfig.findById(id);
   if (!current) { res.status(404).json({ success: false, message: "Market configuration not found." }); return; }
   if (req.countryScopeCode && current.countryCode !== req.countryScopeCode) { res.status(404).json({ success: false, message: "Market configuration not found." }); return; }
-  const allowed = ["onlineEnabled", "homeTuitionEnabled", "studentRegistration", "tutorRegistration", "backgroundCheckRequired", "platformFeePercent", "taxPercent", "isActive", "supportedCities", "supportedLanguages", "defaultLanguage", "verificationPolicy"];
+  const allowed = ["onlineEnabled", "homeTuitionEnabled", "studentRegistration", "tutorRegistration", "backgroundCheckRequired", "isActive", "supportedCities", "supportedLanguages", "defaultLanguage", "verificationPolicy"];
   const changes = Object.fromEntries(allowed.filter((key) => req.body[key] !== undefined).map((key) => [key, req.body[key]]));
   // Payment activation is intentionally code/provider gated; an admin toggle cannot make an unconfigured market transactional.
   if (["AE", "GB"].includes(current.countryCode)) Object.assign(changes, { paymentsEnabled: false, payoutsEnabled: false, paymentProvider: "none", launchStatus: "beta", "featureFlags.acceptance": false });
