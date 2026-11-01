@@ -1272,6 +1272,29 @@ export async function TutorProfilePageBody({ tutor }: { tutor: TutorProfile | nu
                   <p style={{ color: "#4b5563", lineHeight: 1.6, marginTop: ".4rem", fontSize: "0.9rem" }}>
                     {review.comment}
                   </p>
+                  {review.tutorResponse && (
+                    <div
+                      style={{
+                        marginTop: "0.6rem",
+                        padding: "0.65rem 0.875rem",
+                        backgroundColor: "#f0f9ff",
+                        borderLeft: "3px solid #0369a1",
+                        borderRadius: "0 0.375rem 0.375rem 0",
+                      }}
+                    >
+                      <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "#0369a1", margin: "0 0 0.25rem" }}>
+                        Tutor's response
+                        {review.tutorRespondedAt && (
+                          <span style={{ fontWeight: 400, marginLeft: "0.5rem", color: "#64748b" }}>
+                            · {new Date(review.tutorRespondedAt).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" })}
+                          </span>
+                        )}
+                      </p>
+                      <p style={{ color: "#0c4a6e", fontSize: "0.85rem", lineHeight: 1.6, margin: 0 }}>
+                        {review.tutorResponse}
+                      </p>
+                    </div>
+                  )}
                 </article>
               ))
             ) : (

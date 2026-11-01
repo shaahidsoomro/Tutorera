@@ -151,10 +151,14 @@ export const INITIAL_FILTERS: FiltersState = {
 
 export interface Review {
   _id: string;
+  tutorId?: string;
   student: { name: string; avatar: string };
   rating: number;
   comment: string;
   createdAt: string;
+  tutorResponse?: string;
+  tutorRespondedAt?: string;
+  isVerifiedBooking?: boolean;
 }
 
 export interface PaginationMeta {

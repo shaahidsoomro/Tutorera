@@ -584,7 +584,7 @@ function ProfileSection({ profile }: { profile: TutorProfileData }) {
 
 // ─── Tutor Dashboard ──────────────────────────────────────────────────────────
 
-type Tab = "bookings" | "recommended" | "browse" | "profile" | "calculator";
+type Tab = "bookings" | "recommended" | "browse" | "profile" | "calculator" | "reviews";
 
 interface Props {
   userId: string;
@@ -599,6 +599,10 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
   const [loadingRec, setLoadingRec] = useState(false);
   const [requests, setRequests]     = useState<DashRequest[]>([]);
   const [directRequests, setDirectRequests] = useState<DashDirectRequest[]>([]);
+  const [myReviews, setMyReviews] = useState<Array<{_id:string;student:{name:string;avatar?:string};rating:number;comment:string;createdAt:string;tutorResponse?:string;tutorRespondedAt?:string}>>([]);
+  const [loadingReviews, setLoadingReviews] = useState(false);
+  const [respondingTo, setRespondingTo] = useState<string|null>(null);
+  const [responseText, setResponseText] = useState("");
   const [loadingD, setLoadingD]     = useState(false);
   const [profile, setProfile]       = useState<TutorProfileData | null>(null);
   const [loadingB, setLoadingB]     = useState(true);
@@ -697,6 +701,12 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
     if (tab === "recommended" && recommended.length === 0) fetchRecommended();
     if (tab === "browse" && requests.length === 0) fetchRequests();
     if (tab === "browse") fetchDirectRequests();
+    if (tab === "reviews" && myReviews.length === 0) {
+      setLoadingReviews(true);
+      axiosInstance.get(`/reviews/${userId}?limit=50`).then(res => {
+        setMyReviews(res.data.reviews ?? []);
+      }).catch(() => setMyReviews([])).finally(() => setLoadingReviews(false));
+    }
   }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const upcomingCount  = bookings.filter((b) => b.status === "upcoming" && b.paymentStatus === "confirmed").length;
@@ -844,6 +854,13 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
       <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
     </svg>
     My Profile
+  </button>
+  <button
+    onClick={() => setTab("reviews")}
+    aria-current={tab === "reviews" ? "true" : undefined}
+    className={`${s.tab} ${tab === "reviews" ? s.tabActive : ""}`}
+  >
+    ⭐ My Reviews {myReviews.length > 0 && `(${myReviews.length})`}
   </button>
   <Link href="/offers" className={s.tab}>My Offers & Negotiations</Link>
   <Link href="/chat" className={s.tab}>Messages</Link>
@@ -1043,6 +1060,102 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
               </div>
             </div>
             <CommissionCalculator />
+          </section>
+        )}
+
+        {tab === "reviews" && (
+          <section aria-label="My student reviews">
+            <div className={s.sectionHeader}>
+              <div>
+                <h2 className={s.sectionTitle}>Student Reviews</h2>
+                <p style={{ fontSize: 13, color: "#64748b", margin: "4px 0 0" }}>
+                  Respond to student feedback to build trust with future students. One response per review, max 1000 characters.
+                </p>
+              </div>
+            </div>
+
+            {loadingReviews ? (
+              <div className={s.spinner} />
+            ) : myReviews.length === 0 ? (
+              <div className={s.empty}>
+                <div className={s.emptyIcon}>⭐</div>
+                <p className={s.emptyTitle}>No reviews yet</p>
+                <p className={s.emptyDesc}>Reviews appear here after students complete sessions and rate their experience.</p>
+              </div>
+            ) : (
+              myReviews.map(review => (
+                <div key={review._id} className={s.card}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "0.5rem" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                      <div className={s.bidAvatar} style={{ width: 36, height: 36, fontSize: "0.9rem" }}>
+                        {review.student?.name?.charAt(0).toUpperCase() ?? "S"}
+                      </div>
+                      <div>
+                        <p style={{ margin: 0, fontWeight: 700, fontSize: "0.9rem", color: "#021550" }}>{review.student?.name ?? "Student"}</p>
+                        <p style={{ margin: 0, fontSize: "0.75rem", color: "#9ca3af" }}>{new Date(review.createdAt).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" })}</p>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 2 }}>
+                      {[...Array(5)].map((_, i) => (
+                        <svg key={i} width={14} height={14} viewBox="0 0 20 20" fill={i < review.rating ? "#fbbf24" : "#e2e8f0"} aria-hidden="true">
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                      ))}
+                    </div>
+                  </div>
+
+                  <p style={{ margin: "0.6rem 0 0", color: "#374151", fontSize: "0.875rem", lineHeight: 1.6 }}>{review.comment}</p>
+
+                  {review.tutorResponse ? (
+                    <div style={{ marginTop: "0.75rem", padding: "0.65rem 0.875rem", backgroundColor: "#f0f9ff", borderLeft: "3px solid #0369a1", borderRadius: "0 0.375rem 0.375rem 0" }}>
+                      <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "#0369a1", margin: "0 0 0.25rem" }}>
+                        Your response · {review.tutorRespondedAt ? new Date(review.tutorRespondedAt).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" }) : ""}
+                      </p>
+                      <p style={{ color: "#0c4a6e", fontSize: "0.85rem", lineHeight: 1.6, margin: 0 }}>{review.tutorResponse}</p>
+                    </div>
+                  ) : respondingTo === review._id ? (
+                    <div style={{ marginTop: "0.75rem" }}>
+                      <textarea
+                        value={responseText}
+                        onChange={e => setResponseText(e.target.value)}
+                        maxLength={1000}
+                        rows={3}
+                        placeholder="Write a professional response to this review… (10–1000 characters)"
+                        aria-label="Review response"
+                        style={{ width: "100%", padding: "0.6rem 0.75rem", border: "1.5px solid #bfdbfe", borderRadius: "0.4rem", fontSize: "0.82rem", resize: "vertical", fontFamily: "inherit", boxSizing: "border-box" }}
+                      />
+                      <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem", alignItems: "center" }}>
+                        <button
+                          type="button"
+                          className={s.btnSuccess}
+                          disabled={responseText.trim().length < 10}
+                          onClick={async () => {
+                            try {
+                              await axiosInstance.patch(`/reviews/${userId}/${review._id}/respond`, { response: responseText.trim() });
+                              setMyReviews(prev => prev.map(r => r._id === review._id ? { ...r, tutorResponse: responseText.trim(), tutorRespondedAt: new Date().toISOString() } : r));
+                              setRespondingTo(null); setResponseText("");
+                              showSuccess("Response published.");
+                            } catch (err) { showError(err, "Failed to publish response."); }
+                          }}
+                        >
+                          Publish Response
+                        </button>
+                        <button type="button" className={s.btnOutline} onClick={() => { setRespondingTo(null); setResponseText(""); }}>Cancel</button>
+                        <span style={{ fontSize: "0.72rem", color: "#9ca3af", marginLeft: "auto" }}>{responseText.length}/1000</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => { setRespondingTo(review._id); setResponseText(""); }}
+                      style={{ marginTop: "0.6rem", padding: "0.4rem 0.875rem", background: "#f0f9ff", color: "#0369a1", border: "1px solid #bae6fd", borderRadius: "0.4rem", fontSize: "0.78rem", fontWeight: 600, cursor: "pointer" }}
+                    >
+                      ↩ Respond
+                    </button>
+                  )}
+                </div>
+              ))
+            )}
           </section>
         )}
       </div>
