@@ -1,6 +1,7 @@
 "use client";
 
 import api from "@/lib/axios";
+import { useAuth } from "@/context/AuthContext";
 import {
   LEGAL_OPERATOR,
   PRIVACY_CONTACT_EMAIL,
@@ -18,11 +19,12 @@ import {
   Trash2
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect,useState } from "react";
+import { useState } from "react";
 import s from "../compliance-pages.module.css";
 
 export default function PrivacyCenterPage() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { user } = useAuth();
+  const isLoggedIn = !!user;
   const [isExporting, setIsExporting] = useState(false);
   const [exportSuccess, setExportSuccess] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -30,13 +32,6 @@ export default function PrivacyCenterPage() {
   const [marketingConsent, setMarketingConsent] = useState(false);
   const [isUpdatingConsent, setIsUpdatingConsent] = useState(false);
   const [consentSuccess, setConsentSuccess] = useState(false);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("token");
-      setIsLoggedIn(!!token);
-    }
-  }, []);
 
   const handleExportData = async () => {
     setIsExporting(true);

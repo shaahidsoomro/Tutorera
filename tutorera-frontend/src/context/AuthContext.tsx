@@ -44,6 +44,7 @@ interface RegisterData {
 
 interface AuthContextType {
   user: User | null;
+  token: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<User>;
   register: (data: RegisterData) => Promise<User>;
@@ -58,34 +59,27 @@ const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      api
-        .get("/auth/me")
-        .then((res) => setUser(res.data.user))
-        .catch(() => {
-          localStorage.removeItem("token");
-          setUser(null);
-        })
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
+    api
+      .get("/auth/me")
+      .then((res) => setUser(res.data.user))
+      .catch(() => setUser(null))
+      .finally(() => setLoading(false));
   }, []);
 
   const login = async (email: string, password: string): Promise<User> => {
     const res = await api.post("/auth/login", { email, password });
-    localStorage.setItem("token", res.data.token);
+    setToken(res.data.token ?? null);
     setUser(res.data.user);
     return res.data.user;
   };
 
   const register = async (data: RegisterData) => {
     const res = await api.post("/auth/register", data);
-    localStorage.setItem("token", res.data.token);
+    setToken(res.data.token ?? null);
     setUser(res.data.user);
     return res.data.user;
   };
@@ -98,14 +92,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     studentDetails?: { dateOfBirth?: string; guardianEmail?: string; guardianName?: string }
   ): Promise<GoogleAuthResult> => {
     const res = await api.post("/auth/google", { idToken, role, countryCode, preferredLanguage, ...studentDetails });
-    localStorage.setItem("token", res.data.token);
+    setToken(res.data.token ?? null);
     setUser(res.data.user);
     return { user: res.data.user, needsRole: res.data.needsRole };
   };
 
   const selectRole = async (role: "student" | "tutor" | "parent", details?: { dateOfBirth?: string; guardianEmail?: string; guardianName?: string }): Promise<User> => {
     const res = await api.patch("/auth/select-role", { role, ...details });
-    localStorage.setItem("token", res.data.token);
+    setToken(res.data.token ?? null);
     setUser(res.data.user);
     return res.data.user;
   };
@@ -125,20 +119,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
-    const token = localStorage.getItem("token");
-
-    localStorage.removeItem("token");
     setUser(null);
-
+    setToken(null);
     void api
-      .post(
-        "/auth/logout",
-        undefined,
-        {
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-          timeout: 5000,
-        }
-      )
+      .post("/auth/logout", undefined, { timeout: 5000 })
       .catch((err) => {
         console.error("Logout request failed:", err);
       });
@@ -148,6 +132,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     <AuthContext.Provider
       value={{
         user,
+        token,
         loading,
         login,
         register,

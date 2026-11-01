@@ -32,11 +32,14 @@ export const initSocket = (httpServer: HttpServer, options?: { pollingOnly?: boo
     if (!token) return next(new Error("Authentication required"));
 
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { id: string };
+      const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { id: string; iat: number };
 
-      const user = await User.findById(decoded.id).select("isActive role isMinor parentConsentVerified dateOfBirth");
+      const user = await User.findById(decoded.id).select("isActive role isMinor parentConsentVerified dateOfBirth sessionInvalidBefore");
       if (!user) return next(new Error("User no longer exists"));
       if (!user.isActive) return next(new Error("Account is deactivated"));
+      if (user.sessionInvalidBefore && decoded.iat * 1000 < user.sessionInvalidBefore.getTime()) {
+        return next(new Error("Session expired. Please log in again."));
+      }
       if (user.role === "pending") return next(new Error("Account role selection is required"));
       if (!isRealtimeStudentAllowed(user)) {
         return next(new Error("Guardian approval is required before realtime tutoring is available"));

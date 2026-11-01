@@ -1,5 +1,6 @@
 "use client";
 
+import api from "@/lib/axios";
 import { showError,showSuccess } from "@/lib/toast";
 import { useState } from "react";
 import s from "./tracking.module.css";
@@ -22,14 +23,7 @@ export function TrackingUrlBlock({ applicationId, token, basePath = "/track/tuto
   const handleRotate = async () => {
     setRotating(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "https://api.tutorera.ac.pk/api/v1"}/tracking/application-status/rotate-token`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${typeof window !== "undefined" ? localStorage.getItem("token") || "" : ""}`,
-        },
-      });
-      if (!res.ok) throw new Error("Failed to rotate link");
-      const data = await res.json();
+      const { data } = await api.post("/tracking/application-status/rotate-token");
       setTokenState(data.trackingToken);
       try {
         await navigator.clipboard.writeText(`${window.location.origin}${basePath}/${data.trackingToken}`);

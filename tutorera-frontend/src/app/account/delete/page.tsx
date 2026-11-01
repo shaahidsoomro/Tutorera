@@ -1,6 +1,7 @@
 "use client";
 
 import api from "@/lib/axios";
+import { useAuth } from "@/context/AuthContext";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -12,12 +13,13 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import React,{ useEffect,useState } from "react";
+import React,{ useState } from "react";
 import s from "../../compliance-pages.module.css";
 
 export default function AccountDeletePage() {
   const router = useRouter();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { user } = useAuth();
+  const isLoggedIn = !!user;
   const [reason, setReason] = useState("");
   const [confirmText, setConfirmText] = useState("");
   const [acknowledge, setAcknowledge] = useState(false);
@@ -25,16 +27,6 @@ export default function AccountDeletePage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isDeleted, setIsDeleted] = useState(false);
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        setIsLoggedIn(false);
-      } else {
-        setIsLoggedIn(true);
-      }
-    }
-  }, []);
 
   const handleDelete = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,10 +52,6 @@ export default function AccountDeletePage() {
 
       if (res.data?.success) {
         setIsDeleted(true);
-        if (typeof window !== "undefined") {
-          localStorage.removeItem("token");
-          localStorage.removeItem("user");
-        }
         setTimeout(() => {
           router.push("/");
         }, 4000);

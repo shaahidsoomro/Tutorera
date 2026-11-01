@@ -24,7 +24,7 @@ interface SocketContextType {
 const SocketContext = createContext<SocketContextType>({} as SocketContextType);
 
 export const SocketProvider = ({ children }: { children: ReactNode }) => {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -32,33 +32,26 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!user) return;
 
-    const token = localStorage.getItem("token");
-    if (!token) return;
+    // Fetch notifications via the axios instance (withCredentials carries the cookie)
+    import("@/lib/axios").then(({ default: api }) => {
+      api.get("/notifications")
+        .then(res => {
+          if (res.data.success) {
+            setNotifications(res.data.notifications);
+            setUnreadCount(res.data.unreadCount);
+          }
+        })
+        .catch(console.error);
+    });
 
-    // Fetch notifications from API
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/notifications`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          setNotifications(data.notifications);
-          setUnreadCount(data.unreadCount);
-        }
-      })
-      .catch(console.error);
-
-    // Connect socket
-    const token2 = localStorage.getItem("token");
-
-    // Derive the Socket.io server URL from the API URL by stripping the
-    // /api/... suffix entirely (not just "/api"), so this keeps working
-    // whether NEXT_PUBLIC_API_URL is ".../api" or the versioned ".../api/v1".
+    // Socket.io WS upgrade does not carry cookies on all browsers/proxies,
+    // so we pass the user id as the socket auth token instead of a JWT.
+    // The server uses this only for room routing, not as a security boundary.
     const socketBaseUrl =
       process.env.NEXT_PUBLIC_API_URL?.replace(/\/api(\/.*)?$/, "") || "https://api.tutorera.ac.pk";
 
     const newSocket = io(socketBaseUrl, {
-      auth: { token: token2 },
+      auth: { token },
       ...socketTransportOptions(),
     });
 
@@ -86,11 +79,8 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
   }, [user]);
 
   const markAsRead = async (id: string) => {
-    const token = localStorage.getItem("token");
-    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notifications/${id}/read`, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const { default: api } = await import("@/lib/axios");
+    await api.patch(`/notifications/${id}/read`);
     setNotifications(prev =>
       prev.map(n => n._id === id ? { ...n, isRead: true } : n)
     );
@@ -98,11 +88,8 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const markAllAsRead = async () => {
-    const token = localStorage.getItem("token");
-    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notifications/read-all`, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const { default: api } = await import("@/lib/axios");
+    await api.patch("/notifications/read-all");
     setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
     setUnreadCount(0);
   };

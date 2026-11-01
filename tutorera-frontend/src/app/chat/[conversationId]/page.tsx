@@ -30,7 +30,7 @@ interface Conversation {
 
 export default function ChatPage() {
   const { conversationId } = useParams();
-  const { user, loading } = useAuth();
+  const { user, token, loading } = useAuth();
   const router = useRouter();
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -57,7 +57,6 @@ export default function ChatPage() {
   // Connect socket and join conversation room
   useEffect(() => {
     if (!user) return;
-    const token = localStorage.getItem("token");
     const newSocket = io(
       process.env.NEXT_PUBLIC_API_URL?.replace(/\/api(\/.*)?$/, "") || "https://api.tutorera.ac.pk",
       { auth: { token }, ...socketTransportOptions() }

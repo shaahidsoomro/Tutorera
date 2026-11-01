@@ -5,34 +5,20 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// Attach token to every request
-api.interceptors.request.use((config) => {
-  if (typeof window !== "undefined") {
-    const token = localStorage.getItem("token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-  }
-  return config;
-});
-
-// Centralized 401 handling — if any request comes back unauthorized (expired token,
-// suspended account, etc.), clear local auth state and redirect to login. This prevents
-// the UI from silently staying in a "logged in" state after the backend has already
-// invalidated the session.
+// Centralized 401 handling — if any request comes back unauthorized (expired/invalidated
+// token, suspended account, etc.), redirect to login. The httpOnly cookie is cleared
+// server-side on logout; we only need to handle the UI redirect here.
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (typeof window !== "undefined" && error.response?.status === 401) {
-      const isAuthRoute = error.config?.url?.includes("/auth/login")
-        || error.config?.url?.includes("/auth/register")
-        || error.config?.url?.includes("/auth/logout")
-        || error.config?.url?.includes("/ai/"); // don't redirect away from chat on 401
-      if (!isAuthRoute) {
-        localStorage.removeItem("token");
-        if (window.location.pathname !== "/login") {
-          window.location.href = "/login";
-        }
+      const url = error.config?.url ?? "";
+      const isAuthRoute = url.includes("/auth/login")
+        || url.includes("/auth/register")
+        || url.includes("/auth/logout")
+        || url.includes("/auth/me");
+      if (!isAuthRoute && window.location.pathname !== "/login") {
+        window.location.href = "/login";
       }
     }
     return Promise.reject(error);

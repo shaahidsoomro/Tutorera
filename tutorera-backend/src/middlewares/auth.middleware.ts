@@ -44,7 +44,7 @@ export const protect = async (
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload & { iat: number };
     const user = await User.findById(decoded.id);
 
     if (!user) {
@@ -54,6 +54,11 @@ export const protect = async (
 
     if (!user.isActive) {
       res.status(403).json({ success: false, message: "Your account has been deactivated" });
+      return;
+    }
+
+    if (user.sessionInvalidBefore && decoded.iat * 1000 < user.sessionInvalidBefore.getTime()) {
+      res.status(401).json({ success: false, message: "Session expired. Please log in again." });
       return;
     }
 
@@ -117,12 +122,13 @@ export const optionalAuth = async (
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload & { iat: number };
     const user = await User.findById(decoded.id);
     // Optional authentication is only advisory. A pending role or a minor
     // awaiting adult supervision must not become an authenticated actor
     // through a public endpoint that uses optionalAuth instead of protect.
-    if (user?.isActive && user.role !== "pending" && !needsLegacyAgeReview(user) &&
+    const sessionValid = !user?.sessionInvalidBefore || decoded.iat * 1000 >= user.sessionInvalidBefore.getTime();
+    if (user?.isActive && sessionValid && user.role !== "pending" && !needsLegacyAgeReview(user) &&
         !(user.role === "student" && user.isMinor && !user.parentConsentVerified)) {
       req.user = user;
     }

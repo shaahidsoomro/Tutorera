@@ -4,6 +4,7 @@ import { IUser } from "../types";
 
 export const generateToken = (userId: string, role: string): string => {
   const options: SignOptions = {
+    algorithm: "HS256",
     expiresIn: "7d",
   };
 

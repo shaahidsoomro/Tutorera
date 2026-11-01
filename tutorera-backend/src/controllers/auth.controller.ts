@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { OAuth2Client } from "google-auth-library";
 import User from "../models/User.model";
 import { logAudit } from "../utils/logAudit";
-import { sendTokenResponse } from "../utils/generateToken";
+import { sendTokenResponse, generateToken } from "../utils/generateToken";
 import { AuthRequest } from "../types";
 import crypto from "crypto";
 import { NotificationService } from "../services/notification.service";
@@ -335,7 +335,7 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
     return;
   }
 
-  const token = require("../utils/generateToken").generateToken(user._id.toString(), user.role);
+  const token = generateToken(user._id.toString(), user.role);
   const cookieOptions = {
     expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     httpOnly: true,
