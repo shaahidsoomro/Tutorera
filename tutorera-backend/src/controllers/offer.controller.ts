@@ -21,6 +21,8 @@ import { MatchingService } from "../services/matching.service";
 import MatchLog from "../models/MatchLog.model";
 import { assertAcceptanceAvailable, assertMarketFeature } from "../services/market.service";
 import { convertAmount } from "../services/exchangeRate.service";
+import PromoCode from "../models/PromoCode.model";
+import PromoCodeRedemption from "../models/PromoCodeRedemption.model";
 
 const ACTIVE_REQUEST_STATES = ["open", "published", "receiving_offers", "negotiating"] as const;
 const ACTIVE_OFFER_STATES = ["pending", "submitted", "viewed", "countered"] as const;
@@ -157,8 +159,42 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
     }
 
     const feeQuote = await resolveMarketplaceFees(offer.amount, request.countryCode || "PK");
+
+    // Optional promo code discount applied to studentTotal before checkout
+    let promoDiscount = 0;
+    let promoCodeDoc: InstanceType<typeof PromoCode> | null = null;
+    const promoCodeInput = typeof req.body.promoCode === "string" ? req.body.promoCode.trim().toUpperCase() : null;
+    if (promoCodeInput) {
+      promoCodeDoc = await PromoCode.findOne({ code: promoCodeInput, isActive: true });
+      if (promoCodeDoc) {
+        const now = new Date();
+        const roleOk = promoCodeDoc.applicableRoles.includes((req.user?.role || "") as "student" | "parent");
+        const timingOk = promoCodeDoc.validFrom <= now && (!promoCodeDoc.validUntil || promoCodeDoc.validUntil >= now);
+        const amountOk = feeQuote.studentTotal >= promoCodeDoc.minBookingAmount;
+        const globalLimitOk = !promoCodeDoc.maxRedemptions || promoCodeDoc.redemptionCount < promoCodeDoc.maxRedemptions;
+        const userRedemptions = await PromoCodeRedemption.countDocuments({ promoCode: promoCodeDoc._id, user: req.user?._id, status: { $ne: "cancelled" } });
+        const userLimitOk = userRedemptions < promoCodeDoc.maxRedemptionsPerUser;
+        if (roleOk && timingOk && amountOk && globalLimitOk && userLimitOk) {
+          const raw = promoCodeDoc.discountType === "percentage"
+            ? (feeQuote.studentTotal * promoCodeDoc.discountValue) / 100
+            : promoCodeDoc.discountValue;
+          promoDiscount = Math.min(
+            promoCodeDoc.maxDiscountAmount ? Math.min(raw, promoCodeDoc.maxDiscountAmount) : raw,
+            feeQuote.studentTotal
+          );
+          promoDiscount = Math.round(promoDiscount * 100) / 100;
+        } else {
+          promoCodeDoc = null; // invalid — ignore silently so accept still proceeds at full price
+        }
+      } else {
+        promoCodeDoc = null;
+      }
+    }
+
+    const checkoutAmount = Math.round((feeQuote.studentTotal - promoDiscount) * 100) / 100;
+
     await assertParentBookingPolicy({ student: request.student, request: request._id, bid: offer._id,
-      amount: feeQuote.studentTotal, currency: offer.currency || request.currency || "PKR", queueApprovals: true });
+      amount: checkoutAmount, currency: offer.currency || request.currency || "PKR", queueApprovals: true });
 
     // Atomic guard — same purpose as before: only one accept attempt can
     // win this transition, so two concurrent accept clicks can't both
@@ -182,7 +218,7 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
     try {
       const student = await User.findById(request.student).select("name email phone");
       const checkout = await paymentProvider.createCheckout({
-        amount: feeQuote.studentTotal,
+        amount: checkoutAmount,
         currency: offer.currency || request.currency || "PKR",
         marketCountryCode: request.countryCode,
         feeSnapshot: feeQuote,
@@ -191,15 +227,25 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
         tutorId: offer.tutor.toString(),
         customerMobileNo: student?.phone || "03000000000",  // no hardcoded fallback — let gateway handle gracefully
         customerEmail: student?.email || "",
-        // Same "BID-" prefix the webhook handler already branches on —
-        // Offer and Bid are the same collection, so this is fully
-        // compatible with the existing payment.controller.ts webhook logic.
         basketId: `BID-${offer._id.toString()}`,
-        description: `TUTORERA offer acceptance ${offer._id.toString()}`,
+        description: `TUTORERA offer acceptance ${offer._id.toString()}${promoDiscount > 0 ? ` (promo: ${promoCodeDoc?.code}, discount: ${promoDiscount})` : ""}`,
         successUrl: `${process.env.CLIENT_URL}/offers?payment=success&offer=${offer._id}`,
         failureUrl: `${process.env.CLIENT_URL}/offers?payment=failed&offer=${offer._id}`,
         checkoutUrl: `${process.env.CLIENT_URL}/offers?payment=processing&offer=${offer._id}`,
       });
+
+      // Record promo redemption as "reserved" until booking is confirmed via webhook
+      if (promoCodeDoc && promoDiscount > 0) {
+        await PromoCodeRedemption.create({
+          promoCode: promoCodeDoc._id,
+          user: req.user?._id,
+          originalAmount: feeQuote.studentTotal,
+          discountAmount: promoDiscount,
+          finalAmount: checkoutAmount,
+          status: "reserved",
+        });
+        await PromoCode.updateOne({ _id: promoCodeDoc._id }, { $inc: { redemptionCount: 1 } });
+      }
 
       await logAudit({
         action: "offer_accept_checkout_started",
@@ -214,6 +260,7 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
         success: true,
         message: "Redirecting to payment. Your booking will be created once payment completes.",
         checkoutUrl: checkout.checkoutUrl,
+        promoDiscount: promoDiscount > 0 ? { code: promoCodeDoc?.code, discountAmount: promoDiscount, finalAmount: checkoutAmount } : undefined,
       });
     } catch (err: any) {
       // Checkout creation failed — roll back the reservation immediately.

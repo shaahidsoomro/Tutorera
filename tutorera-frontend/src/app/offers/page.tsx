@@ -108,6 +108,10 @@ function OffersContent() {
   const [showComparison, setShowComparison] = useState(false);
   const [checkoutSession, setCheckoutSession] = useState<{ offerId: string; sessionId: string; clientSecret: string; publishableKey: string } | null>(null);
   const [startingPayment, setStartingPayment] = useState(false);
+  const [promoInput, setPromoInput] = useState("");
+  const [promoState, setPromoState] = useState<{ code: string; discountAmount: number; finalAmount: number; description: string } | null>(null);
+  const [promoError, setPromoError] = useState("");
+  const [promoChecking, setPromoChecking] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -201,13 +205,36 @@ function OffersContent() {
     }
   }
 
+  async function validatePromo(amount: number) {
+    if (!promoInput.trim()) return;
+    setPromoChecking(true);
+    setPromoError("");
+    setPromoState(null);
+    try {
+      const res = await api.post("/promo-codes/validate", { code: promoInput.trim(), amount });
+      if (res.data?.valid) {
+        setPromoState({ code: res.data.promoCode.code, discountAmount: res.data.discountAmount, finalAmount: res.data.finalAmount, description: res.data.promoCode.description });
+      }
+    } catch (e: any) {
+      setPromoError(e?.response?.data?.message || "Invalid promo code.");
+    } finally {
+      setPromoChecking(false);
+    }
+  }
+
   // Returns true when the request was handled (including a redirect to the
   // payment page) and false when it failed, so callers can keep a dialog open.
   async function action(o: Offer, type: "accept" | "decline" | "withdraw"): Promise<boolean> {
     try {
-      const res = await api.post(`/offers/${o._id}/${type}`);
+      const body: Record<string, unknown> = {};
+      if (type === "accept" && promoState) body.promoCode = promoState.code;
+      const res = await api.post(`/offers/${o._id}/${type}`, body);
       if (type === "accept" && res.data?.sessionId) {
         setCheckoutSession({ offerId: o._id, sessionId: res.data.sessionId, clientSecret: res.data.clientSecret, publishableKey: res.data.publishableKey });
+        return true;
+      }
+      if (type === "accept" && res.data?.checkoutUrl) {
+        window.location.href = res.data.checkoutUrl;
         return true;
       }
       showSuccess(type === "accept" ? (res.data?.message || "Rate agreed! Proceeding to booking.") : "Offer updated.");
@@ -481,6 +508,43 @@ function OffersContent() {
                     </div>
                   )}
                 </details>
+
+                {/* Promo code entry — shown to students on active offers */}
+                {isRequester && active.includes(o.status) && (
+                  <div style={{ marginBottom: "0.75rem" }}>
+                    <details>
+                      <summary style={{ fontSize: "0.8rem", color: "#64748b", cursor: "pointer", fontWeight: 600, userSelect: "none" }}>
+                        Have a promo code?
+                      </summary>
+                      <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem", flexWrap: "wrap" }}>
+                        <input
+                          type="text"
+                          value={promoInput}
+                          onChange={e => { setPromoInput(e.target.value.toUpperCase()); setPromoState(null); setPromoError(""); }}
+                          placeholder="Enter code"
+                          style={{ flex: 1, minWidth: 120, padding: "0.4rem 0.75rem", border: "1.5px solid #cbd5e1", borderRadius: 6, fontSize: "0.85rem", textTransform: "uppercase" }}
+                        />
+                        <button
+                          type="button"
+                          disabled={promoChecking || !promoInput.trim()}
+                          onClick={() => validatePromo(o.amount)}
+                          style={{ padding: "0.4rem 0.9rem", background: "#0329b2", color: "white", border: "none", borderRadius: 6, fontSize: "0.8rem", fontWeight: 700, cursor: promoChecking || !promoInput.trim() ? "not-allowed" : "pointer", opacity: promoChecking || !promoInput.trim() ? 0.6 : 1 }}
+                        >
+                          {promoChecking ? "Checking…" : "Apply"}
+                        </button>
+                        {promoState && (
+                          <button type="button" onClick={() => { setPromoState(null); setPromoInput(""); }} style={{ padding: "0.4rem 0.7rem", background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}>✕</button>
+                        )}
+                      </div>
+                      {promoError && <p style={{ margin: "0.3rem 0 0", fontSize: "0.78rem", color: "#dc2626" }}>{promoError}</p>}
+                      {promoState && (
+                        <div style={{ marginTop: "0.4rem", padding: "0.5rem 0.75rem", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 6, fontSize: "0.8rem", color: "#065f46" }}>
+                          ✓ <strong>{promoState.code}</strong>{promoState.description ? ` — ${promoState.description}` : ""}: save {o.currency || o.request.currency || "PKR"} {promoState.discountAmount.toLocaleString()} → you pay <strong>{promoState.finalAmount.toLocaleString()}</strong>
+                        </div>
+                      )}
+                    </details>
+                  </div>
+                )}
 
                 {/* Action Buttons */}
                 {active.includes(o.status) && (
