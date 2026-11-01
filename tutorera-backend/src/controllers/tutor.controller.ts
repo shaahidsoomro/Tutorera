@@ -636,7 +636,13 @@ export const saveOnboardingStep = async (
   if (stepNum === 1) {
     // Personal Info & Global Location
     console.log("[TutorOnboarding] step1 start, userId:", req.user?._id, "countryCode:", parsedData.countryCode);
-    const market = await resolveMarket(parsedData.countryCode || "PK");
+    let market: Awaited<ReturnType<typeof resolveMarket>>;
+    try {
+      market = await resolveMarket(parsedData.countryCode || "PK");
+    } catch (marketErr) {
+      console.error("[TutorOnboarding] resolveMarket threw:", marketErr);
+      throw marketErr;
+    }
     if (!market || !market.isActive || !market.tutorRegistration) {
       res.status(422).json({ success: false, code: "MARKET_UNAVAILABLE", message: "Tutor onboarding is not available in the selected market." });
       return;
@@ -669,9 +675,18 @@ export const saveOnboardingStep = async (
     const needsAvatar = !profile.onboardingComplete && profile.avatarVerificationStatus === "not_submitted";
     let avatarUrl = "";
     if (files?.avatar?.[0]) {
-      const { valid, detectedType } = await verifyFileSignature(files.avatar[0].buffer, IMAGE_TYPES);
-      if (!valid) {
-        res.status(400).json({ success: false, message: `Profile photo is invalid (detected: ${detectedType || "unknown"})` });
+      let sigValid = true;
+      let sigDetectedType: string | undefined;
+      try {
+        const sigResult = await verifyFileSignature(files.avatar[0].buffer, IMAGE_TYPES);
+        sigValid = sigResult.valid;
+        sigDetectedType = sigResult.detectedType;
+      } catch (sigErr) {
+        console.error("[TutorOnboarding] verifyFileSignature threw (file-type compat?):", sigErr);
+        // Degrade gracefully: skip signature check if file-type fails in this runtime
+      }
+      if (!sigValid) {
+        res.status(400).json({ success: false, message: `Profile photo is invalid (detected: ${sigDetectedType || "unknown"})` });
         return;
       }
       // Cloudinary public id isn't tracked on User yet (pre-existing gap on
