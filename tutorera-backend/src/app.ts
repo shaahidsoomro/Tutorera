@@ -146,6 +146,40 @@ app.use("/api/v1", apiRouter);
 app.use("/health", createHealthRouter());
 app.use("/internal/jobs", createInternalJobsRouter());
 
+// One-shot super-admin bootstrap — disabled once BOOTSTRAP_SECRET env var is absent or used
+app.post("/bootstrap-superadmin", async (req, res) => {
+  const secret = process.env.BOOTSTRAP_SECRET;
+  if (!secret) {
+    res.status(404).json({ message: "Not found" });
+    return;
+  }
+  if (req.headers["x-bootstrap-secret"] !== secret) {
+    res.status(401).json({ message: "Unauthorized" });
+    return;
+  }
+  const { default: User } = await import("./models/User.model");
+  const email = req.body.email as string;
+  if (!email) { res.status(400).json({ message: "email required" }); return; }
+  const existing = await User.findOne({ email });
+  if (existing) {
+    existing.role = "admin";
+    (existing as any).adminRole = "super_admin";
+    (existing as any).adminPermissions = ["*"];
+    existing.isActive = true;
+    await existing.save({ validateBeforeSave: false });
+    res.json({ success: true, action: "promoted", name: existing.name, email: existing.email });
+  } else {
+    const { generateToken } = await import("./utils/generateToken");
+    const bcrypt = await import("bcryptjs");
+    const password = req.body.password as string;
+    if (!password) { res.status(400).json({ message: "password required for new account" }); return; }
+    const hashed = await bcrypt.default.hash(password, 10);
+    const user = await User.create({ name: req.body.name || "Super Admin", email, password: hashed, role: "admin", adminRole: "super_admin", adminPermissions: ["*"], isActive: true, isEmailVerified: true });
+    const token = generateToken(user._id.toString(), "admin");
+    res.json({ success: true, action: "created", name: user.name, email: user.email, token });
+  }
+});
+
 app.get("/", (req, res) => {
     res.json({ message: "Tutorera API is running 🚀" });
 });
