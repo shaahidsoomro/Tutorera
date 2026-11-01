@@ -838,9 +838,10 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
 
   try {
     const student = await User.findById(request.student).select("name email phone");
-    const checkoutUrl = await paymentProvider.createCheckout({
+    const checkout = await paymentProvider.createCheckout({
       amount: feeQuote.studentTotal,
       currency: bid.currency || request.currency || "",
+      marketCountryCode: request.countryCode,
       feeSnapshot: feeQuote,
       customerMobileNo: student?.phone || "03000000000",
       customerEmail: student?.email || "",
@@ -857,7 +858,9 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
     res.status(200).json({
       success: true,
       message: "Redirecting to payment. Your offer will be confirmed once payment completes.",
-      checkoutUrl,
+      sessionId: checkout.sessionId,
+      clientSecret: checkout.clientSecret,
+      publishableKey: checkout.publishableKey,
     });
   } catch (err: any) {
     await Request.updateOne({ _id: requestId, status: "awaiting_payment" }, { status: "open" });

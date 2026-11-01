@@ -20,6 +20,7 @@ import { useRouter } from "next/navigation";
 import { useCallback,useEffect,useState } from "react";
 import PostRequestModal from "./PostRequestModal";
 import RatingModal from "./RatingModal";
+import RapidPayCheckoutModal from "@/components/payments/RapidPayCheckoutModal";
 
 const C = UI_COLORS;
 
@@ -128,14 +129,19 @@ function BookingCard({ booking, onClaimSubmitted }: {
   const [alreadyRated, setAlreadyRated] = useState(false);
   const router = useRouter();
   const [paying, setPaying] = useState(false);
+  const [checkoutSession, setCheckoutSession] = useState<{ sessionId: string; clientSecret: string; publishableKey: string } | null>(null);
   const [rebooking, setRebooking] = useState(false);
 
   const handlePay = async () => {
     setPaying(true);
     try {
       const res = await axiosInstance.post(`/payments/booking/${booking._id}/checkout`);
-      if (res.data?.checkoutUrl) {
-        window.location.assign(res.data.checkoutUrl);
+      if (res.data?.sessionId && res.data?.clientSecret) {
+        setCheckoutSession({
+          sessionId: res.data.sessionId,
+          clientSecret: res.data.clientSecret,
+          publishableKey: res.data.publishableKey || "",
+        });
       } else {
         showError("Unable to initiate checkout session. Please try again.");
       }
@@ -424,6 +430,36 @@ function BookingCard({ booking, onClaimSubmitted }: {
           subtitle="How was your session? Your review helps other students."
           onSubmit={handleRateSubmit}
           onClose={() => setShowRatingModal(false)}
+        />
+      )}
+      {checkoutSession && (
+        <RapidPayCheckoutModal
+          sessionId={checkoutSession.sessionId}
+          clientSecret={checkoutSession.clientSecret}
+          publishableKey={checkoutSession.publishableKey}
+          onSuccess={async () => {
+            setCheckoutSession(null);
+            try {
+              const result = await axiosInstance.post("/payments/confirm", { basketId: booking._id });
+              if (result.data?.confirmed) {
+                showSuccess("Payment received and booking confirmed.");
+                onClaimSubmitted?.();
+              } else {
+                showSuccess("Payment received. Your booking is being confirmed.");
+              }
+            } catch (error) {
+              showError(error, "Payment received, but confirmation is still processing.");
+            }
+          }}
+          onPending={() => {
+            setCheckoutSession(null);
+            showSuccess("Payment is awaiting confirmation.");
+          }}
+          onError={(error) => {
+            setCheckoutSession(null);
+            showError(error?.message || "Payment was not completed.", "Payment failed.");
+          }}
+          onClose={() => setCheckoutSession(null)}
         />
       )}
     </>

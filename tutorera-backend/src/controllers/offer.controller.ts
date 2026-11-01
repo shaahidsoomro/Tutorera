@@ -181,9 +181,10 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
 
     try {
       const student = await User.findById(request.student).select("name email phone");
-      const checkoutUrl = await paymentProvider.createCheckout({
+      const checkout = await paymentProvider.createCheckout({
         amount: feeQuote.studentTotal,
         currency: offer.currency || request.currency || "PKR",
+        marketCountryCode: request.countryCode,
         feeSnapshot: feeQuote,
         bidId: offer._id.toString(),
         studentId: request.student.toString(),
@@ -212,7 +213,9 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
       res.status(200).json({
         success: true,
         message: "Redirecting to payment. Your booking will be created once payment completes.",
-        checkoutUrl,
+        sessionId: checkout.sessionId,
+        clientSecret: checkout.clientSecret,
+        publishableKey: checkout.publishableKey,
       });
     } catch (err: any) {
       // Checkout creation failed — roll back the reservation immediately.
@@ -268,9 +271,10 @@ export const retryOfferPayment = async (req: AuthRequest, res: Response): Promis
 
   try {
     const student = await User.findById(request.student).select("name email phone");
-    const checkoutUrl = await paymentProvider.createCheckout({
+    const checkout = await paymentProvider.createCheckout({
       amount: feeQuote.studentTotal,
       currency: offer.currency || request.currency || "PKR",
+      marketCountryCode: request.countryCode,
       feeSnapshot: feeQuote,
       bidId: offer._id.toString(),
       studentId: request.student.toString(),
@@ -284,7 +288,13 @@ export const retryOfferPayment = async (req: AuthRequest, res: Response): Promis
       checkoutUrl: `${process.env.CLIENT_URL}/offers?payment=processing&offer=${offer._id}`,
     });
 
-    res.status(200).json({ success: true, message: "Redirecting to payment.", checkoutUrl });
+    res.status(200).json({
+      success: true,
+      message: "Payment session created.",
+      sessionId: checkout.sessionId,
+      clientSecret: checkout.clientSecret,
+      publishableKey: checkout.publishableKey,
+    });
   } catch (err: any) {
     console.error("Failed to create retry checkout:", err);
     res.status(502).json({ success: false, message: "Unable to start payment. Please try again." });

@@ -4,9 +4,10 @@ import PaymentLedger from "../models/PaymentLedger.model";
 import Booking from "../models/Booking.model";
 import Bid from "../models/Bid.model";
 import type { MarketplaceFeeQuote } from "./pricing.service";
-import { createTransaction, verifyWebhookSignature } from "../utils/rapidGateway";
+import { verifyWebhookSignature } from "../utils/rapidGateway";
+import { rapidPayProvider, RapidPayCheckoutParams, RapidPayCheckoutResult } from "./rapidPayProvider.service";
 
-export type PaymentProviderName = "rapid_gateway";
+export type PaymentProviderName = "rapidpay";
 
 export interface CheckoutParams {
   amount: number;
@@ -25,7 +26,10 @@ export interface CheckoutParams {
   tutorId?: string;
   metadata?: Record<string, unknown>;
   feeSnapshot?: MarketplaceFeeQuote;
+  marketCountryCode?: string;
 }
+
+export type PaymentCheckoutResult = RapidPayCheckoutResult;
 
 export interface ProviderWebhookEvent {
   provider: PaymentProviderName;
@@ -38,25 +42,30 @@ export interface ProviderWebhookEvent {
 }
 
 export const paymentProvider = {
-  name: "rapid_gateway" as PaymentProviderName,
+  name: "rapidpay" as PaymentProviderName,
 
-  async createCheckout(params: CheckoutParams): Promise<string> {
+  async createCheckout(params: CheckoutParams): Promise<PaymentCheckoutResult> {
     const currency = (params.currency || "").toUpperCase();
     if (!currency) {
       throw { statusCode: 422, code: "PAYMENT_CURRENCY_REQUIRED", message: "Checkout currency is required." };
     }
 
-    const checkoutUrl = await createTransaction({
+    const checkoutParams: RapidPayCheckoutParams = {
       amount: params.amount,
       currency,
-      customerMobileNo: params.customerMobileNo,
+      marketCountryCode: params.marketCountryCode,
+      reference: params.basketId,
       customerEmail: params.customerEmail,
-      basketId: params.basketId,
-      description: params.description,
-      successUrl: params.successUrl,
-      failureUrl: params.failureUrl,
-      checkoutUrl: params.checkoutUrl,
-    });
+      customerMobile: params.customerMobileNo,
+      metadata: {
+        bookingId: params.bookingId,
+        bidId: params.bidId,
+        studentId: params.studentId,
+        payerId: params.payerId,
+        tutorId: params.tutorId,
+      },
+    };
+    const session = await rapidPayProvider.createCheckout(checkoutParams);
 
     await recordPaymentLedger({
       providerTransactionId: params.basketId,
@@ -70,10 +79,55 @@ export const paymentProvider = {
       payerId: params.payerId || params.studentId,
       tutorId: params.tutorId,
       feeSnapshot: params.feeSnapshot,
-      metadata: { checkoutUrl, ...(params.metadata || {}) },
+      metadata: {
+        sessionId: session.sessionId,
+        clientSecret: session.clientSecret,
+        publishableKey: session.publishableKey,
+        platformAmount: params.amount,
+        platformCurrency: currency,
+        ...(params.metadata || {}),
+      },
     });
 
-    return checkoutUrl;
+    return session;
+  },
+
+  async confirmCheckout(basketId: string): Promise<{
+    confirmed: boolean;
+    sessionStatus: string;
+    amount?: number;
+    currency?: string;
+  }> {
+    const checkout = await PaymentLedger.findOne({
+      providerTransactionId: basketId,
+      eventType: "checkout.created",
+      provider: { $in: ["rapidpay", "rapid_gateway"] },
+    }).sort("-createdAt");
+    if (!checkout) {
+      throw Object.assign(new Error("No checkout session found"), { statusCode: 404, code: "PAYMENT_SESSION_MISSING" });
+    }
+
+    const sessionId = String((checkout.metadata as Record<string, unknown> | undefined)?.sessionId || "");
+    if (!sessionId) {
+      throw Object.assign(new Error("Checkout session ID is missing"), { statusCode: 422, code: "PAYMENT_SESSION_MISSING" });
+    }
+
+    const result = await rapidPayProvider.getSessionStatus(sessionId);
+    if (result.status !== "success") {
+      return { confirmed: false, sessionStatus: result.status, amount: result.amount, currency: result.currency };
+    }
+    if (result.amount !== checkout.grossAmount || result.currency.toUpperCase() !== checkout.currency.toUpperCase()) {
+      await PaymentLedger.updateOne(
+        { _id: checkout._id },
+        { $set: { settlementStatus: "exception", "metadata.sessionStatus": result.status } },
+      );
+      throw Object.assign(new Error("RapidPay payment amount or currency did not match checkout"), {
+        statusCode: 422,
+        code: "RAPIDPAY_SESSION_MISMATCH",
+      });
+    }
+
+    return { confirmed: true, sessionStatus: result.status, amount: result.amount, currency: result.currency };
   },
 
   verifyWebhookSignature,
@@ -115,9 +169,16 @@ export async function recordPaymentLedger(args: {
 }) {
   // Signed webhooks identify only a checkout basket; restore the authenticated
   // parent payer from its checkout record rather than assuming the learner paid.
-  const originalCheckout = args.eventType === "checkout.created" ? null
-    : await PaymentLedger.findOne({ providerTransactionId: args.providerTransactionId, eventType: "checkout.created" })
-        .select("payer").sort("-createdAt").lean();
+  let originalCheckout: { payer?: Types.ObjectId } | null = null;
+  if (args.eventType !== "checkout.created") {
+    const checkoutQuery = PaymentLedger.findOne({
+      providerTransactionId: args.providerTransactionId,
+      eventType: "checkout.created",
+    }) as any;
+    originalCheckout = typeof checkoutQuery?.select === "function"
+      ? await checkoutQuery.select("payer").sort("-createdAt").lean()
+      : await checkoutQuery;
+  }
   const payerId = args.payerId || originalCheckout?.payer?.toString() || args.studentId;
   // Ledger values use the agreed checkout/booking quote, never today's rates.
   let fees: MarketplaceFeeQuote | undefined = args.feeSnapshot;

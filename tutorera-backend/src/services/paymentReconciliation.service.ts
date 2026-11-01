@@ -34,7 +34,7 @@ const MINIMUM_CHECKOUT_AGE_MS = 60_000;
  */
 export async function reconcileSwichCheckout(basketId: string, io?: SocketIOServer): Promise<SwichReconciliationResult> {
   const checkout = await PaymentLedger.findOne({
-    provider: "swich",
+    provider: { $in: ["swich", "rapidpay"] },
     providerTransactionId: basketId,
     eventType: "checkout.created",
   }).sort("-createdAt");
@@ -45,7 +45,7 @@ export async function reconcileSwichCheckout(basketId: string, io?: SocketIOServ
   }
 
   const alreadySettled = await PaymentLedger.exists({
-    provider: "swich",
+    provider: { $in: ["swich", "rapidpay"] },
     providerTransactionId: basketId,
     eventType: "payment.succeeded",
     status: "succeeded",
