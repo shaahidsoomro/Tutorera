@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { Response } from "express";
 import { AuthRequest } from "../types";
 import ParentProfile from "../models/ParentProfile.model";
@@ -450,4 +451,16 @@ export const saveParentOnboarding = async (req: AuthRequest, res: Response): Pro
     message: "Parent onboarding completed successfully",
     profile,
   });
+};
+
+export const cancelChildLinkRequest = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { requestId } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(requestId)) { res.status(400).json({ success: false, message: "Invalid request ID" }); return; }
+  const linkRequest = await ParentLinkRequest.findById(requestId);
+  if (!linkRequest) { res.status(404).json({ success: false, message: "Link request not found" }); return; }
+  if (linkRequest.parent.toString() !== req.user?._id?.toString()) { res.status(403).json({ success: false, message: "Forbidden" }); return; }
+  if (linkRequest.status !== "pending") { res.status(409).json({ success: false, message: "Only pending link requests can be cancelled" }); return; }
+  linkRequest.status = "cancelled";
+  await linkRequest.save();
+  res.json({ success: true, message: "Link request cancelled" });
 };

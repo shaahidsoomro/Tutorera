@@ -25,6 +25,7 @@ export interface IBid extends Document {
   paymentPendingExpiresAt?: Date;
   feeQuote?: MarketplaceFeeQuote;
   isDirect: boolean;
+  shortlistedAt?: Date;
   createdAt: Date;
 }
 
@@ -60,6 +61,7 @@ const bidSchema = new Schema<IBid>(
     paymentPendingExpiresAt: { type: Date },
     feeQuote: { type: Schema.Types.Mixed },
     isDirect: { type: Boolean, default: false },
+    shortlistedAt: { type: Date },
   },
   { timestamps: true }
 );

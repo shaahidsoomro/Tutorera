@@ -406,3 +406,16 @@ export const getMyOffers = async (req: AuthRequest, res: Response): Promise<void
   }));
   res.json({ success: true, offers: result });
 };
+
+export const shortlistOffer = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { id } = req.params;
+  const offer = await Bid.findById(id).populate<{ request: { student: unknown } }>("request", "student").lean();
+  if (!offer) { res.status(404).json({ success: false, message: "Offer not found" }); return; }
+  const requestStudent = (offer.request as { student: unknown })?.student?.toString();
+  if (requestStudent !== req.user?._id?.toString()) { res.status(403).json({ success: false, message: "Forbidden" }); return; }
+  if (!["submitted", "viewed", "countered"].includes(offer.status)) {
+    res.status(409).json({ success: false, message: "Offer cannot be shortlisted in its current state" }); return;
+  }
+  await Bid.findByIdAndUpdate(id, { shortlistedAt: new Date() });
+  res.json({ success: true, message: "Offer shortlisted" });
+};

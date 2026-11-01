@@ -1,8 +1,9 @@
 import mongoose, { Types } from "mongoose";
 import { Response } from "express";
-import { Request as ExpressRequest } from "express"; 
+import { Request as ExpressRequest } from "express";
 import { AuthRequest } from "../types";
 import Request from "../models/Request.model";
+import RequestStatusHistory from "../models/RequestStatusHistory.model";
 import Bid from "../models/Bid.model";
 import Booking from "../models/Booking.model";
 import User from "../models/User.model";
@@ -1554,3 +1555,30 @@ export const closeRequest = async (req: AuthRequest, res: Response): Promise<voi
 // transactional implementation is now named initiateAcceptBid because the
 // first step may create a payment hold before final booking confirmation.
 export const acceptBid = initiateAcceptBid;
+
+export const getRequestTimeline = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { id } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(id)) { res.status(400).json({ success: false, message: "Invalid request ID" }); return; }
+  const request = await Request.findById(id).select("student targetTutor").lean();
+  if (!request) { res.status(404).json({ success: false, message: "Request not found" }); return; }
+  const uid = req.user?._id?.toString();
+  if (request.student?.toString() !== uid && request.targetTutor?.toString() !== uid && req.user?.role !== "admin") {
+    res.status(403).json({ success: false, message: "Forbidden" }); return;
+  }
+  const history = await RequestStatusHistory.find({ request: id }).sort({ createdAt: 1 }).lean();
+  res.json({ success: true, timeline: history });
+};
+
+export const inviteTutorToRequest = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { id } = req.params;
+  const { tutorId } = req.body as { tutorId?: string };
+  if (!mongoose.Types.ObjectId.isValid(id) || !tutorId || !mongoose.Types.ObjectId.isValid(tutorId)) {
+    res.status(400).json({ success: false, message: "Invalid request or tutor ID" }); return;
+  }
+  const request = await Request.findById(id).select("student status invitedTutors").lean();
+  if (!request) { res.status(404).json({ success: false, message: "Request not found" }); return; }
+  if (request.student?.toString() !== req.user?._id?.toString()) { res.status(403).json({ success: false, message: "Forbidden" }); return; }
+  if (!["open", "published", "receiving_offers"].includes(request.status)) { res.status(409).json({ success: false, message: "Request is not open for invitations" }); return; }
+  await Request.findByIdAndUpdate(id, { $addToSet: { invitedTutors: new Types.ObjectId(tutorId) } });
+  res.json({ success: true, message: "Tutor invited" });
+};

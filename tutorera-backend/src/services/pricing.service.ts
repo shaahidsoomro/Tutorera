@@ -124,3 +124,6 @@ export async function seedTaxConfigs(): Promise<void> {
 
   console.log("[TaxConfig] Seeded default tax configs for", configs.length, "countries.");
 }
+
+// Alias kept for backward compatibility with controllers that import this name.
+export { resolveMarketplaceFees as calculateMarketplaceFees };

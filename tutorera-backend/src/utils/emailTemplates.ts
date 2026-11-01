@@ -1,6 +1,6 @@
 import { renderTransactionalEmail } from "./emailBrand";
 
-function today() {
+export function today() {
   return new Date().toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" });
 }
 
@@ -482,4 +482,24 @@ export const payoutFailedEmail = (tutorName: string, amount: number, bookingId: 
     deliverability: "This transactional notification was sent because a payout for your TUTORERA tutoring session requires attention.",
   });
   return { subject: "TUTORERA® — Payout Update Required", html };
+};
+
+export function formatMoney(amount: number, currency = "PKR"): string {
+  return new Intl.NumberFormat("en-PK", { style: "currency", currency, maximumFractionDigits: 0 }).format(amount);
+}
+
+export const offerExpiringEmail = (recipientName: string, subject: string, isTutor: boolean) => {
+  const role = isTutor ? "your offer" : "an offer you received";
+  return {
+    subject: "TUTORERA® — Offer Expiring Soon",
+    html: `<p>Hi ${recipientName},</p><p>This is a reminder that ${role} for <strong>${subject}</strong> is expiring soon. Log in to review it before it expires.</p><p><a href="https://tutorera.ac.pk/offers">View Offers</a></p>`,
+  };
+};
+
+export const offerExpiredEmail = (recipientName: string, subject: string, isTutor: boolean) => {
+  const role = isTutor ? "your offer" : "an offer you received";
+  return {
+    subject: "TUTORERA® — Offer Expired",
+    html: `<p>Hi ${recipientName},</p><p>Unfortunately ${role} for <strong>${subject}</strong> has expired. You can browse other opportunities on TUTORERA.</p><p><a href="https://tutorera.ac.pk">Visit TUTORERA</a></p>`,
+  };
 };

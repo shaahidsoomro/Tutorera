@@ -13,6 +13,9 @@ interface ConnectedUsers {
 
 const connectedUsers: ConnectedUsers = {};
 
+let _ioInstance: Server | undefined;
+export { _ioInstance as ioInstance };
+
 export const initSocket = (httpServer: HttpServer): Server => {
   const io = new Server(httpServer, {
     cors: {
@@ -143,6 +146,7 @@ export const initSocket = (httpServer: HttpServer): Server => {
     });
   });
 
+  _ioInstance = io;
   return io;
 };
 

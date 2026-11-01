@@ -141,7 +141,7 @@ export default {
       return new Response("Preview operation disabled", { status: 403, headers: { "X-Robots-Tag": "noindex, nofollow", "Cache-Control": "no-store" } });
     }
     try {
-      const response = await env.BACKEND.getByName("api-primary").fetch(forwardToBackend(request));
+      const response = await env.BACKEND.getByName("api-primary-v2").fetch(forwardToBackend(request));
       if (env.PREVIEW_AUTH_TOKEN) {
         const headers = new Headers(response.headers);
         headers.set("X-Robots-Tag", "noindex, nofollow");
@@ -157,6 +157,6 @@ export default {
     }
   },
   async scheduled(event: ScheduledController, env: Env): Promise<void> {
-    if (env.ENABLE_SCHEDULED_JOBS === "true") await env.BACKEND.getByName("api-primary").enqueue(event.cron, event.scheduledTime);
+    if (env.ENABLE_SCHEDULED_JOBS === "true") await env.BACKEND.getByName("api-primary-v2").enqueue(event.cron, event.scheduledTime);
   },
 } satisfies ExportedHandler<Env>;
