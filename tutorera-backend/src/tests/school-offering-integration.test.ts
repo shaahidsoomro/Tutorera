@@ -8,7 +8,7 @@ import SchoolOffering from "../models/SchoolOffering.model";
 import Request from "../models/Request.model";
 import { MatchingService } from "../services/matching.service";
 
-jest.mock("../services/market.service", () => ({ ...jest.requireActual("../services/market.service"), resolveMarket: jest.fn().mockResolvedValue({ countryCode: "PK", countryName: "Pakistan", currency: "USD", timezone: "Asia/Karachi", isActive: true, studentRegistration: true, onlineEnabled: true, homeTuitionEnabled: true }), assertMarketFeature: jest.fn().mockResolvedValue(undefined) }));
+jest.mock("../services/market.service", () => ({ ...jest.requireActual("../services/market.service"), resolveMarket: jest.fn().mockResolvedValue({ countryCode: "PK", countryName: "Pakistan", currency: "PKR", timezone: "Asia/Karachi", isActive: true, studentRegistration: true, onlineEnabled: true, homeTuitionEnabled: true }), assertMarketFeature: jest.fn().mockResolvedValue(undefined) }));
 jest.mock("../services/locationReference.service", () => ({ resolveLocationReferences: jest.fn().mockResolvedValue({}) }));
 jest.mock("../services/tracking.service", () => ({ ...jest.requireActual("../services/tracking.service"), isMarketplaceEligible: jest.fn().mockReturnValue(true), isHomeTuitionEligible: jest.fn().mockReturnValue(true) }));
 jest.mock("../utils/sendEmail", () => jest.fn().mockResolvedValue(undefined));

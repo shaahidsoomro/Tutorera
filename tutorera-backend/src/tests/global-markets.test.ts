@@ -1,6 +1,6 @@
 import { afterEach, beforeEach } from "@jest/globals";
 import MarketConfig from "../models/MarketConfig.model";
-import { assertAcceptanceAvailable, ensureLaunchMarkets } from "../services/market.service";
+import { assertAcceptanceAvailable, ensureLaunchMarkets, resolveMarket } from "../services/market.service";
 
 describe("global market capability enforcement", () => {
   beforeEach(() => {
@@ -26,6 +26,17 @@ describe("global market capability enforcement", () => {
     for (const countryCode of ["PK", "AE", "GB", "US", "SA", "IN"]) {
       await expect(assertAcceptanceAvailable(countryCode)).resolves.toMatchObject({ countryCode, paymentProvider: "rapidpay" });
     }
+  });
+
+  it("repairs a stale launch-market currency without changing other market settings", async () => {
+    await MarketConfig.create({
+      countryCode: "PK", countryName: "Pakistan", currency: "USD", currencySymbol: "$",
+      timezone: "Asia/Karachi", timezones: ["Asia/Karachi"], paymentProvider: "rapidpay",
+      paymentsEnabled: true, payoutsEnabled: false, isActive: true, launchStatus: "live",
+    });
+
+    await expect(resolveMarket("PK")).resolves.toMatchObject({ currency: "PKR" });
+    expect(await MarketConfig.findOne({ countryCode: "PK" }).select("currency currencySymbol").lean()).toMatchObject({ currency: "PKR", currencySymbol: "Rs." });
   });
 
   it("enables a non-PK market only when RapidPay explicitly approves its market", async () => {

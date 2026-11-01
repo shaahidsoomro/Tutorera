@@ -887,7 +887,12 @@ export const saveOnboardingStep = async (
     // Currency is a market settlement rule, not a tutor-editable price-form
     // field. Step 1 resolves it from MarketConfig; retain that snapshot here
     // so a stale client payload cannot change a USD market back to PKR.
-    const nextCurrency = profile.currency || "USD";
+    const market = await resolveMarket(profile.countryCode || "PK");
+    if (!market || !market.isActive || !market.tutorRegistration) {
+      res.status(422).json({ success: false, code: "MARKET_UNAVAILABLE", message: "Tutor onboarding is not available in the selected market." });
+      return;
+    }
+    const nextCurrency = market.currency;
     updateData = {
       bio: parsedData.bio,
       hourlyRate: parseInt(parsedData.hourlyRate),

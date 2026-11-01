@@ -111,6 +111,14 @@ export async function ensureLaunchMarkets(): Promise<void> {
 export async function resolveMarket(countryCode?: string): Promise<IMarketConfig | null> {
   const code = (countryCode || "PK").toUpperCase();
   let market = await MarketConfig.findOne({ countryCode: code, isActive: true });
+  const launchConfig = LAUNCH_MARKETS[code as keyof typeof LAUNCH_MARKETS];
+  if (market && launchConfig && (market.currency !== launchConfig.currency || market.currencySymbol !== launchConfig.currencySymbol)) {
+    market = await MarketConfig.findOneAndUpdate(
+      { _id: market._id },
+      { $set: { currency: launchConfig.currency, currencySymbol: launchConfig.currencySymbol } },
+      { returnDocument: "after", runValidators: true },
+    );
+  }
   if (!market && Object.prototype.hasOwnProperty.call(LAUNCH_MARKETS, code)) {
     await ensureLaunchMarkets();
     market = await MarketConfig.findOne({ countryCode: code, isActive: true });
