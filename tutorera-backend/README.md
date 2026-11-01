@@ -93,6 +93,11 @@ agreement, and profile-verification gates do not block marketplace activation.
 Suspension, re-verification, termination, and other account safety blocks still
 apply. Rejecting the profile clears the exemption.
 
+Tutor onboarding resolves currency from the selected primary marketplace on the
+backend. Online matching is likewise restricted to that marketplace by default;
+changing a display currency or client-side country filter cannot grant access to
+another marketplace.
+
 ## Project Structure
 ```
 src/

@@ -110,6 +110,11 @@ export function buildSubjectSearchPatterns(subject: string): RegExp[] {
   return patterns;
 }
 
+/** Primary-market restriction used before any scoring or preference filters. */
+export function primaryMarketplaceTutorFilter(request: Pick<IRequest, "countryCode">): Record<string, unknown> {
+  return request.countryCode ? { countryCode: request.countryCode.toUpperCase() } : {};
+}
+
 export class MatchingService {
   private static cachedConfig: MatchingConfigData | null = null;
   private static configCacheTime = 0;
@@ -249,9 +254,10 @@ export class MatchingService {
     // Teaching Mode & Safety Filter
     if (isOnline) {
       query.teachingMode = { $in: ["online", "both"] };
-      if (request.preferredTutorCountries && request.preferredTutorCountries.length > 0) {
-        query.countryCode = { $in: request.preferredTutorCountries };
-      }
+      // A tutor's primary country is the only marketplace they may serve
+      // until an explicit marketplace-access membership exists. Currency or
+      // client-supplied preferred-country filters must not widen this gate.
+      Object.assign(query, primaryMarketplaceTutorFilter(request));
     } else if (isHome) {
       query.teachingMode = { $in: ["in-person", "both"] };
       query.policeVerificationStatus = "approved";
@@ -289,7 +295,7 @@ export class MatchingService {
       query.$or = [
         {
           teachingMode: { $in: ["online", "both"] },
-          ...(request.preferredTutorCountries ? { countryCode: { $in: request.preferredTutorCountries } } : {}),
+          ...primaryMarketplaceTutorFilter(request),
         },
         homeSubQuery,
       ];
