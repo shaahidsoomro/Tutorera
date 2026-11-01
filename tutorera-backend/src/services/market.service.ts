@@ -5,19 +5,19 @@ import { httpError } from "../utils/httpError";
 
 export const LAUNCH_MARKETS = {
   PK: {
-    countryName: "Pakistan", iso3: "PAK", dialCode: "+92", currency: "USD", currencySymbol: "$",
+    countryName: "Pakistan", iso3: "PAK", dialCode: "+92", currency: "PKR", currencySymbol: "Rs.",
     timezone: "Asia/Karachi", timezones: ["Asia/Karachi"], launchStatus: "live", paymentProvider: "rapidpay",
     paymentsEnabled: true, payoutsEnabled: false, onlineEnabled: true, homeTuitionEnabled: true,
     featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: true },
   },
   AE: {
-    countryName: "United Arab Emirates", iso3: "ARE", dialCode: "+971", currency: "USD", currencySymbol: "$",
+    countryName: "United Arab Emirates", iso3: "ARE", dialCode: "+971", currency: "AED", currencySymbol: "AED",
     timezone: "Asia/Dubai", timezones: ["Asia/Dubai"], launchStatus: "live", paymentProvider: "rapidpay",
     paymentsEnabled: true, payoutsEnabled: false, onlineEnabled: true, homeTuitionEnabled: true,
     featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: true },
   },
   GB: {
-    countryName: "United Kingdom", iso3: "GBR", dialCode: "+44", currency: "USD", currencySymbol: "$",
+    countryName: "United Kingdom", iso3: "GBR", dialCode: "+44", currency: "GBP", currencySymbol: "£",
     timezone: "Europe/London", timezones: ["Europe/London"], launchStatus: "live", paymentProvider: "rapidpay",
     paymentsEnabled: true, payoutsEnabled: false, onlineEnabled: true, homeTuitionEnabled: true,
     featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: true },
@@ -29,13 +29,13 @@ export const LAUNCH_MARKETS = {
     featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: true },
   },
   SA: {
-    countryName: "Saudi Arabia", iso3: "SAU", dialCode: "+966", currency: "USD", currencySymbol: "$",
+    countryName: "Saudi Arabia", iso3: "SAU", dialCode: "+966", currency: "SAR", currencySymbol: "SAR",
     timezone: "Asia/Riyadh", timezones: ["Asia/Riyadh"], launchStatus: "live", paymentProvider: "rapidpay",
     paymentsEnabled: true, payoutsEnabled: false, onlineEnabled: true, homeTuitionEnabled: true,
     featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: true },
   },
   IN: {
-    countryName: "India", iso3: "IND", dialCode: "+91", currency: "USD", currencySymbol: "$",
+    countryName: "India", iso3: "IND", dialCode: "+91", currency: "INR", currencySymbol: "₹",
     timezone: "Asia/Kolkata", timezones: ["Asia/Kolkata"], launchStatus: "live", paymentProvider: "rapidpay",
     paymentsEnabled: true, payoutsEnabled: false, onlineEnabled: true, homeTuitionEnabled: true,
     featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: true },
@@ -45,9 +45,9 @@ export const LAUNCH_MARKETS = {
 export async function ensureLaunchMarkets(): Promise<void> {
   const rapidPayCapabilities = getRapidPayCapabilities();
   await Promise.all(Object.entries(LAUNCH_MARKETS).map(([countryCode, config]) => {
-    // RapidPay settles the configured launch markets in USD. Historical
-    // requests, bookings and ledger rows retain their own currency snapshot;
-    // this configuration affects newly created marketplace activity only.
+    // Market currency is the local pricing/display currency. RapidPay
+    // capabilities are checked independently so a payment gateway default
+    // cannot overwrite the marketplace's configured currency.
     //
     // Everything else - including launchStatus and featureFlags - is seeded
     // on INSERT ONLY. This used to be a blanket $set applied on every call

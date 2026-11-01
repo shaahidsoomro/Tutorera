@@ -11,17 +11,20 @@ describe("global market capability enforcement", () => {
     delete process.env.RAPIDPAY_SUPPORTED_MARKETS;
   });
 
-  it("keeps every approved launch market transactional in USD", async () => {
+  it("keeps every approved launch market in its local pricing currency", async () => {
     await ensureLaunchMarkets();
     const markets = await MarketConfig.find().sort("countryCode").lean();
     expect(markets.map((market) => market.countryCode)).toEqual(["AE", "GB", "IN", "PK", "SA", "US"]);
-    expect(markets.every((market) => market.paymentsEnabled && market.paymentProvider === "rapidpay" && market.currency === "USD" && market.launchStatus === "live")).toBe(true);
+    expect(markets.every((market) => market.paymentsEnabled && market.paymentProvider === "rapidpay" && market.launchStatus === "live")).toBe(true);
+    expect(Object.fromEntries(markets.map((market) => [market.countryCode, market.currency]))).toEqual({
+      AE: "AED", GB: "GBP", IN: "INR", PK: "PKR", SA: "SAR", US: "USD",
+    });
   });
 
   it("permits acceptance in every approved launch market", async () => {
     await ensureLaunchMarkets();
     for (const countryCode of ["PK", "AE", "GB", "US", "SA", "IN"]) {
-      await expect(assertAcceptanceAvailable(countryCode)).resolves.toMatchObject({ countryCode, paymentProvider: "rapidpay", currency: "USD" });
+      await expect(assertAcceptanceAvailable(countryCode)).resolves.toMatchObject({ countryCode, paymentProvider: "rapidpay" });
     }
   });
 
@@ -33,7 +36,7 @@ describe("global market capability enforcement", () => {
       await expect(assertAcceptanceAvailable("AE")).resolves.toMatchObject({
         countryCode: "AE",
         paymentProvider: "rapidpay",
-        currency: "USD",
+        currency: "AED",
       });
     } finally {
       if (previous === undefined) delete process.env.RAPIDPAY_SUPPORTED_MARKETS;
