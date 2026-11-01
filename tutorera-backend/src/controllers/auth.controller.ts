@@ -118,7 +118,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     await NotificationService.publishEvent(user._id.toString(), "auth.registered", payload);
 
     try {
-      // Platform admin notification to mentiserapk@gmail.com
+      // Platform super-admin notification
       await NotificationService.publishEvent("system_admin", "admin.user_registered", {
         name: user.name,
         email: user.email,
@@ -311,7 +311,7 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
       await NotificationService.publishEvent(user._id.toString(), "auth.registered", payload);
 
       try {
-        // Platform admin notification to mentiserapk@gmail.com
+        // Platform super-admin notification
         await NotificationService.publishEvent("system_admin", "admin.user_registered", {
           name: user.name,
           email: user.email,

@@ -28,6 +28,7 @@ import { isValidIanaTimezone, zonedDateTimeToUtc } from "../utils/timezone";
 import { convertAmount } from "../services/exchangeRate.service";
 import { releaseExpiredPaymentHold } from "../services/requestLifecycle.service";
 import { assertParentBookingPolicy } from "../services/parentBookingPolicy.service";
+import { LEGAL_CONFIG } from "../config/legal";
 import {
   MARKETPLACE_REQUEST_EXPIRY_DAYS,
   MAX_REQUEST_EXTENSIONS,
@@ -138,7 +139,7 @@ export const createRequest = async (req: AuthRequest, res: Response): Promise<vo
       description: request.description || request.learningObjectives,
       curriculum: request.curriculum,
     });
-    await sendEmail({ to: "mentiserapk@gmail.com", subject: adminAlert.subject, html: adminAlert.html });
+    await sendEmail({ to: LEGAL_CONFIG.PLATFORM_SUPER_ADMIN_EMAIL, subject: adminAlert.subject, html: adminAlert.html });
   } catch (alertErr) {
     console.error("Failed to send admin tuition request alert email:", alertErr);
   }
@@ -1200,7 +1201,7 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
       description: `Direct booking with tutor ID: ${tutorId}`,
       curriculum: request.curriculum,
     });
-    await sendEmail({ to: "mentiserapk@gmail.com", subject: adminAlert.subject, html: adminAlert.html });
+    await sendEmail({ to: LEGAL_CONFIG.PLATFORM_SUPER_ADMIN_EMAIL, subject: adminAlert.subject, html: adminAlert.html });
   } catch (err) {
     console.error("Failed to send direct booking request email / admin alert:", err);
   }

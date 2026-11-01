@@ -1,4 +1,5 @@
 import { renderTransactionalEmail } from "./emailBrand";
+import { LEGAL_CONFIG } from "../config/legal";
 
 export function today() {
   return new Date().toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" });
@@ -431,7 +432,7 @@ ${data.applicationId ? `• Tutor Application ID: ${data.applicationId}` : ""}`,
       amount: roleLabel,
     },
     cta: { label: "Open Admin Panel", url: "https://tutorera.ac.pk/admin" },
-    additionalInformation: "Notification dispatched automatically to mentiserapk@gmail.com.",
+    additionalInformation: `Notification dispatched automatically to ${LEGAL_CONFIG.PLATFORM_SUPER_ADMIN_EMAIL}.`,
     includeSecurityNotice: true,
   });
   return { subject: `[TUTORERA Admin] New ${roleLabel} Sign Up: ${data.name}`, html };
@@ -534,7 +535,7 @@ ${data.description ? `• Details: "${data.description}"` : ""}`,
       amount: `PKR ${data.budgetPKR.toLocaleString()}`,
     },
     cta: { label: "Review in Marketplace", url: "https://tutorera.ac.pk/browse-requests" },
-  additionalInformation: "Notification dispatched automatically to mentiserapk@gmail.com.",
+  additionalInformation: `Notification dispatched automatically to ${LEGAL_CONFIG.PLATFORM_SUPER_ADMIN_EMAIL}.`,
   includeSecurityNotice: true,
 });
 return { subject: `[TUTORERA Alert] New ${isHome ? "🏠 Home Tuition" : "🌐 Tuition"} Request: ${data.subject} (${data.city || data.countryName || "Global"})`, html };

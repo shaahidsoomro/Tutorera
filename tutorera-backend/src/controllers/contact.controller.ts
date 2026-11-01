@@ -3,6 +3,7 @@ import { AuthRequest } from "../types";
 import Contact from "../models/Contact.model";
 import sendEmail from "../utils/sendEmail";
 import { renderTransactionalEmail } from "../utils/emailBrand";
+import { LEGAL_CONFIG } from "../config/legal";
 
 // @desc    Submit contact form
 // @route   POST /api/contact
@@ -14,7 +15,7 @@ export const submitContact = async (req: Request, res: Response): Promise<void> 
   const contact = await Contact.create({ name, email, phone, userType, bookingReference, transactionReference, subject, message });
 
   // Send email notification to admin
-  const adminRecipient = process.env.EMAIL_USER || "mentiserapk@gmail.com";
+  const adminRecipient = process.env.EMAIL_USER || LEGAL_CONFIG.PLATFORM_SUPER_ADMIN_EMAIL;
   const adminSubject = `[TUTORERA Contact] ${subject}`;
   const adminHtml = renderTransactionalEmail({
     subject: adminSubject,
@@ -118,7 +119,7 @@ export const submitSupportRequest = async (req: AuthRequest, res: Response): Pro
   });
 
   const isUrgent = priority === "urgent";
-  const adminRecipient = process.env.EMAIL_USER || "mentiserapk@gmail.com";
+  const adminRecipient = process.env.EMAIL_USER || LEGAL_CONFIG.PLATFORM_SUPER_ADMIN_EMAIL;
 
   // Email to admin — includes booking context for quick lookup
   const adminSubject = `[TUTORERA Support${isUrgent ? " — URGENT" : ""}] ${subject}`;

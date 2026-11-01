@@ -12,6 +12,7 @@
     "backfill:tracking": "ts-node src/scripts/backfillTutorTracking.ts",
     "audit:student-age": "ts-node src/scripts/auditStudentAgeCoverage.ts",
     "audit:age-review-index": "ts-node src/scripts/auditAgeReviewIndexes.ts",
+    "promote:super-admin": "ts-node src/scripts/promoteSuperAdmin.ts",
     "geo:import": "ts-node src/scripts/importGeoNames.ts",
     "migrate:pk": "ts-node src/scripts/migrateLegacyPakistan.ts",
     "smoke:api": "node scripts/smoke-api.mjs https://api.tutorera.ac.pk"

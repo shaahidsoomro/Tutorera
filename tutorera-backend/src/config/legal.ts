@@ -7,6 +7,7 @@ export const LEGAL_CONFIG = Object.freeze({
   REGISTERED_COUNTRY: "Pakistan",
   REGISTERED_ADDRESS: "House 387, Street 11, Phase 5-b, Ghauri Town, Islamabad, Islamabad Capital Territory, Pakistan",
   SUPPORT_EMAIL: "hello@mentisera.pk",
+  PLATFORM_SUPER_ADMIN_EMAIL: "mentiserapk@gmail.com",
   LEGAL_CONTACT_EMAIL: "hello@mentisera.pk",
   PRIVACY_CONTACT_EMAIL: "hello@mentisera.pk",
   SAFETY_CONTACT_EMAIL: "hello@mentisera.pk",

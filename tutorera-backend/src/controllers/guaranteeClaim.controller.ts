@@ -7,6 +7,7 @@ import User from "../models/User.model";
 import sendEmail from "../utils/sendEmail";
 import { renderTransactionalEmail } from "../utils/emailBrand";
 import { formatMoney } from "../utils/emailTemplates";
+import { LEGAL_CONFIG } from "../config/legal";
 
 // @desc    Submit a first session guarantee claim
 // @route   POST /api/guarantee/claim
@@ -56,7 +57,7 @@ export const submitClaim = async (req: AuthRequest, res: Response): Promise<void
   });
 
   const formattedAmount = formatMoney(booking.amount, booking.currency || "USD");
-  const adminRecipient = process.env.EMAIL_USER || "mentiserapk@gmail.com";
+  const adminRecipient = process.env.EMAIL_USER || LEGAL_CONFIG.PLATFORM_SUPER_ADMIN_EMAIL;
 
   // Email to admin
   const adminSubject = `[TUTORERA Guarantee] New Claim: ${req.user?.name}`;
