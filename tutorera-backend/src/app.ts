@@ -1,7 +1,6 @@
 // src/app.ts
 import "express-async-errors";
 import express from "express";
-import mongoose from "mongoose";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
@@ -43,6 +42,9 @@ import pricingRoutes from "./routes/pricing.routes";
 import meetingRoutes from "./routes/meeting.routes";
 import legalAgreementRoutes from "./routes/legalAgreement.routes";
 import featureFlagRoutes from "./routes/featureFlag.routes";
+import promoCodeRoutes from "./routes/promoCode.routes";
+import { createHealthRouter } from "./routes/health.routes";
+import { createInternalJobsRouter } from "./routes/internalJobs.routes";
 
 // This file builds the Express app only — no httpServer, no Socket.io, no
 // .listen(). That's what lets tests import the app directly via supertest
@@ -136,22 +138,13 @@ apiRouter.use("/matching", matchingRoutes);
 apiRouter.use("/pricing", pricingRoutes);
 apiRouter.use("/", legalAgreementRoutes);
 apiRouter.use("/feature-flags", featureFlagRoutes);
+apiRouter.use("/promo-codes", promoCodeRoutes);
 
 app.use("/api/v1", generalLimiter);
 app.use("/api/v1", apiRouter);
 
-// Public liveness endpoint: does not disclose infrastructure details.
-app.get("/health/live", (_req, res) => {
-    res.setHeader("Cache-Control", "no-store");
-    res.status(200).json({ status: "ok" });
-});
-
-// Readiness endpoint for load balancers and deployment smoke checks.
-app.get("/health/ready", (_req, res) => {
-    res.setHeader("Cache-Control", "no-store");
-    const ready = mongoose.connection.readyState === 1;
-    res.status(ready ? 200 : 503).json({ status: ready ? "ready" : "unavailable" });
-});
+app.use("/health", createHealthRouter());
+app.use("/internal/jobs", createInternalJobsRouter());
 
 app.get("/", (req, res) => {
     res.json({ message: "Tutorera API is running 🚀" });

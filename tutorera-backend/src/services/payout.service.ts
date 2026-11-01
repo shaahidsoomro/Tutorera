@@ -3,6 +3,69 @@ import PaymentLedger from "../models/PaymentLedger.model";
 import RefundRequest from "../models/RefundRequest.model";
 import logger from "../config/logger";
 
+export interface PayoutListResult {
+  payouts: object[];
+  total: number;
+  page: number;
+  pages: number;
+}
+
+export async function listPayouts(opts: {
+  state?: string;
+  tutorId?: string;
+  page: number;
+  limit: number;
+}): Promise<PayoutListResult> {
+  const filter: Record<string, unknown> = {
+    status: "completed",
+    paymentStatus: "confirmed",
+    payoutRequestedAt: { $exists: true },
+  };
+  if (opts.state) filter.payoutStatus = opts.state;
+  if (opts.tutorId) filter.tutor = opts.tutorId;
+  const skip = (opts.page - 1) * opts.limit;
+  const [payouts, total] = await Promise.all([
+    Booking.find(filter)
+      .select("_id tutor student payoutStatus payoutRequestedAt payoutProcessedAt transferRef adminNote totalAmount currency")
+      .sort({ payoutRequestedAt: -1 })
+      .skip(skip)
+      .limit(opts.limit)
+      .lean(),
+    Booking.countDocuments(filter),
+  ]);
+  return { payouts, total, page: opts.page, pages: Math.ceil(total / opts.limit) };
+}
+
+export async function markPayoutComplete(opts: {
+  transferRef: string;
+  evidenceRef: string;
+  adminId: string;
+  adminNote?: string;
+}): Promise<void> {
+  const booking = await Booking.findOne({ transferRef: opts.transferRef });
+  if (!booking) throw Object.assign(new Error("Payout not found for transferRef"), { statusCode: 404 });
+  if (booking.payoutStatus === "paid") throw Object.assign(new Error("Payout already marked complete"), { statusCode: 409 });
+  booking.payoutStatus = "paid";
+  booking.payoutProcessedAt = new Date();
+  (booking as any).evidenceRef = opts.evidenceRef;
+  (booking as any).adminNote = opts.adminNote || "";
+  await booking.save();
+  logger.info({ transferRef: opts.transferRef, adminId: opts.adminId }, "Payout marked complete");
+}
+
+export async function markPayoutFailed(opts: {
+  transferRef: string;
+  adminId: string;
+  adminNote: string;
+}): Promise<void> {
+  const booking = await Booking.findOne({ transferRef: opts.transferRef });
+  if (!booking) throw Object.assign(new Error("Payout not found for transferRef"), { statusCode: 404 });
+  booking.payoutStatus = "pending";
+  (booking as any).adminNote = opts.adminNote;
+  await booking.save();
+  logger.warn({ transferRef: opts.transferRef, adminId: opts.adminId }, "Payout marked failed, returned to pending");
+}
+
 export interface PayoutRunResult {
   scanned: number;
   processed: number;
