@@ -21,6 +21,7 @@ export const loginLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     skipSuccessfulRequests: true, // only count failed attempts
+    skip: () => process.env.NODE_ENV === "test",
     message: { success: false, message: "Too many login attempts. Please try again in 15 minutes." },
 });
 
@@ -30,6 +31,7 @@ export const registerLimiter = rateLimit({
     max: 10,
     standardHeaders: true,
     legacyHeaders: false,
+    skip: () => process.env.NODE_ENV === "test",
     message: { success: false, message: "Too many accounts created from this location. Please try again later." },
 });
 
@@ -39,6 +41,7 @@ export const otpRequestLimiter = rateLimit({
     max: 5,
     standardHeaders: true,
     legacyHeaders: false,
+    skip: () => process.env.NODE_ENV === "test",
     message: { success: false, message: "Too many code requests. Please wait before requesting another." },
 });
 
@@ -47,6 +50,7 @@ export const otpVerifyLimiter = rateLimit({
     max: 10,
     standardHeaders: true,
     legacyHeaders: false,
+    skip: () => process.env.NODE_ENV === "test",
     message: { success: false, message: "Too many attempts. Please request a new code." },
 });
 
