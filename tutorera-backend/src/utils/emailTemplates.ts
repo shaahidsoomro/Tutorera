@@ -591,16 +591,36 @@ export function formatMoney(amount: number, currency = "PKR"): string {
 
 export const offerExpiringEmail = (recipientName: string, subject: string, isTutor: boolean) => {
   const role = isTutor ? "your offer" : "an offer you received";
-  return {
-    subject: "TUTORERA® — Offer Expiring Soon",
-    html: `<p>Hi ${recipientName},</p><p>This is a reminder that ${role} for <strong>${subject}</strong> is expiring soon. Log in to review it before it expires.</p><p><a href="https://tutorera.ac.pk/offers">View Offers</a></p>`,
-  };
+  const emailSubject = "TUTORERA® — Offer Expiring Soon";
+  const html = renderTransactionalEmail({
+    subject: emailSubject,
+    emailCategory: "Offer Update",
+    emailHeading: "Offer Expiring Soon",
+    emailSubheading: `Don't miss out — ${role} for ${subject} is about to expire.`,
+    firstName: recipientName,
+    openingMessage: `This is a reminder that ${role} for ${subject} is expiring soon.`,
+    mainMessage: "Log in to review the offer before it expires. Once expired, it cannot be reactivated.",
+    cta: { label: "View Offers", url: "https://tutorera.ac.pk/offers" },
+    includeSecurityNotice: false,
+    deliverability: "This transactional notification was sent because of an active offer on your TUTORERA account.",
+  });
+  return { subject: emailSubject, html };
 };
 
 export const offerExpiredEmail = (recipientName: string, subject: string, isTutor: boolean) => {
   const role = isTutor ? "your offer" : "an offer you received";
-  return {
-    subject: "TUTORERA® — Offer Expired",
-    html: `<p>Hi ${recipientName},</p><p>Unfortunately ${role} for <strong>${subject}</strong> has expired. You can browse other opportunities on TUTORERA.</p><p><a href="https://tutorera.ac.pk">Visit TUTORERA</a></p>`,
-  };
+  const emailSubject = "TUTORERA® — Offer Expired";
+  const html = renderTransactionalEmail({
+    subject: emailSubject,
+    emailCategory: "Offer Update",
+    emailHeading: "Offer Has Expired",
+    emailSubheading: `${role.charAt(0).toUpperCase() + role.slice(1)} for ${subject} is no longer active.`,
+    firstName: recipientName,
+    openingMessage: `Unfortunately, ${role} for ${subject} has expired.`,
+    mainMessage: "You can browse other tutors and post new tuition requests anytime on TUTORERA.",
+    cta: { label: "Browse TUTORERA", url: "https://tutorera.ac.pk/tutors" },
+    includeSecurityNotice: false,
+    deliverability: "This transactional notification was sent because an offer on your TUTORERA account expired.",
+  });
+  return { subject: emailSubject, html };
 };
