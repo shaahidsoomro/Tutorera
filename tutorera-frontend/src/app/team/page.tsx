@@ -41,12 +41,12 @@ export default function TeamPage() {
         <div style={{ maxWidth: 1120, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1.5rem", alignItems: "stretch" }}>
           <article style={{ backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: "1.25rem", padding: "2rem", boxShadow: "0 14px 38px rgba(17,24,39,0.06)" }}>
             <div style={{ width: 88, height: 88, borderRadius: "50%", background: "linear-gradient(135deg, #0329B2, #7c3aed)", display: "grid", placeItems: "center", color: "white", fontSize: "1.5rem", fontWeight: 900, marginBottom: "1.25rem" }} aria-hidden="true">
-              SN
+              KF
             </div>
             <p style={{ color: C.accent, fontSize: "0.78rem", fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "0.45rem" }}>Chief Executive Officer</p>
-            <h2 style={{ color: C.primary, fontSize: "1.55rem", fontWeight: 850, marginBottom: "0.75rem" }}>Miss Saba Noor</h2>
+            <h2 style={{ color: C.primary, fontSize: "1.55rem", fontWeight: 850, marginBottom: "0.75rem" }}>Miss Kinza Farooq</h2>
             <p style={{ color: C.gray500, lineHeight: 1.75 }}>
-              Saba Noor leads TUTORERA&apos;s education vision and marketplace direction. She is an educator and EdTech leader focused on making tutoring transparent, structured, and accessible for students and parents worldwide and locally.
+              Kinza Farooq leads TUTORERA&apos;s education vision and marketplace direction. She is an educator and EdTech leader focused on making tutoring transparent, structured, and accessible for students and parents worldwide and locally.
             </p>
             <div style={{ marginTop: "1.25rem", display: "flex", flexWrap: "wrap", gap: "0.6rem" }}>
               {["Education strategy", "Tutor quality", "Student success", "EdTech leadership"].map((item) => (
