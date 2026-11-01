@@ -27,6 +27,8 @@ import { isMarketplaceEligible, isHomeTuitionEligible } from "./tracking.service
 import { checkSubjectEligibility } from "./subjectEligibility.service";
 import { schoolOfferingIsActive } from "./schoolOfferingAvailability.service";
 import { sendNotification } from "../utils/socket";
+import sendEmail from "../utils/sendEmail";
+import { newMatchedRequestEmail } from "../utils/emailTemplates";
 import logger from "../config/logger";
 
 export interface MatchReason {
@@ -927,6 +929,30 @@ export class MatchingService {
               type: "bid",
               link: "/dashboard?tab=browse",
             });
+          }
+
+          // Email notification for offline tutors — respect per-user preference
+          try {
+            const tutorUser = await User.findById(tutorUserId).select("name email notificationPreferences");
+            if (tutorUser?.email && tutorUser.notificationPreferences?.emailNotifications !== false) {
+              const dashboardUrl = `${process.env.CLIENT_URL || "https://tutorera.ac.pk"}/dashboard?tab=browse`;
+              const mail = newMatchedRequestEmail({
+                tutorName: tutorUser.name?.split(" ")[0] || "Tutor",
+                matchScore: m.matchScore,
+                subject: request.subject,
+                level: request.level,
+                teachingMode: request.teachingMode,
+                city: request.city,
+                budget: request.budget,
+                currency: currencyCode,
+                pricingUnit: request.pricingUnit || "hour",
+                reasons: m.reasons,
+                dashboardUrl,
+              });
+              sendEmail({ to: tutorUser.email, subject: mail.subject, html: mail.html }).catch(() => undefined);
+            }
+          } catch {
+            // email failure must not break matching dispatch
           }
         })
       );

@@ -608,6 +608,36 @@ export const offerExpiringEmail = (recipientName: string, subject: string, isTut
   return { subject: emailSubject, html };
 };
 
+export const newMatchedRequestEmail = (data: {
+  tutorName: string;
+  matchScore: number;
+  subject: string;
+  level: string;
+  teachingMode: string;
+  city?: string;
+  budget: number;
+  currency: string;
+  pricingUnit: string;
+  reasons: string[];
+  dashboardUrl: string;
+}) => {
+  const emailSubject = `TUTORERA® — New ${data.matchScore}% Match: ${data.subject} Tuition Request`;
+  const locationText = data.teachingMode === "online" ? "Online" : data.city || "In-person";
+  const html = renderTransactionalEmail({
+    subject: emailSubject,
+    emailCategory: "New Opportunity",
+    emailHeading: `New ${data.matchScore}% Match`,
+    emailSubheading: `A student needs a ${data.subject} tutor — you're a strong match.`,
+    firstName: data.tutorName,
+    openingMessage: `A student just posted a ${data.subject} (${data.level}) tuition request that matches your profile at ${data.matchScore}%.`,
+    mainMessage: `<strong>Subject:</strong> ${data.subject} · ${data.level}<br/><strong>Mode:</strong> ${locationText}<br/><strong>Budget:</strong> ${data.currency} ${data.budget.toLocaleString()}/${data.pricingUnit}<br/><br/>Why you match:<br/>${data.reasons.slice(0, 3).map(r => `• ${r}`).join("<br/>")}`,
+    cta: { label: "View & Send Offer →", url: data.dashboardUrl },
+    includeSecurityNotice: false,
+    deliverability: "You received this because a new student request matches your TUTORERA tutor profile. You can manage notification preferences in your account settings.",
+  });
+  return { subject: emailSubject, html };
+};
+
 export const offerExpiredEmail = (recipientName: string, subject: string, isTutor: boolean) => {
   const role = isTutor ? "your offer" : "an offer you received";
   const emailSubject = "TUTORERA® — Offer Expired";
