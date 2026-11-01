@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import { OAuth2Client } from "google-auth-library";
 import User from "../models/User.model";
 import { logAudit } from "../utils/logAudit";
 import { sendTokenResponse, generateToken } from "../utils/generateToken";
@@ -33,7 +32,21 @@ import { newGoogleStudentSchema } from "../validators/auth.validator";
 const TRACKING_BASE_URL = process.env.CLIENT_URL || "https://tutorera.ac.pk";
 
 
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+/** Verify a Google ID token using the tokeninfo endpoint (fetch-based, CF Workers safe). */
+async function verifyGoogleIdToken(idToken: string): Promise<{ sub: string; email: string; name?: string; picture?: string; email_verified: boolean } | null> {
+  try {
+    const res = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`);
+    if (!res.ok) return null;
+    const payload = await res.json() as Record<string, string>;
+    const expectedAud = process.env.GOOGLE_CLIENT_ID;
+    if (expectedAud && payload.aud !== expectedAud) return null;
+    if (payload.email_verified !== "true") return null;
+    if (!payload.sub || !payload.email) return null;
+    return { sub: payload.sub, email: payload.email, name: payload.name, picture: payload.picture, email_verified: true };
+  } catch {
+    return null;
+  }
+}
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -182,20 +195,9 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 export const googleAuth = async (req: Request, res: Response): Promise<void> => {
   const { idToken, role, countryCode = "PK", preferredLanguage, dateOfBirth, guardianEmail, guardianName } = req.body;
 
-  let payload;
-  try {
-    const ticket = await googleClient.verifyIdToken({
-      idToken,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
-    payload = ticket.getPayload();
-  } catch {
+  const payload = await verifyGoogleIdToken(idToken);
+  if (!payload) {
     res.status(401).json({ success: false, message: "Invalid Google token" });
-    return;
-  }
-
-  if (!payload || !payload.email || payload.email_verified !== true) {
-    res.status(401).json({ success: false, message: "Could not verify Google account" });
     return;
   }
 
