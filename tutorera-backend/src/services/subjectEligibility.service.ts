@@ -23,6 +23,7 @@ import { logAudit } from "../utils/logAudit";
 import { EDUCATION_LEVELS, normalizeEducationLevel } from "../config/educationLevels";
 import { hasCurrentQualificationReview, meetsMinimumDegreeLevel } from "./qualificationReview.service";
 import { hasApprovedSubjectEvidence } from "./subjectEvidenceReview.service";
+import { isApprovalExempt } from "./eligibility.service";
 
 export const NOT_ELIGIBLE_MESSAGE = "You are not approved to teach this subject or level. Submit a relevant qualification for admin review.";
 
@@ -56,7 +57,8 @@ export interface EligibilityCheckResult {
  * plain result object (not a thrown error) so callers can shape their own
  * HTTP response/status code around it consistently with their existing
  * error-handling style. */
-export function checkSubjectEligibility(profile: Pick<ITutorProfile, "subjectEligibility">, subject: string, level?: string): EligibilityCheckResult {
+export function checkSubjectEligibility(profile: Pick<ITutorProfile, "subjectEligibility" | "adminApprovalExempt">, subject: string, level?: string): EligibilityCheckResult {
+  if (isApprovalExempt(profile)) return { eligible: true };
   if (isSubjectLevelApproved(profile, subject, level)) return { eligible: true };
   return { eligible: false, message: NOT_ELIGIBLE_MESSAGE };
 }

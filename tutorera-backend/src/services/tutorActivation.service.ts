@@ -10,6 +10,7 @@ import {
   evaluateMarketplaceAccess,
   hasApprovedTeachingSubject,
   hasCoreDocumentsApproved,
+  isApprovalExempt,
 } from "./eligibility.service";
 
 export interface ActivationEvaluationResult {
@@ -84,6 +85,7 @@ export async function evaluateTutorActivation(
 
   const missing: string[] = [];
   const reasons: string[] = [];
+  const approvalExempt = isApprovalExempt(profile);
 
   // 1. Account status checks (suspension / termination)
   const accountNotSuspended =
@@ -120,14 +122,14 @@ export async function evaluateTutorActivation(
 // A tutor may select subjects during onboarding, but no subject becomes
   // teachable until an administrator approves its precise levels. This is a
   // separate trust gate from document verification.
-  const subjectEligibilityApproved = hasApprovedTeachingSubject(profile);
+  const subjectEligibilityApproved = approvalExempt || hasApprovedTeachingSubject(profile);
   if (!subjectEligibilityApproved) {
     missing.push("subject_eligibility_approved");
     reasons.push("At least one teaching subject and level must be approved by an administrator.");
   }
 
   // 3. Document submission
-  const documentsSubmitted = Boolean(
+  const documentsSubmitted = approvalExempt || Boolean(
     profile.cnicFront &&
     profile.videoIntro &&
     profile.education &&
@@ -140,7 +142,7 @@ export async function evaluateTutorActivation(
   }
 
   // 4. Mandatory documents verified
-  const mandatoryDocumentsVerified = Boolean(
+  const mandatoryDocumentsVerified = approvalExempt || Boolean(
     hasCoreDocumentsApproved(profile) &&
     (!policeIsRequired(profile) || profile.policeVerificationStatus === "approved" || profile.policeVerificationStatus === "not_required")
   );
@@ -150,14 +152,14 @@ export async function evaluateTutorActivation(
   }
 
   // 5. Identity verified
-  const identityVerified = profile.cnicVerificationStatus === "approved";
+  const identityVerified = approvalExempt || profile.cnicVerificationStatus === "approved";
   if (!identityVerified) {
     missing.push("identity_verified");
     reasons.push("Government identity has not been verified.");
   }
 
   // 6. Admin approved
-  const adminApproved = profile.verificationStatus === "approved";
+  const adminApproved = approvalExempt || profile.verificationStatus === "approved";
   if (!adminApproved) {
     missing.push("admin_approved");
     reasons.push("Application has not been approved by an administrator.");
@@ -165,8 +167,8 @@ export async function evaluateTutorActivation(
 
   // 7. Applicable Legal Agreement Acceptance & Consents
   const applicableAgreement = await getApplicableAgreement("TUTOR_AGREEMENT", profile.countryCode || "PK", "en", opts);
-  let currentAgreementAccepted = false;
-  let mandatoryConsentsAccepted = false;
+  let currentAgreementAccepted = approvalExempt;
+  let mandatoryConsentsAccepted = approvalExempt;
   let acceptanceRecord = null;
 
   if (applicableAgreement) {

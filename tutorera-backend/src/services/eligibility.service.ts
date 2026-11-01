@@ -25,6 +25,7 @@ type ProfileLike = Pick<
   | "tutorStatus"
   | "verificationStatus"
   | "isVerified"
+  | "adminApprovalExempt"
   | "marketplaceEligible"
 >;
 
@@ -60,6 +61,11 @@ export function isAccessBlocked(profile: ProfileLike | Record<string, any>): boo
   );
 }
 
+/** Explicit admin override bypasses approval gates but never safety blocks. */
+export function isApprovalExempt(profile: ProfileLike | Record<string, any>): boolean {
+  return Boolean(profile.adminApprovalExempt);
+}
+
 export interface MarketplaceAccessEvaluation {
   /** May the tutor be listed, matched and offered to? */
   eligible: boolean;
@@ -92,17 +98,18 @@ export function evaluateMarketplaceAccess(
   options: MarketplaceAccessOptions = {}
 ): MarketplaceAccessEvaluation {
   const coreDocumentsApproved = hasCoreDocumentsApproved(profile);
+  const approvalExempt = isApprovalExempt(profile);
   const grandfatherBypassActive =
     !coreDocumentsApproved &&
     Boolean(options.grandfathered) &&
     profile.verificationStatus === "approved" &&
     Boolean(profile.marketplaceEligible);
 
-  const coreApproved = coreDocumentsApproved || grandfatherBypassActive;
-  const subjectApproved = hasApprovedTeachingSubject(profile);
-  const agreementSatisfied = isAgreementSatisfied(profile);
+  const coreApproved = approvalExempt || coreDocumentsApproved || grandfatherBypassActive;
+  const subjectApproved = approvalExempt || hasApprovedTeachingSubject(profile);
+  const agreementSatisfied = approvalExempt || isAgreementSatisfied(profile);
   const accessBlocked = isAccessBlocked(profile);
-  const adminApproved = profile.verificationStatus === "approved";
+  const adminApproved = approvalExempt || profile.verificationStatus === "approved";
 
   const blockingReasons: string[] = [];
   if (accessBlocked) blockingReasons.push("Account is suspended, under re-verification, or terminated.");
@@ -110,10 +117,10 @@ export function evaluateMarketplaceAccess(
   if (!subjectApproved) blockingReasons.push("No teaching subject and level has been approved by an administrator.");
   if (!agreementSatisfied) blockingReasons.push("The tutor marketplace agreement has not been accepted.");
   if (!adminApproved) blockingReasons.push("An administrator has not approved this application.");
-  if (!profile.isVerified) blockingReasons.push("Profile is not marked as verified.");
+  if (!approvalExempt && !profile.isVerified) blockingReasons.push("Profile is not marked as verified.");
 
   return {
-    eligible: !accessBlocked && coreApproved && subjectApproved && agreementSatisfied && adminApproved && Boolean(profile.isVerified),
+    eligible: !accessBlocked && coreApproved && subjectApproved && agreementSatisfied && adminApproved && (approvalExempt || Boolean(profile.isVerified)),
     grandfatherBypassActive,
     coreApproved,
     subjectApproved,

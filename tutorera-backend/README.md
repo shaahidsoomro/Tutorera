@@ -84,6 +84,15 @@ There is no payment Cloudflare Worker and no direct database write path outside 
 | POST | /api/v1/contact | Submit contact form |
 | POST | /api/v1/upload/avatar | Upload avatar |
 
+### Administrative approval exemption
+
+An administrator approval through `PATCH /api/admin/verify/:id` (or the bulk
+equivalent) records an auditable `adminApprovalExempt` flag on the tutor
+profile. While that flag is active, approval, document, subject-eligibility,
+agreement, and profile-verification gates do not block marketplace activation.
+Suspension, re-verification, termination, and other account safety blocks still
+apply. Rejecting the profile clears the exemption.
+
 ## Project Structure
 ```
 src/

@@ -56,6 +56,25 @@ describe("marketplace eligibility has one authority (audit P1-03)", () => {
     expect(isMarketplaceEligible(profile)).toBe(false);
   });
 
+  it("allows an explicitly admin-exempt profile through approval gates", async () => {
+    const { profile } = await createTutor({
+      adminApprovalExempt: true,
+      cnicVerificationStatus: "pending",
+      degreeVerificationStatus: "pending",
+      demoVideoStatus: "pending",
+      subjectEligibility: [],
+      agreementAcceptedAt: undefined,
+      verificationStatus: "pending",
+      isVerified: false,
+    });
+
+    const access = evaluateMarketplaceAccess(profile.toObject());
+    expect(access.eligible).toBe(true);
+    expect(access.coreApproved).toBe(true);
+    expect(access.subjectApproved).toBe(true);
+    expect(access.agreementSatisfied).toBe(true);
+  });
+
   it("blocks a tutor with documents but no approved subject and level", async () => {
     const { profile } = await createTutor({ subjectEligibility: [] });
 

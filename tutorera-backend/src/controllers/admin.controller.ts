@@ -171,6 +171,9 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
 
   profile.verificationStatus = status;
   profile.isVerified = status === "approved";
+  profile.adminApprovalExempt = status === "approved";
+  profile.adminApprovalExemptAt = status === "approved" ? now : undefined;
+  profile.adminApprovalExemptBy = status === "approved" ? req.user?._id : undefined;
   profile.rejectionReason = status === "rejected" ? (reason || "") : "";
   profile.lastStatusChangeAt = now;
   // Some applications pre-date the expanded level enum (for example
@@ -332,6 +335,9 @@ export const bulkVerifyTutors = async (req: AuthRequest, res: Response): Promise
 
       profile.verificationStatus = status;
       profile.isVerified = status === "approved";
+      profile.adminApprovalExempt = status === "approved";
+      profile.adminApprovalExemptAt = status === "approved" ? now : undefined;
+      profile.adminApprovalExemptBy = status === "approved" ? req.user?._id : undefined;
       profile.rejectionReason = status === "rejected" ? (reason || "") : "";
       profile.lastStatusChangeAt = now;
       // See verifyTutor: verification is an administrative state transition,

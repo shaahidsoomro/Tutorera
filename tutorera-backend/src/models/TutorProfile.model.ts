@@ -186,6 +186,10 @@ export interface ITutorProfile extends Document {
   verificationStatus: "pending" | "approved" | "rejected";
   rejectionReason: string;
   isVerified: boolean;
+  /** Explicit administrative override for approval gates, preserved for auditability. */
+  adminApprovalExempt?: boolean;
+  adminApprovalExemptAt?: Date;
+  adminApprovalExemptBy?: Types.ObjectId;
   agreementAcceptanceRequired?: boolean;
   agreementAcceptedAt?: Date;
   agreementVersion?: string;
@@ -411,6 +415,9 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
     verificationStatus: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
     rejectionReason: { type: String, default: "" },
     isVerified: { type: Boolean, default: false },
+    adminApprovalExempt: { type: Boolean, default: false, index: true },
+    adminApprovalExemptAt: { type: Date },
+    adminApprovalExemptBy: { type: Schema.Types.ObjectId, ref: "User" },
     agreementAcceptanceRequired: { type: Boolean, default: false },
     agreementAcceptedAt: { type: Date },
     agreementVersion: { type: String, trim: true },
