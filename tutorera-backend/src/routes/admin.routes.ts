@@ -35,8 +35,10 @@ import {
   recordExternalRefundTransfer,
   verifyExternalRefundTransfer,
 } from "../controllers/refundRequest.controller";
-import { getAllReferrals } from "../controllers/referral.controller";
+import { getAllReferrals, getReferralConfigAdmin, updateReferralConfigAdmin, exportReferralsAdmin } from "../controllers/referral.controller";
 import { getAllStudentRatings, getStudentRatings } from "../controllers/studentRating.controller";
+import { getTutorRatingsForAdmin } from "../controllers/review.controller";
+import { listApprovals, reviewApproval, submitApproval } from "../controllers/adminApproval.controller";
 import { protect, authorize } from "../middlewares/auth.middleware";
 import { requirePermission } from "../middlewares/rbac.middleware";
 import { enforceCountryScope } from "../middlewares/countryScope.middleware";
@@ -67,6 +69,13 @@ import {
 import taxConfigRoutes from "./admin/taxConfig.routes";
 import exchangeRateAdminRoutes from "./admin/exchangeRate.routes";
 import geographyAdminRoutes from "./admin/geography.routes";
+import promoCodeAdminRoutes from "./admin/promoCode.routes";
+import emailTemplateAdminRoutes from "./admin/emailTemplate.routes";
+import academicFrameworkAdminRoutes from "./admin/academicFramework.routes";
+import verificationAdminRoutes from "./admin/verification.routes";
+import payoutAdminRoutes from "./admin/payout.routes";
+import subjectAdminRoutes from "./admin/subject.routes";
+import disciplineSubjectMapAdminRoutes from "./admin/disciplineSubjectMap.routes";
 import {
   listAgents,
   planAgentExecution,
@@ -118,6 +127,13 @@ router.put("/markets/:id", requirePermission("market.configure"), updateMarketCo
 router.use("/tax-config", taxConfigRoutes);
 router.use("/exchange-rates", exchangeRateAdminRoutes);
 router.use("/geography", geographyAdminRoutes);
+router.use("/promo-codes", promoCodeAdminRoutes);
+router.use("/email-templates", emailTemplateAdminRoutes);
+router.use("/academic-framework", academicFrameworkAdminRoutes);
+router.use("/verification", verificationAdminRoutes);
+router.use("/payouts-admin", payoutAdminRoutes);
+router.use("/subjects", subjectAdminRoutes);
+router.use("/discipline-subject-maps", disciplineSubjectMapAdminRoutes);
 
 // Supervisor Agent — read-only administrative intelligence
 router.get("/agents", adminAgentLimiter, listAgents);
@@ -168,6 +184,13 @@ router.patch("/refund-requests/:id", requirePermission("claims.manage"), updateR
 router.post("/refund-requests/:id/external-transfer", requirePermission("payment.refund"), recordExternalRefundTransfer);
 router.post("/refund-requests/:id/external-verify", requirePermission("payment.refund"), verifyExternalRefundTransfer);
 router.get("/referrals", requirePermission("growth.read"), getAllReferrals);
+router.get("/referrals/export", requirePermission("growth.read"), exportReferralsAdmin);
+router.get("/referral-config", requirePermission("growth.manage"), getReferralConfigAdmin);
+router.put("/referral-config", requirePermission("growth.manage"), updateReferralConfigAdmin);
+router.get("/tutor-ratings", requirePermission("tutor.read"), getTutorRatingsForAdmin);
+router.get("/approvals", requirePermission("system.monitor"), listApprovals);
+router.post("/approvals", requirePermission("system.monitor"), submitApproval);
+router.post("/approvals/:id/review", requirePermission("system.monitor"), reviewApproval);
 router.get("/student-ratings", requirePermission("student.read"), getAllStudentRatings);
 router.get("/student-ratings/:studentId", requirePermission("student.read"), getStudentRatings);
 

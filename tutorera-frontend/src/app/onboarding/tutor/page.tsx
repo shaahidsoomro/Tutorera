@@ -252,7 +252,7 @@ export default function TutorOnboardingPage() {
   };
 
   // Whether teaching mode mandates the selected market's safety verification.
-  const isHomeTuitionMandatory = step4.teachingMode === "in-person";
+  const isHomeTuitionMandatory = step4.teachingMode === "in-person" || step4.teachingMode === "both";
   const isOnlineOnly = step4.teachingMode === "online";
 
   const handleNext = async () => {
@@ -331,6 +331,12 @@ export default function TutorOnboardingPage() {
 
         if (isHomeTuitionMandatory && existingDocs.policeVerificationStatus === "rejected" && !policeCertificate) {
           setError(`Your background and safety document was rejected (${existingDocs.policeRejectionReason || "Action required"}). Please select a new document to re-submit.`);
+          setSaving(false);
+          return;
+        }
+
+        if (!videoIntro && !existingDocs.videoIntro) {
+          setError("A demo video URL is required. Please provide a YouTube or Vimeo link.");
           setSaving(false);
           return;
         }
@@ -909,7 +915,7 @@ export default function TutorOnboardingPage() {
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
                     <label style={{ fontSize: '0.875rem', fontWeight: '600', color: C.primary }}>
-                      Demo Video URL <span style={{ color: '#9ca3af', fontWeight: '400' }}>(Recommended)</span>
+                      Demo Video URL <span style={{ color: '#ef4444', fontWeight: '600' }}>*</span>
                     </label>
                     {existingDocs.videoIntro && (
                       <span style={{ fontSize: '0.75rem', fontWeight: 700, color: existingDocs.demoVideoStatus === 'approved' ? '#16a34a' : existingDocs.demoVideoStatus === 'rejected' ? '#dc2626' : '#d97706' }}>

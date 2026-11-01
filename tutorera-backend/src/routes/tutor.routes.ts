@@ -10,6 +10,7 @@ import {
   getPublicTutors,
   getPublicTutorSeoFacets,
 } from "../controllers/publicTutor.controller";
+import { getMySchoolOfferings, updateMySchoolOfferings } from "../controllers/schoolOffering.controller";
 import {
   saveAvailability,
   getTutorAvailability,
@@ -40,6 +41,8 @@ router.post("/onboarding/step", protect, authorize("tutor"), uploadVerification.
 // Profile
 router.post("/profile", protect, authorize("tutor"), validate(tutorProfileSchema), createOrUpdateProfile);
 router.get("/profile/me", protect, authorize("tutor"), getMyProfile);
+router.get("/school-offerings/me", protect, authorize("tutor"), getMySchoolOfferings);
+router.put("/school-offerings/me", protect, authorize("tutor"), updateMySchoolOfferings);
 
 // Public — all tutor exposure is gated by the canonical marketplace eligibility rule.
 // These wildcard/parameterized routes MUST be last
