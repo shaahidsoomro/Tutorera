@@ -16,7 +16,8 @@ api.interceptors.response.use(
       const isAuthRoute = url.includes("/auth/login")
         || url.includes("/auth/register")
         || url.includes("/auth/logout")
-        || url.includes("/auth/me");
+        || url.includes("/auth/me")
+        || url.includes("/auth/google");
       if (!isAuthRoute && window.location.pathname !== "/login") {
         window.location.href = "/login";
       }

@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import jwt from "jsonwebtoken";
 import User from "../models/User.model";
 import { logAudit } from "../utils/logAudit";
 import { sendTokenResponse, generateToken } from "../utils/generateToken";
@@ -31,18 +32,70 @@ import { newGoogleStudentSchema } from "../validators/auth.validator";
 
 const TRACKING_BASE_URL = process.env.CLIENT_URL || "https://tutorera.ac.pk";
 
+// Google ID token verification — JWKS-based (fetch-based, works in CF Workers).
+// Fetches Google's public keys via native fetch, converts JWK → PEM, verifies RS256.
+let _googleJwksCache: { keys: Array<{ kid: string; n: string; e: string }>; fetchedAt: number } | null = null;
 
-/** Verify a Google ID token using the tokeninfo endpoint (fetch-based, CF Workers safe). */
-async function verifyGoogleIdToken(idToken: string): Promise<{ sub: string; email: string; name?: string; picture?: string; email_verified: boolean } | null> {
-  try {
-    const res = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`);
+async function getGooglePublicKey(kid: string): Promise<string | null> {
+  const now = Date.now();
+  if (!_googleJwksCache || now - _googleJwksCache.fetchedAt > 3_600_000) {
+    const res = await fetch("https://www.googleapis.com/oauth2/v3/certs");
     if (!res.ok) return null;
-    const payload = await res.json() as Record<string, string>;
-    const expectedAud = process.env.GOOGLE_CLIENT_ID;
-    if (expectedAud && payload.aud !== expectedAud) return null;
-    if (payload.email_verified !== "true") return null;
-    if (!payload.sub || !payload.email) return null;
-    return { sub: payload.sub, email: payload.email, name: payload.name, picture: payload.picture, email_verified: true };
+    const data = await res.json() as { keys: Array<{ kid: string; n: string; e: string; kty: string; alg: string }> };
+    _googleJwksCache = { keys: data.keys, fetchedAt: now };
+  }
+  const key = _googleJwksCache.keys.find((k) => k.kid === kid);
+  if (!key) return null;
+  // Convert JWK RSA public key to PEM
+  const n = Buffer.from(key.n, "base64url");
+  const e = Buffer.from(key.e, "base64url");
+  // ASN.1 DER encoding of RSAPublicKey: SEQUENCE { INTEGER n, INTEGER e }
+  const encodeAsn1Int = (buf: Buffer): Buffer => {
+    const needsPad = buf[0] & 0x80;
+    const body = needsPad ? Buffer.concat([Buffer.from([0x00]), buf]) : buf;
+    const lenBytes = body.length > 127
+      ? Buffer.from([0x82, (body.length >> 8) & 0xff, body.length & 0xff])
+      : Buffer.from([body.length]);
+    return Buffer.concat([Buffer.from([0x02]), lenBytes, body]);
+  };
+  const nAsn1 = encodeAsn1Int(n);
+  const eAsn1 = encodeAsn1Int(e);
+  const seqBody = Buffer.concat([nAsn1, eAsn1]);
+  const seqLenBytes = seqBody.length > 127
+    ? Buffer.from([0x82, (seqBody.length >> 8) & 0xff, seqBody.length & 0xff])
+    : Buffer.from([seqBody.length]);
+  const rsaPublicKey = Buffer.concat([Buffer.from([0x30]), seqLenBytes, seqBody]);
+  // SubjectPublicKeyInfo wrapper: SEQUENCE { SEQUENCE { OID rsaEncryption, NULL }, BIT STRING rsaPublicKey }
+  const rsaOid = Buffer.from([0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01, 0x05, 0x00]);
+  const bitStringBody = Buffer.concat([Buffer.from([0x00]), rsaPublicKey]);
+  const bitStringLen = bitStringBody.length > 127
+    ? Buffer.from([0x82, (bitStringBody.length >> 8) & 0xff, bitStringBody.length & 0xff])
+    : Buffer.from([bitStringBody.length]);
+  const bitString = Buffer.concat([Buffer.from([0x03]), bitStringLen, bitStringBody]);
+  const spkiBody = Buffer.concat([rsaOid, bitString]);
+  const spkiLenBytes = spkiBody.length > 127
+    ? Buffer.from([0x82, (spkiBody.length >> 8) & 0xff, spkiBody.length & 0xff])
+    : Buffer.from([spkiBody.length]);
+  const spki = Buffer.concat([Buffer.from([0x30]), spkiLenBytes, spkiBody]);
+  const b64 = spki.toString("base64");
+  return `-----BEGIN PUBLIC KEY-----\n${b64.match(/.{1,64}/g)!.join("\n")}\n-----END PUBLIC KEY-----`;
+}
+
+async function verifyGoogleIdToken(idToken: string): Promise<{ sub: string; email: string; name?: string; picture?: string } | null> {
+  try {
+    // Decode header to get kid without verifying (safe — we verify next)
+    const [headerB64] = idToken.split(".");
+    const header = JSON.parse(Buffer.from(headerB64, "base64url").toString("utf8")) as { kid?: string; alg?: string };
+    if (!header.kid || header.alg !== "RS256") return null;
+    const publicKey = await getGooglePublicKey(header.kid);
+    if (!publicKey) return null;
+    const decoded = jwt.verify(idToken, publicKey, {
+      algorithms: ["RS256"],
+      audience: process.env.GOOGLE_CLIENT_ID,
+      issuer: ["accounts.google.com", "https://accounts.google.com"],
+    }) as jwt.JwtPayload;
+    if (!decoded.email || decoded.email_verified !== true || !decoded.sub) return null;
+    return { sub: decoded.sub, email: decoded.email as string, name: decoded.name as string | undefined, picture: decoded.picture as string | undefined };
   } catch {
     return null;
   }
