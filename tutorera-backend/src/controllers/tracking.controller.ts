@@ -843,6 +843,50 @@ export const setReverification = async (req: AuthRequest, res: Response): Promis
   res.status(200).json({ success: true, profile });
 };
 
+export const setAdminExempt = async (req: AuthRequest, res: Response): Promise<void> => {
+  const data = await loadProfileOr404(req, res);
+  if (!data) return;
+  const { exempt, reason } = req.body;
+  if (typeof exempt !== "boolean") {
+    res.status(400).json({ success: false, message: "exempt must be boolean" });
+    return;
+  }
+  const { user, profile } = data;
+  const actor = actorFromReq(req);
+  profile.adminApprovalExempt = exempt;
+  profile.adminApprovalExemptAt = exempt ? new Date() : undefined;
+  profile.adminApprovalExemptBy = exempt ? req.user?._id : undefined;
+  profile.lastStatusChangeAt = new Date();
+  await profile.save({ validateModifiedOnly: true });
+  await logAudit({ action: `admin_approval_exempt_${exempt ? "granted" : "revoked"}`, actor: actor.name, actorId: actor.id, entity: "TutorProfile", targetId: profile._id.toString(), targetName: user.name, metadata: reason ? { reason } : undefined });
+  await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: exempt ? "ADMIN_APPROVAL_EXEMPT_GRANTED" : "ADMIN_APPROVAL_EXEMPT_REVOKED", message: `Admin approval exemption ${exempt ? "granted" : "revoked"}${reason ? `: ${reason}` : ""}` });
+  res.status(200).json({ success: true, profile });
+};
+
+export const setPoliceNotRequired = async (req: AuthRequest, res: Response): Promise<void> => {
+  const data = await loadProfileOr404(req, res);
+  if (!data) return;
+  const { notRequired, reason } = req.body;
+  if (typeof notRequired !== "boolean") {
+    res.status(400).json({ success: false, message: "notRequired must be boolean" });
+    return;
+  }
+  const { user, profile } = data;
+  const actor = actorFromReq(req);
+  if (notRequired) {
+    profile.policeVerificationStatus = "not_required";
+    profile.policeRejectionReason = "";
+    profile.policeReviewedAt = new Date();
+  } else {
+    profile.policeVerificationStatus = profile.policeCertificate ? "pending" : "not_submitted";
+  }
+  profile.lastStatusChangeAt = new Date();
+  await profile.save({ validateModifiedOnly: true });
+  await logAudit({ action: `police_verification_${notRequired ? "exempted" : "re_enabled"}`, actor: actor.name, actorId: actor.id, entity: "TutorProfile", targetId: profile._id.toString(), targetName: user.name, metadata: reason ? { reason } : undefined });
+  await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: notRequired ? "POLICE_EXEMPTED" : "POLICE_REQUIREMENT_RESTORED", message: `Police verification ${notRequired ? "marked not required" : "re-enabled"}${reason ? `: ${reason}` : ""}` });
+  res.status(200).json({ success: true, profile });
+};
+
 export const getApplicationHistory = async (req: AuthRequest, res: Response): Promise<void> => {
   const data = await loadProfileOr404(req, res);
   if (!data) return;

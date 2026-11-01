@@ -95,6 +95,7 @@ interface ApplicationDetail {
     avatarRejectionReason: string;
     marketplaceEligible: boolean;
     homeTuitionEligible: boolean;
+    adminApprovalExempt?: boolean;
     suspendedAt: string | null;
     reVerificationRequired: boolean;
     createdAt: string;
@@ -341,6 +342,34 @@ function AdminApplicationDetailContent({ params }: { params: Params }) {
       window.open(res.data.url, "_blank");
     } catch (err) {
       showError(err, "Failed to load document");
+    }
+  };
+
+  const handlePoliceNotRequired = async (notRequired: boolean) => {
+    setBusyKey(`police-not-required-${notRequired}`);
+    try {
+      await api.patch(`/tracking/admin/applications/${id}/police-not-required`, { notRequired, reason: reasonFor || undefined });
+      showSuccess(notRequired ? "Police check marked not required" : "Police check requirement restored");
+      setReasonFor("");
+      await fetchDetail();
+    } catch (err) {
+      showError(err, "Failed to update police requirement");
+    } finally {
+      setBusyKey("");
+    }
+  };
+
+  const handleAdminExempt = async (exempt: boolean) => {
+    setBusyKey(`admin-exempt-${exempt}`);
+    try {
+      await api.patch(`/tracking/admin/applications/${id}/exempt`, { exempt, reason: reasonFor || undefined });
+      showSuccess(exempt ? "Admin approval exemption granted" : "Admin approval exemption revoked");
+      setReasonFor("");
+      await fetchDetail();
+    } catch (err) {
+      showError(err, "Failed to update exemption");
+    } finally {
+      setBusyKey("");
     }
   };
 
@@ -720,8 +749,43 @@ function AdminApplicationDetailContent({ params }: { params: Params }) {
               <button disabled={busyKey === "police-approved"} onClick={() => handleAction("police", "approved", "Police")} style={btnSuccessStyle}>Approve</button>
               <button disabled={busyKey === "police-rejected"} onClick={() => handleAction("police", "rejected", "Police")} style={btnDangerStyle}>Reject</button>
               <button disabled={busyKey === "police-pending"} onClick={() => handleAction("police", "pending", "Police")} style={btnSecondaryStyle}>Mark pending</button>
+              <button
+                disabled={!!busyKey}
+                onClick={() => handlePoliceNotRequired(p.policeVerificationStatus !== "not_required")}
+                style={{ ...btnSecondaryStyle, borderColor: p.policeVerificationStatus === "not_required" ? "#d97706" : undefined, color: p.policeVerificationStatus === "not_required" ? "#d97706" : undefined }}
+                title="Mark police verification as not required (e.g. online-only tutor)"
+              >
+                {p.policeVerificationStatus === "not_required" ? "Restore requirement" : "Exempt — mark not required"}
+              </button>
             </div>
             {documentReasonField("police", "background and safety document")}
+          </div>
+        </div>
+
+        <div className={s.card} style={{ marginBottom: 16, border: `1.5px solid #fbbf24`, background: "#fffbeb" }}>
+          <p className={s.cardTitle} style={{ marginBottom: 4, color: "#92400e" }}>⚠️ Admin approval exemption</p>
+          <p style={{ fontSize: 12, color: "#78350f", margin: "0 0 12px", lineHeight: 1.5 }}>
+            Grants this tutor a global bypass of all document approval gates — they can be activated and listed without needing each document approved.
+            Use only in exceptional cases (e.g. pre-verified institutional tutors, system migrations). Audit-logged with your name and timestamp.
+          </p>
+          <p style={{ fontSize: 13, color: "#92400e", fontWeight: 700, margin: "0 0 10px" }}>
+            Currently: <strong>{p.adminApprovalExempt ? "EXEMPT (bypass active)" : "Not exempt (normal approval flow)"}</strong>
+          </p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button
+              disabled={!!busyKey || p.adminApprovalExempt}
+              onClick={() => handleAdminExempt(true)}
+              style={{ ...btnDangerStyle, opacity: p.adminApprovalExempt ? 0.5 : 1 }}
+            >
+              Grant exemption
+            </button>
+            <button
+              disabled={!!busyKey || !p.adminApprovalExempt}
+              onClick={() => handleAdminExempt(false)}
+              style={{ ...btnSecondaryStyle, opacity: !p.adminApprovalExempt ? 0.5 : 1 }}
+            >
+              Revoke exemption
+            </button>
           </div>
         </div>
 

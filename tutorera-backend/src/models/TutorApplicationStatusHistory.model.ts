@@ -46,7 +46,11 @@ export type StatusEvent =
   | "PROFILE_SUSPENDED"
   | "PROFILE_UNSUSPENDED"
   | "RE_VERIFICATION_REQUESTED"
-  | "TOKEN_ROTATED";
+  | "TOKEN_ROTATED"
+  | "ADMIN_APPROVAL_EXEMPT_GRANTED"
+  | "ADMIN_APPROVAL_EXEMPT_REVOKED"
+  | "POLICE_EXEMPTED"
+  | "POLICE_REQUIREMENT_RESTORED";
 
 export interface ITutorApplicationStatusHistory extends Document {
   tutor: Types.ObjectId;

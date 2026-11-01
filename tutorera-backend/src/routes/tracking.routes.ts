@@ -15,6 +15,8 @@ import {
   setHomeTuitionEligibility,
   setSuspended,
   setReverification,
+  setAdminExempt,
+  setPoliceNotRequired,
   getApplicationHistory,
   uploadApplicationDocumentOnBehalf,
   reviewSubjectEligibility,
@@ -55,6 +57,8 @@ router.patch("/admin/applications/:id/marketplace", protect, authorize("admin"),
 router.patch("/admin/applications/:id/home-tuition", protect, authorize("admin"), requirePermission("tutor.verify"), setHomeTuitionEligibility);
 router.patch("/admin/applications/:id/suspended", protect, authorize("admin"), requirePermission("tutor.suspend"), setSuspended);
 router.patch("/admin/applications/:id/reverification", protect, authorize("admin"), requirePermission("tutor.verify"), setReverification);
+router.patch("/admin/applications/:id/exempt", protect, authorize("admin"), requirePermission("tutor.verify"), setAdminExempt);
+router.patch("/admin/applications/:id/police-not-required", protect, authorize("admin"), requirePermission("tutor.verify"), setPoliceNotRequired);
 router.patch("/admin/applications/:id/subject-eligibility", protect, authorize("admin"), requirePermission("tutor.verify"), reviewSubjectEligibility);
 router.get("/admin/applications/:id/subject-eligibility/:subject/evidence/:index", protect, authorize("admin"), requirePermission("tutor.verify"), getSubjectEligibilityEvidenceUrl);
 router.patch("/admin/applications/:id/subject-eligibility/:subject/evidence/:index", protect, authorize("admin"), requirePermission("tutor.verify"), reviewSubjectEligibilityEvidence);
