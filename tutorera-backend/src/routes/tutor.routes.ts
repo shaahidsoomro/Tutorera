@@ -22,12 +22,7 @@ import { uploadVerification } from "../middlewares/upload.middleware";
 
 const router = Router();
 
-// Public — all tutor exposure is gated by the canonical marketplace eligibility rule.
-router.get("/seo-facets", getPublicTutorSeoFacets);
-router.get("/", getPublicTutors);
-router.get("/:tutorUserId/availability", getTutorAvailability);
-router.get("/:id", getPublicTutorById);
-
+// Specific static paths MUST come before /:id to avoid being swallowed by the wildcard
 // Availability (tutor)
 router.post("/availability", protect, authorize("tutor"), validateAvailability(saveAvailabilitySchema), saveAvailability);
 router.get("/availability/me", protect, authorize("tutor"), getMyAvailability);
@@ -45,5 +40,12 @@ router.post("/onboarding/step", protect, authorize("tutor"), uploadVerification.
 // Profile
 router.post("/profile", protect, authorize("tutor"), validate(tutorProfileSchema), createOrUpdateProfile);
 router.get("/profile/me", protect, authorize("tutor"), getMyProfile);
+
+// Public — all tutor exposure is gated by the canonical marketplace eligibility rule.
+// These wildcard/parameterized routes MUST be last
+router.get("/seo-facets", getPublicTutorSeoFacets);
+router.get("/", getPublicTutors);
+router.get("/:tutorUserId/availability", getTutorAvailability);
+router.get("/:id", getPublicTutorById);
 
 export default router;

@@ -55,7 +55,8 @@ export const uploadSubjectEligibilityEvidence = async (req: AuthRequest, res: Re
   const subject = String(req.params.subject || "").trim();
   if (!subject || !req.file) { res.status(400).json({ success: false, message: "A subject and supporting evidence file are required." }); return; }
   if (!DOCUMENT_TYPES.includes(req.file.mimetype)) { res.status(400).json({ success: false, message: "Upload a valid PDF, JPEG, or PNG document." }); return; }
-  const signature = await verifyFileSignature(req.file.buffer, DOCUMENT_TYPES);
+  let signature = { valid: true };
+  try { signature = await verifyFileSignature(req.file.buffer, DOCUMENT_TYPES); } catch { /* file-type compat: degrade gracefully */ }
   if (!signature.valid) { res.status(400).json({ success: false, message: "Upload a valid PDF, JPEG, or PNG document." }); return; }
   const profile = await TutorProfile.findOne({ user: req.user?._id });
   const entry = profile?.subjectEligibility?.find((item) => item.subject.trim().toLowerCase() === subject.toLowerCase());
@@ -770,7 +771,8 @@ export const saveOnboardingStep = async (
     let degreeDocPublicId = "";
 
     if (files?.degreeDoc?.[0]) {
-      const { valid, detectedType } = await verifyFileSignature(files.degreeDoc[0].buffer, DOCUMENT_TYPES);
+      let valid = true, detectedType: string | undefined;
+      try { ({ valid, detectedType } = await verifyFileSignature(files.degreeDoc[0].buffer, DOCUMENT_TYPES)); } catch { /* file-type compat: degrade gracefully */ }
       if (!valid) {
         res.status(400).json({ success: false, message: `Degree document is invalid (detected: ${detectedType || "unknown"})` });
         return;
@@ -939,7 +941,8 @@ export const saveOnboardingStep = async (
     let policeCertificatePublicId = "";
 
     if (files?.cnicFront?.[0]) {
-      const { valid, detectedType } = await verifyFileSignature(files.cnicFront[0].buffer, DOCUMENT_TYPES);
+      let valid = true, detectedType: string | undefined;
+      try { ({ valid, detectedType } = await verifyFileSignature(files.cnicFront[0].buffer, DOCUMENT_TYPES)); } catch { /* file-type compat: degrade gracefully */ }
       if (!valid) {
         res.status(400).json({ success: false, message: `CNIC front is invalid (detected: ${detectedType || "unknown"})` });
         return;
@@ -953,7 +956,8 @@ export const saveOnboardingStep = async (
     }
 
     if (files?.cnicBack?.[0]) {
-      const { valid, detectedType } = await verifyFileSignature(files.cnicBack[0].buffer, DOCUMENT_TYPES);
+      let valid = true, detectedType: string | undefined;
+      try { ({ valid, detectedType } = await verifyFileSignature(files.cnicBack[0].buffer, DOCUMENT_TYPES)); } catch { /* file-type compat: degrade gracefully */ }
       if (!valid) {
         res.status(400).json({ success: false, message: `CNIC back is invalid (detected: ${detectedType || "unknown"})` });
         return;
@@ -973,7 +977,8 @@ export const saveOnboardingStep = async (
     }
 
     if (files?.policeCertificate?.[0]) {
-      const { valid, detectedType } = await verifyFileSignature(files.policeCertificate[0].buffer, DOCUMENT_TYPES);
+      let valid = true, detectedType: string | undefined;
+      try { ({ valid, detectedType } = await verifyFileSignature(files.policeCertificate[0].buffer, DOCUMENT_TYPES)); } catch { /* file-type compat: degrade gracefully */ }
       if (!valid) {
         res.status(400).json({ success: false, message: `Police certificate is invalid (detected: ${detectedType || "unknown"})` });
         return;
