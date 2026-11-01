@@ -1,7 +1,7 @@
 import { Router } from "express";
-import { uploadAvatar, uploadVerificationDocs, uploadBlogCoverImage } from "../controllers/upload.controller";
+import { uploadAvatar, uploadVerificationDocs, uploadSubjectEligibilityEvidence, uploadBlogCoverImage } from "../controllers/upload.controller";
 import { protect, authorize } from "../middlewares/auth.middleware";
-import { uploadAvatar as uploadAvatarMulter, uploadVerification as uploadVerificationMulter, uploadImage as uploadImageMulter } from "../middlewares/upload.middleware";
+import { uploadAvatar as uploadAvatarMulter, uploadVerification as uploadVerificationMulter, uploadDocument as uploadDocumentMulter, uploadImage as uploadImageMulter } from "../middlewares/upload.middleware";
 import { uploadLimiter } from "../middlewares/rateLimiters";
 
 const router = Router();
@@ -51,6 +51,15 @@ router.post(
   authorize("tutor"),
   verificationFields,
   uploadVerificationDocs
+);
+
+router.post(
+  "/subject-eligibility-evidence",
+  uploadLimiter,
+  protect,
+  authorize("tutor"),
+  uploadDocumentMulter.single("evidence"),
+  uploadSubjectEligibilityEvidence
 );
 
 export default router;

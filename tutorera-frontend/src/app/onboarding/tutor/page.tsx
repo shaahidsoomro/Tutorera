@@ -41,6 +41,13 @@ interface ExistingDocsState {
   rejectionReason?: string;
 }
 
+interface SubjectEligibilityEntry {
+  subject: string;
+  status?: string;
+  evidenceRequired?: boolean;
+  evidence?: { label?: string; status?: string }[];
+}
+
 export default function TutorOnboardingPage() {
   const { user, loading } = useAuth();
   const geo = useGeoData();
@@ -87,6 +94,9 @@ export default function TutorOnboardingPage() {
   // Step 3
   const [step3, setStep3] = useState({ experience: "", previousInstitutions: "" });
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const [subjectEligibility, setSubjectEligibility] = useState<SubjectEligibilityEntry[]>([]);
+  const [subjectEvidenceFiles, setSubjectEvidenceFiles] = useState<Record<string, File | null>>({});
+  const [uploadingEvidence, setUploadingEvidence] = useState("");
   // Keep already selected subjects visible when switching curriculum filters.
   const visibleSubjects = qualificationSelection
     ? Array.from(new Set([...qualificationSubjects, ...selectedSubjects]))
@@ -161,6 +171,9 @@ export default function TutorOnboardingPage() {
             });
             if (Array.isArray(p.subjects) && p.subjects.length > 0) {
               setSelectedSubjects(p.subjects);
+            }
+            if (Array.isArray(p.subjectEligibility)) {
+              setSubjectEligibility(p.subjectEligibility);
             }
             if (Array.isArray(p.levels) && p.levels.length > 0) {
               setSelectedLevels(p.levels);
@@ -373,6 +386,28 @@ export default function TutorOnboardingPage() {
       setError("Failed to save. Please try again.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const uploadEvidence = async (subject: string) => {
+    const file = subjectEvidenceFiles[subject];
+    if (!file) return;
+    setUploadingEvidence(subject);
+    setError("");
+    try {
+      const formData = new FormData();
+      formData.append("subject", subject);
+      formData.append("evidence", file);
+      await api.post("/upload/subject-eligibility-evidence", formData);
+      const refreshed = await api.get("/tutors/profile/me");
+      setSubjectEligibility(refreshed.data?.profile?.subjectEligibility || []);
+      setSubjectEvidenceFiles(current => ({ ...current, [subject]: null }));
+      setSuccessMsg(`${subject} evidence uploaded for review.`);
+    } catch (failure: unknown) {
+      const response = failure as { response?: { data?: { message?: string } } };
+      setError(response.response?.data?.message || "Unable to upload subject evidence.");
+    } finally {
+      setUploadingEvidence("");
     }
   };
 
@@ -688,6 +723,42 @@ export default function TutorOnboardingPage() {
                       </button>
                     ))}
                   </div>
+                  {selectedSubjects.length > 0 && (
+                    <div style={{ marginTop: "1.25rem", padding: "1rem", border: "1px solid #bfdbfe", borderRadius: "0.75rem", backgroundColor: "#eff6ff" }}>
+                      <p style={{ margin: "0 0 0.35rem", fontWeight: 700, color: C.primary }}>Subject eligibility evidence (optional)</p>
+                      <p style={{ margin: "0 0 0.85rem", color: C.gray500, fontSize: "0.8rem", lineHeight: 1.5 }}>
+                        Upload a transcript, certificate, or other subject-specific proof when requested by the review team. Accepted formats: PDF, JPG, PNG (8 MB maximum).
+                      </p>
+                      {selectedSubjects.map(subject => {
+                        const entry = subjectEligibility.find(candidate => candidate.subject.toLowerCase() === subject.toLowerCase());
+                        const latest = entry?.evidence?.[entry.evidence.length - 1];
+                        const file = subjectEvidenceFiles[subject];
+                        return (
+                          <div key={subject} style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.6rem", marginTop: "0.65rem" }}>
+                            <strong style={{ minWidth: "150px", color: C.primary }}>{subject}</strong>
+                            <input
+                              id={`subject-evidence-${subject}`}
+                              type="file"
+                              accept=".pdf,.jpg,.jpeg,.png"
+                              onChange={event => setSubjectEvidenceFiles(current => ({ ...current, [subject]: event.target.files?.[0] || null }))}
+                              style={{ maxWidth: "100%" }}
+                              aria-label={`${subject} supporting evidence`}
+                            />
+                            <button
+                              type="button"
+                              disabled={!file || uploadingEvidence === subject}
+                              onClick={() => void uploadEvidence(subject)}
+                              style={{ padding: "0.45rem 0.8rem", border: 0, borderRadius: 999, backgroundColor: file ? C.accent : "#cbd5e1", color: "white", fontWeight: 700, cursor: file ? "pointer" : "not-allowed" }}
+                            >
+                              {uploadingEvidence === subject ? "Uploading..." : "Upload evidence"}
+                            </button>
+                            {latest && <span style={{ fontSize: "0.78rem", color: latest.status === "approved" ? "#15803d" : latest.status === "rejected" ? "#b91c1c" : "#a16207" }}>{latest.label || "Evidence"} · {latest.status || "pending"}</span>}
+                            {!entry && <span style={{ fontSize: "0.78rem", color: C.gray500 }}>Save subjects first</span>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.6rem' }}>Levels You Teach *</label>

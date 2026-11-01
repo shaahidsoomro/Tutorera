@@ -264,6 +264,7 @@ export const uploadVerificationDocs = async (
         applicationId: tutorUser.applicationId || "TUT-PENDING",
         statusUrl: `${process.env.CLIENT_URL || "https://tutorera.ac.pk"}/tutor/application-status`,
       };
+
       try {
         await Promise.allSettled(resubmittedDocs.map(async (docType) => {
           const { subject, html } = documentResubmittedEmail(tutorUser.name, docType, cta);
@@ -339,4 +340,53 @@ export const uploadVerificationDocs = async (
       error: process.env.NODE_ENV === "development" ? String(error) : undefined,
     });
   }
+};
+
+export const uploadSubjectEligibilityEvidence = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  if (!req.file) {
+    res.status(400).json({ success: false, message: "No evidence file uploaded." });
+    return;
+  }
+
+  const subject = typeof req.body?.subject === "string" ? req.body.subject.trim() : "";
+  if (!subject) {
+    res.status(400).json({ success: false, message: "A subject is required." });
+    return;
+  }
+
+  const { valid, detectedType } = await verifyFileSignature(req.file.buffer, DOCUMENT_TYPES);
+  if (!valid) {
+    res.status(400).json({ success: false, message: `Evidence file is invalid (detected: ${detectedType || "unknown"}).` });
+    return;
+  }
+
+  const profile = await TutorProfile.findOne({ user: req.user?._id });
+  const entry = profile?.subjectEligibility?.find((candidate) => candidate.subject.toLowerCase() === subject.toLowerCase());
+  if (!profile || !entry) {
+    res.status(404).json({ success: false, message: "Subject eligibility request not found. Save your subjects first." });
+    return;
+  }
+
+  const result = await uploadToCloudinary(req.file.buffer, "tutorera/verification/subject-evidence", "auto", true);
+  entry.evidence = entry.evidence || [];
+  const evidence = {
+    url: result.secure_url,
+    publicId: result.public_id,
+    label: typeof req.body?.label === "string" && req.body.label.trim() ? req.body.label.trim() : req.file.originalname,
+    status: "pending" as const,
+  };
+  entry.evidence.push(evidence);
+  entry.status = "needs_evidence";
+  entry.evidenceRequired = true;
+  await profile.save();
+
+  res.status(201).json({
+    success: true,
+    message: "Subject evidence uploaded and sent for review.",
+    subject,
+    evidence: { label: evidence.label, status: evidence.status },
+  });
 };
