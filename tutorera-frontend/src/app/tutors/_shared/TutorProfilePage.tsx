@@ -607,6 +607,44 @@ export async function TutorProfilePageBody({ tutor }: { tutor: TutorProfile | nu
                     <Video size={14} color="#db2777" /> Video Demo Verified
                   </span>
                 )}
+
+                {tutor.badges?.experiencedTutor && (
+                  <span
+                    style={{
+                      backgroundColor: "rgba(245, 158, 11, 0.1)",
+                      color: "#92400e",
+                      display: "inline-flex",
+                      gap: "0.35rem",
+                      alignItems: "center",
+                      padding: "0.25rem 0.75rem",
+                      borderRadius: 999,
+                      fontSize: "0.82rem",
+                      fontWeight: 700,
+                      border: "1px solid rgba(245, 158, 11, 0.3)",
+                    }}
+                  >
+                    ⭐ Experienced Tutor
+                  </span>
+                )}
+
+                {tutor.badges?.topPerformer && (
+                  <span
+                    style={{
+                      backgroundColor: "rgba(234, 88, 12, 0.1)",
+                      color: "#9a3412",
+                      display: "inline-flex",
+                      gap: "0.35rem",
+                      alignItems: "center",
+                      padding: "0.25rem 0.75rem",
+                      borderRadius: 999,
+                      fontSize: "0.82rem",
+                      fontWeight: 700,
+                      border: "1px solid rgba(234, 88, 12, 0.3)",
+                    }}
+                  >
+                    🏆 Top Performer
+                  </span>
+                )}
               </div>
 
               {/* Primary Subjects Headline */}
@@ -923,6 +961,54 @@ export async function TutorProfilePageBody({ tutor }: { tutor: TutorProfile | nu
                     </div>
                     <div style={{ fontSize: "0.75rem", color: "#7e22ce" }}>
                       Background Screened
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {tutor.badges?.experiencedTutor && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.6rem",
+                    padding: "0.75rem 1rem",
+                    borderRadius: 10,
+                    backgroundColor: "#fffbeb",
+                    border: "1px solid #fde68a",
+                  }}
+                >
+                  <span style={{ fontSize: "1.1rem", lineHeight: 1 }}>⭐</span>
+                  <div>
+                    <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#92400e" }}>
+                      Experienced Tutor
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "#b45309" }}>
+                      Admin-recognised excellence
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {tutor.badges?.topPerformer && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.6rem",
+                    padding: "0.75rem 1rem",
+                    borderRadius: 10,
+                    backgroundColor: "#fff7ed",
+                    border: "1px solid #fed7aa",
+                  }}
+                >
+                  <span style={{ fontSize: "1.1rem", lineHeight: 1 }}>🏆</span>
+                  <div>
+                    <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#9a3412" }}>
+                      Top Performer
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "#c2410c" }}>
+                      ≥4.5 rating · 10+ reviews
                     </div>
                   </div>
                 </div>

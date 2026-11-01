@@ -87,6 +87,17 @@ export default function TutorCard({ tutor, matchScore }: TutorCardProps) {
           </>
         )}
 
+        {(tutor as any).badges?.experiencedTutor && (
+          <span className={styles.videoBadge} title="Admin-recognised experienced tutor" style={{ background: "#fffbeb", color: "#92400e", border: "1px solid #fde68a" }}>
+            ⭐ Experienced
+          </span>
+        )}
+        {(tutor as any).badges?.topPerformer && (
+          <span className={styles.videoBadge} title="Top performer: ≥4.5 rating, 10+ reviews" style={{ background: "#fff7ed", color: "#9a3412", border: "1px solid #fed7aa" }}>
+            🏆 Top
+          </span>
+        )}
+
         {typeof matchScore === "number" && (
           <span style={{ position: "relative", zIndex: 1 }}>
             <MatchScoreBadge

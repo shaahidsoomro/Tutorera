@@ -58,6 +58,17 @@ export interface TutorProfile {
   responseTimeFormatted?: string;
   lastActiveAt?: string;
   payoutAccount?: PayoutAccount;
+  cnicVerificationStatus?: string;
+  demoVideoStatus?: string;
+  homeTuitionEligible?: boolean;
+  badges?: {
+    identityVerified?: boolean;
+    credentialsVerified?: boolean;
+    videoVerified?: boolean;
+    experiencedTutor?: boolean;
+    topPerformer?: boolean;
+    experiencedTutorGrantedAt?: string;
+  };
 }
 
 export interface PayoutAccount {
