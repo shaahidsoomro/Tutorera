@@ -1,6 +1,6 @@
 import { Router } from "express";
 import {
-  createRequest, getAllRequests, getMyRequests, getRequestTimeline,
+  createRequest, getAllRequests, getMyRequests, getRequestById, getRequestTimeline,
   cancelRequest, placeBid, getBidsForRequest,
   createDirectBookingRequest, getMyDirectRequests, rejectBid,
   getPublicRequestsPreview, getRequestSeoFacets,
@@ -27,6 +27,7 @@ router.post("/draft", protect, authorize("student", "parent"), saveRequestDraftP
 router.patch("/:id/bids/:bidId/reject", protect, rejectBid);
 router.post("/", protect, authorize("student", "parent"), validate(createRequestSchema), createRequest);
 router.get("/my", protect, authorize("student", "parent"), getMyRequests);
+router.get("/:id", protect, getRequestById);
 router.get("/:id/timeline", protect, getRequestTimeline);
 router.post("/:id/invitations", protect, authorize("student", "parent"), inviteTutorToRequest);
 router.patch("/:id/cancel", protect, authorize("student", "parent"), cancelRequest);

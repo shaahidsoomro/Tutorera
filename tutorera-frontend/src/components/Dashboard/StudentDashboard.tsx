@@ -669,6 +669,9 @@ function RequestCard({
 
       {/* Action triggers: Expand tutor offers, Extend, Repost, Close, & Smart matched tutors */}
       <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.75rem", alignItems: "center" }}>
+        <a href={`/requests/${request._id}`} style={{ padding: "0.45rem 0.85rem", background: "#eff6ff", color: "#0329b2", border: "1.5px solid #bfdbfe", borderRadius: "0.5rem", fontSize: "0.78rem", fontWeight: 700, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
+          🔗 View Details
+        </a>
         {["open", "published", "receiving_offers", "negotiating", "awaiting_payment", "booked", "closed"].includes(request.status) && (
           <button
             onClick={() => loadBids()}

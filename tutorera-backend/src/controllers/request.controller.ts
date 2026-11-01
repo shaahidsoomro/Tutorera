@@ -566,6 +566,61 @@ export const getBidsForRequest = async (req: AuthRequest, res: Response): Promis
   res.status(200).json({ success: true, total: bids.length, bids });
 };
 
+// @desc    Get a single request with its offers (student's own request)
+// @route   GET /api/requests/:id
+// @access  Private (student/parent — own request; tutor — any open request)
+export const getRequestById = async (req: AuthRequest, res: Response): Promise<void> => {
+  const userId = req.user?._id;
+  const role = req.user?.role;
+  const isTutor = role === "tutor";
+
+  const query = isTutor
+    ? { _id: req.params.id, status: { $in: ["open", "published", "receiving_offers", "negotiating"] } }
+    : { _id: req.params.id, student: userId };
+
+  const request = await Request.findOne(query as any).populate("student", "name avatar");
+  if (!request) {
+    res.status(404).json({ success: false, message: "Request not found." });
+    return;
+  }
+
+  const now = Date.now();
+  const obj = request.toObject();
+  const offersCount = await Bid.countDocuments({ request: request._id, status: { $nin: ["withdrawn", "rejected"] } });
+
+  let bids: unknown[] = [];
+  if (!isTutor) {
+    bids = await Bid.find({ request: request._id })
+      .populate({
+        path: "tutor",
+        select: "name avatar city",
+        populate: {
+          path: "tutorProfile",
+          model: "TutorProfile",
+          select: "averageRating totalReviews experience degreeVerificationStatus cnicVerificationStatus demoVideoStatus policeVerificationStatus homeTuitionEligible videoIntro badges",
+          foreignField: "user",
+          localField: "_id",
+        } as any,
+      })
+      .sort("-createdAt");
+  } else {
+    const tutorBid = await Bid.findOne({ request: request._id, tutor: userId });
+    if (tutorBid) bids = [tutorBid];
+  }
+
+  const enriched = {
+    ...obj,
+    offersCount,
+    isExpired: obj.status === "expired" || Boolean(obj.expiresAt && new Date(obj.expiresAt).getTime() <= now),
+    canExtend: ["open", "published", "receiving_offers"].includes(obj.status) && Boolean(obj.expiresAt) && new Date(obj.expiresAt!).getTime() > now,
+    canRepost: obj.status === "expired" || obj.status === "cancelled",
+    secondsRemaining: obj.expiresAt ? Math.max(0, Math.floor((new Date(obj.expiresAt).getTime() - now) / 1000)) : 0,
+    bids,
+  };
+
+  res.status(200).json({ success: true, request: enriched });
+};
+
 // Centralize expiry and revocation with the scheduled lifecycle worker.
 export { releaseExpiredPaymentHold } from "../services/requestLifecycle.service";
 
