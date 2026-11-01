@@ -648,11 +648,177 @@ export const updateAdminUserRole = async (req: AuthRequest, res: Response): Prom
     return;
   }
 
+  // Only super_admin may assign or modify the super_admin role
+  const callerRole = req.user?.adminRole;
+  if (
+    (adminRole === "super_admin" || target.adminRole === "super_admin") &&
+    callerRole !== "super_admin"
+  ) {
+    res.status(403).json({ success: false, message: "Only a super administrator may assign or modify the super_admin role." });
+    return;
+  }
+
   target.adminRole = adminRole || target.adminRole;
   if (adminPermissions) target.adminPermissions = adminPermissions;
   await target.save();
 
-  res.json({ success: true, message: `Admin role updated to '${target.adminRole}'` });
+  await logAudit({
+    action: "admin_role_updated",
+    actor: req.user?.name || "Admin",
+    actorId: req.user?._id?.toString(),
+    entity: "User",
+    targetId: target._id.toString(),
+    targetName: target.name,
+    metadata: { adminRole: target.adminRole, adminPermissions: target.adminPermissions },
+  });
+
+  res.json({ success: true, message: `Admin role updated to '${target.adminRole}'`, user: { id: target._id, name: target.name, adminRole: target.adminRole } });
+};
+
+// @desc    Promote any user to an admin role, or demote an admin back to a base role
+// @route   POST /api/admin/users/:id/promote
+// @access  super_admin only
+export const promoteUser = async (req: AuthRequest, res: Response): Promise<void> => {
+  const callerRole = req.user?.adminRole;
+  if (callerRole !== "super_admin") {
+    res.status(403).json({ success: false, message: "Only a super administrator may promote or demote users." });
+    return;
+  }
+
+  const { id } = req.params;
+  const { role, adminRole, adminPermissions } = req.body;
+
+  const VALID_ROLES = ["student", "tutor", "parent", "admin"];
+  const VALID_ADMIN_ROLES = Object.keys(ROLE_PERMISSIONS);
+
+  if (role && !VALID_ROLES.includes(role)) {
+    res.status(400).json({ success: false, message: `Invalid role. Must be one of: ${VALID_ROLES.join(", ")}` });
+    return;
+  }
+  if (adminRole && !VALID_ADMIN_ROLES.includes(adminRole)) {
+    res.status(400).json({ success: false, message: `Invalid adminRole. Must be one of: ${VALID_ADMIN_ROLES.join(", ")}` });
+    return;
+  }
+
+  const target = await User.findById(id);
+  if (!target) {
+    res.status(404).json({ success: false, message: "User not found" });
+    return;
+  }
+
+  // Prevent self-demotion
+  if (target._id.toString() === req.user?._id?.toString() && role && role !== "admin") {
+    res.status(400).json({ success: false, message: "You cannot demote your own super_admin account." });
+    return;
+  }
+
+  const prevRole = target.role;
+  const prevAdminRole = target.adminRole;
+
+  if (role) target.role = role;
+  if (role === "admin" && adminRole) {
+    target.adminRole = adminRole;
+    target.adminPermissions = adminPermissions || (ROLE_PERMISSIONS[adminRole as keyof typeof ROLE_PERMISSIONS] as string[]) || [];
+  } else if (role && role !== "admin") {
+    // Demoting from admin: strip admin fields
+    target.adminRole = undefined as any;
+    target.adminPermissions = [];
+  }
+  if (role === "admin" && adminPermissions) {
+    target.adminPermissions = adminPermissions;
+  }
+
+  await target.save({ validateBeforeSave: false });
+
+  await logAudit({
+    action: role === "admin" ? "user_promoted_to_admin" : "admin_demoted",
+    actor: req.user?.name || "Super Admin",
+    actorId: req.user?._id?.toString(),
+    entity: "User",
+    targetId: target._id.toString(),
+    targetName: target.name,
+    metadata: { prevRole, prevAdminRole, newRole: target.role, newAdminRole: target.adminRole },
+  });
+
+  res.json({
+    success: true,
+    message: role === "admin"
+      ? `${target.name} promoted to admin with role '${target.adminRole}'.`
+      : `${target.name} demoted from admin to '${target.role}'.`,
+    user: { id: target._id, name: target.name, email: target.email, role: target.role, adminRole: target.adminRole },
+  });
+};
+
+// @desc    Ban, suspend, or reactivate any user
+// @route   PATCH /api/admin/users/:id/moderate
+// @access  Private (admin) — super_admin required for admin targets
+export const moderateUser = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { action, reason, suspendUntil } = req.body;
+  const VALID_ACTIONS = ["ban", "suspend", "reactivate"];
+  if (!VALID_ACTIONS.includes(action)) {
+    res.status(400).json({ success: false, message: `Invalid action. Must be one of: ${VALID_ACTIONS.join(", ")}` });
+    return;
+  }
+
+  const target = await User.findById(req.params.id);
+  if (!target) {
+    res.status(404).json({ success: false, message: "User not found" });
+    return;
+  }
+
+  // Only super_admin may moderate another admin
+  if (target.role === "admin" && req.user?.adminRole !== "super_admin") {
+    res.status(403).json({ success: false, message: "Only a super administrator may moderate an administrator account." });
+    return;
+  }
+  // Prevent self-moderation
+  if (target._id.toString() === req.user?._id?.toString()) {
+    res.status(400).json({ success: false, message: "You cannot moderate your own account." });
+    return;
+  }
+
+  const now = new Date();
+  if (action === "ban") {
+    target.isActive = false;
+    target.sessionInvalidBefore = now;
+    (target as any).banReason = reason || "Banned by administrator";
+    (target as any).bannedAt = now;
+    (target as any).suspendedUntil = undefined;
+  } else if (action === "suspend") {
+    target.isActive = false;
+    target.sessionInvalidBefore = now;
+    (target as any).suspendReason = reason || "Suspended by administrator";
+    (target as any).suspendedAt = now;
+    (target as any).suspendedUntil = suspendUntil ? new Date(suspendUntil) : undefined;
+  } else {
+    // reactivate
+    target.isActive = true;
+    target.sessionInvalidBefore = undefined as any;
+    (target as any).banReason = undefined;
+    (target as any).bannedAt = undefined;
+    (target as any).suspendReason = undefined;
+    (target as any).suspendedAt = undefined;
+    (target as any).suspendedUntil = undefined;
+  }
+
+  await target.save({ validateBeforeSave: false });
+
+  await logAudit({
+    action: `user_${action}ned`,
+    actor: req.user?.name || "Admin",
+    actorId: req.user?._id?.toString(),
+    entity: "User",
+    targetId: target._id.toString(),
+    targetName: target.name,
+    metadata: { action, reason, suspendUntil },
+  });
+
+  const statusLabel = action === "ban" ? "banned" : action === "suspend" ? "suspended" : "reactivated";
+  res.json({
+    success: true,
+    message: `${target.name} has been ${statusLabel}.`,
+    user: { id: target._id, name: target.name, email: target.email, isActive: target.isActive },
+  });
 };
 
 // ─── 10. Student & Tutor 360° Profiles ───────────────────────────────────────

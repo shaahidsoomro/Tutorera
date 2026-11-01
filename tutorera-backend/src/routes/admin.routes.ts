@@ -63,6 +63,8 @@ import {
   updateMarketConfig,
   getAdminRolesOverview,
   updateAdminUserRole,
+  promoteUser,
+  moderateUser,
   getStudent360,
   getTutor360,
 } from "../controllers/adminControlTower.controller";
@@ -143,6 +145,10 @@ router.get("/agents/:agentId/summary", adminAgentLimiter, getAgentSummary);
 router.get("/system/health", requirePermission("system.monitor"), getSystemHealth);
 router.get("/roles/overview", requirePermission("roles.manage"), getAdminRolesOverview);
 router.patch("/roles/users/:userId", requirePermission("roles.manage"), updateAdminUserRole);
+
+// User Moderation & Promotion (super_admin)
+router.post("/users/:id/promote", requirePermission("roles.manage"), promoteUser);
+router.patch("/users/:id/moderate", requirePermission("users.manage"), moderateUser);
 
 // Customer 360°
 router.get("/customers/students/:id/360", requirePermission("student.read"), getStudent360);
