@@ -99,6 +99,14 @@ interface ApplicationDetail {
     suspendedAt: string | null;
     reVerificationRequired: boolean;
     createdAt: string;
+    badges?: {
+      identityVerified?: boolean;
+      credentialsVerified?: boolean;
+      videoVerified?: boolean;
+      experiencedTutor?: boolean;
+      topPerformer?: boolean;
+      experiencedTutorGrantedAt?: string;
+    };
   };
   history: { id: string; at: string; event: string; message: string; actor: string; actorRole: string }[];
   reviewHistory: { id: string; component: string; decision: string; previousStatus: string | null; newStatus: string; rejectionReason: string | null; internalNotes: string | null; reviewedAt: string; reviewedBy: string }[];

@@ -26,6 +26,7 @@ export interface TutorOfferItem {
     countryName?: string;
     policeVerificationStatus?: string;
     degreeVerificationStatus?: string;
+    cnicVerificationStatus?: string;
     rating?: number;
     reviewsCount?: number;
     experience?: number;

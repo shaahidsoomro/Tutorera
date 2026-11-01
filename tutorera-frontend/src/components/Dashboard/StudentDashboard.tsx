@@ -1042,7 +1042,8 @@ const fetchRequests = useCallback(async () => {
           const { request: req, offers } = result.value;
           for (const bid of offers) {
             if (bid.status === "countered" && bid.latestSenderRole === "tutor") {
-              countered.push({ ...bid, request: req });
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              countered.push({ ...bid, request: req } as any);
             }
           }
         }

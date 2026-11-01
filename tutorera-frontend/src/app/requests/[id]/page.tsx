@@ -13,9 +13,10 @@ import OfferComparisonModal from "@/components/marketplace/OfferComparisonModal"
 type Badge = { identityVerified?: boolean; credentialsVerified?: boolean; videoVerified?: boolean; experiencedTutor?: boolean; topPerformer?: boolean };
 type TutorProfile = { averageRating?: number; totalReviews?: number; experience?: number; degreeVerificationStatus?: string; cnicVerificationStatus?: string; demoVideoStatus?: string; policeVerificationStatus?: string; homeTuitionEligible?: boolean; videoIntro?: string; badges?: Badge };
 type Tutor = { _id: string; name: string; avatar?: string; city?: string; tutorProfile?: TutorProfile };
-type Bid = { _id: string; amount: number; currency?: string; pricingUnit?: string; status: string; message?: string; expiresAt?: string; matchScore?: number; tutor: Tutor };
+type Bid = { _id: string; amount: number; currency?: string; pricingUnit?: string; status: string; message?: string; expiresAt?: string; matchScore?: number; shortlistedAt?: string; tutor: Tutor };
+type StudentReputation = { totalBookings: number; completedBookings: number; cancelledByStudent: number; paymentSuccessRate: number; averageRatingByTutors: number | null; totalRatingsByTutors: number; reliabilityTier: "excellent" | "good" | "fair" | "new"; reliabilityScore: number };
 type Request = {
-  _id: string; subject: string; description?: string; level?: string; city?: string; teachingMode?: string; schedule?: string; budget: number; currency?: string; pricingUnit?: string; status: string; expiresAt?: string; offersCount: number; isExpired: boolean; canExtend: boolean; canRepost: boolean; secondsRemaining: number; createdAt: string; bids?: Bid[]; student?: { name: string; avatar?: string };
+  _id: string; subject: string; description?: string; level?: string; city?: string; teachingMode?: string; schedule?: string; budget: number; currency?: string; pricingUnit?: string; status: string; expiresAt?: string; offersCount: number; isExpired: boolean; canExtend: boolean; canRepost: boolean; secondsRemaining: number; createdAt: string; bids?: Bid[]; student?: { name: string; avatar?: string }; studentReputation?: StudentReputation;
 };
 
 function statusColor(status: string) {
@@ -253,6 +254,35 @@ export default function RequestDetailPage() {
         </div>
       </div>
 
+      {/* Student reliability — visible to tutors only */}
+      {!isOwner && request.studentReputation && (() => {
+        const rep = request.studentReputation!;
+        const tierColor = { excellent: "#059669", good: "#0329b2", fair: "#d97706", new: "#6b7280" }[rep.reliabilityTier];
+        const tierLabel = { excellent: "✅ Excellent Student", good: "👍 Reliable Student", fair: "⚠️ Fair Track Record", new: "🆕 New Student" }[rep.reliabilityTier];
+        return (
+          <div style={{ background: "#f8fafc", borderRadius: 12, border: "1.5px solid #e2e8f0", padding: "1rem 1.25rem", marginBottom: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: "#021550" }}>Student Reliability</span>
+              <span style={{ fontSize: 12, fontWeight: 700, padding: "3px 10px", borderRadius: 999, background: tierColor + "18", color: tierColor, border: `1px solid ${tierColor}33` }}>{tierLabel}</span>
+            </div>
+            <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+              {rep.totalBookings > 0 ? (
+                <>
+                  <span style={{ fontSize: 12, color: "#475569" }}>📚 <strong>{rep.totalBookings}</strong> booking{rep.totalBookings !== 1 ? "s" : ""}</span>
+                  <span style={{ fontSize: 12, color: "#475569" }}>✅ <strong>{rep.completedBookings}</strong> completed</span>
+                  <span style={{ fontSize: 12, color: "#475569" }}>💳 <strong>{rep.paymentSuccessRate}%</strong> payment rate</span>
+                  {rep.averageRatingByTutors !== null && (
+                    <span style={{ fontSize: 12, color: "#475569" }}>⭐ <strong>{rep.averageRatingByTutors}</strong> avg tutor rating ({rep.totalRatingsByTutors})</span>
+                  )}
+                </>
+              ) : (
+                <span style={{ fontSize: 12, color: "#94a3b8" }}>First time using Tutorera — no booking history yet.</span>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Active offers */}
       {isOwner && (
         <>
@@ -287,11 +317,15 @@ export default function RequestDetailPage() {
 
       {showComparison && request.bids && (
         <OfferComparisonModal
+          isOpen={showComparison}
           offers={request.bids as any}
-          requestId={id}
-          requestCurrency={request.currency || "PKR"}
+          requestTitle={request.subject}
+          proposedBudget={request.budget}
+          currency={request.currency || "PKR"}
+          pricingUnit={request.pricingUnit || "hr"}
           onClose={() => setShowComparison(false)}
-          onOfferAccepted={load}
+          onAcceptOffer={async () => { setShowComparison(false); await load(); }}
+          onCounterOffer={() => setShowComparison(false)}
         />
       )}
     </main>

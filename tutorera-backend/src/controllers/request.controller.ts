@@ -23,6 +23,7 @@ import { MatchingService } from "../services/matching.service";
 import { syncStudentTutorRelationship } from "../services/relationship.service";
 import { computeAndStoreTutorResponseTime } from "../services/tutorStats.service";
 import { classifyRequestLoss } from "../services/requestLoss.service";
+import { getStudentReputation } from "../services/studentReputation.service";
 import { assertAcceptanceAvailable, assertMarketFeature, resolveMarket } from "../services/market.service";
 import { isValidIanaTimezone, zonedDateTimeToUtc } from "../utils/timezone";
 import { convertAmount } from "../services/exchangeRate.service";
@@ -608,6 +609,15 @@ export const getRequestById = async (req: AuthRequest, res: Response): Promise<v
     if (tutorBid) bids = [tutorBid];
   }
 
+  // Tutors browsing a request should see the student's reliability tier so they
+  // can gauge booking risk before committing to a competitive bid.
+  let studentReputation = undefined;
+  if (isTutor) {
+    try {
+      studentReputation = await getStudentReputation(request.student as Types.ObjectId);
+    } catch { /* non-critical — reputation unavailable, continue */ }
+  }
+
   const enriched = {
     ...obj,
     offersCount,
@@ -616,6 +626,7 @@ export const getRequestById = async (req: AuthRequest, res: Response): Promise<v
     canRepost: obj.status === "expired" || obj.status === "cancelled",
     secondsRemaining: obj.expiresAt ? Math.max(0, Math.floor((new Date(obj.expiresAt).getTime() - now) / 1000)) : 0,
     bids,
+    ...(studentReputation ? { studentReputation } : {}),
   };
 
   res.status(200).json({ success: true, request: enriched });
