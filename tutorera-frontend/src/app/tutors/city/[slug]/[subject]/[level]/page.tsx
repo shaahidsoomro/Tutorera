@@ -54,7 +54,7 @@ export default async function Page({ params }: Props) {
   const relatedLinks = TOP_LEVEL_SLUGS
     .filter((l) => l !== levelSlug)
     .map((l) => ({
-      label: `${LEVELS[l]} ${subject} in ${city}`,
+      label: `${(LEVELS as Record<string, string>)[l] || l} ${subject} in ${city}`,
       href: `/tutors/city/${slug}/${subjectSlug}/${l}`,
     }))
     .concat({ label: `All ${subject} tutors in ${city}`, href: `/tutors/city/${slug}/${subjectSlug}` });

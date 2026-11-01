@@ -89,6 +89,17 @@ export async function fetchTutors(filters: TutorSearchFilters = {}, limit = 24):
   }
 }
 
+export async function fetchTutorBySlug(country: string, slug: string): Promise<TutorProfile | null> {
+  try {
+    const response = await fetch(`${API_URL}/tutors/by-slug/${encodeURIComponent(country)}/${encodeURIComponent(slug)}`, { next: { revalidate: 900 } });
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.profile ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchTutor(id: string): Promise<TutorProfile | null> {
   try {
     const response = await fetch(`${API_URL}/tutors/${encodeURIComponent(extractTutorId(id))}`, { next: { revalidate: 900 } });

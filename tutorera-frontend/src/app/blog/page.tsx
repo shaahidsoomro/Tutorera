@@ -7,7 +7,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = { title: "Tutoring Guides, Curriculum Advice & Tutor Selection", description: "Explore practical guides to tutoring, curriculum choices, exam preparation and selecting tutors. Compare relevant tutor profiles and booking options on TUTORERA.", alternates: { canonical: "/blog" } };
 
 export default async function BlogPage() {
-  const blogs = await getEditorialArticles();
+  const { articles: blogs } = await getEditorialArticles();
   const listingSchema = { "@context": "https://schema.org", "@type": "CollectionPage", name: "TUTORERA Tutoring Guides", url: `${SITE_URL}/blog`, mainEntity: { "@type": "ItemList", itemListElement: blogs.map((blog, index) => ({ "@type": "ListItem", position: index + 1, name: blog.title, url: `${SITE_URL}/blog/${blog.slug}` })) } };
   return <main style={{ background: "#F5F7FF", minHeight: "100vh" }}>
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(listingSchema).replace(/</g, "\\u003c") }} />

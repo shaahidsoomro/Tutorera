@@ -356,3 +356,33 @@ export const subjectCatalogue: CatalogueGroup[] = [
 
 /** Distinct subject names for the existing onboarding multi-select controls. */
 export const catalogueSubjectNames = Array.from(new Set(subjectCatalogue.flatMap(group => group.subjects.map(subject => subject.name)))).sort((a, b) => a.localeCompare(b));
+
+function slugify(name: string) {
+  return name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+}
+
+export interface SubjectEntry { name: string; slug: string }
+export interface SubjectGuide { summary: string; topics: string[] }
+
+export const SUBJECT_GUIDES: Record<string, SubjectGuide> = {};
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tutorera.ac.pk/api/v1";
+
+export async function getSubjectCatalogue(): Promise<{ subjects: SubjectEntry[]; live: boolean }> {
+  try {
+    const r = await fetch(`${API_URL}/subjects?limit=200`, { next: { revalidate: 3600 } });
+    if (r.ok) {
+      const d = await r.json();
+      if (Array.isArray(d.subjects) && d.subjects.length > 0) {
+        return {
+          subjects: (d.subjects as { name: string; slug?: string }[]).map(s => ({ name: s.name, slug: s.slug || slugify(s.name) })),
+          live: true,
+        };
+      }
+    }
+  } catch { /* fall through */ }
+  return {
+    subjects: catalogueSubjectNames.map(name => ({ name, slug: slugify(name) })),
+    live: false,
+  };
+}

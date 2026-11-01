@@ -47,7 +47,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: `Compare verified ${subject} tutors on TUTORERA. Post your requirement free — eligible tutors send offers you compare before choosing.`,
       url: path,
     },
-    twitter: { title: `${title} | TUTORERA`, description },
+    twitter: { title: `${subject} Tutor — Find Verified ${subject} Tutors | TUTORERA`, description: `Find a verified ${subject} tutor for online or in-person lessons. Post your requirement, set a budget, and compare ${subject} tutor offers on TUTORERA — the student-first tutoring marketplace.` },
   };
 }
 
@@ -117,7 +117,7 @@ export default async function Page({ params }: Props) {
       href: `/tutors/subject/${s}`,
     })),
     ...CROSS_LINK_CITY_SLUGS.slice(0, 6).map((citySlug) => ({
-      label: `${subject} Tutors in ${CITIES[citySlug]}`,
+      label: `${subject} Tutors in ${(CITIES as Record<string, string>)[citySlug] || citySlug}`,
       href: `/tutors/city/${citySlug}/${slug}`,
     })),
   ];
@@ -143,7 +143,7 @@ export default async function Page({ params }: Props) {
               href={`/tutors/city/${citySlug}/${slug}`}
               style={{ color: "#0329B2", background: "#EEF5FF", padding: ".6rem 1rem", borderRadius: 999, textDecoration: "none", fontWeight: 600 }}
             >
-              {CITIES[citySlug]}
+              {(CITIES as Record<string, string>)[citySlug] || citySlug}
             </Link>
           ))}
         </div>

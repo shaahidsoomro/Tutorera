@@ -21,7 +21,7 @@ const aliases: Record<string, string[]> = {
   "Online tutoring": ["online", "remote"], "Tutoring costs": ["cost", "price", "pricing", "rate"],
 };
 export default async function BlogTopicsPage() {
-  const articles = await getEditorialArticles();
+  const { articles } = await getEditorialArticles();
   return <main style={{ background: "#F5F7FF", minHeight: "100vh", padding: "3rem 1.5rem" }}>
     <div style={{ maxWidth: 1100, margin: "auto" }}>
       <nav><Link href="/blog">All tutoring guides</Link></nav>

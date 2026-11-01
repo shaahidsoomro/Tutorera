@@ -14,6 +14,7 @@ interface User {
   phone?: string;
   city?: string;
   countryCode?: string;
+  countryName?: string;
   currency?: string;
   preferredLanguage?: string;
   adminRole?: string;

@@ -5,7 +5,7 @@ const STOP = new Set(["tutor","tutors","online","guide","guides","how","the","an
 const terms = (text: string) => new Set(text.toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 2 && !STOP.has(w)));
 export default async function BlogRelatedGuides({ slug, title, tags }: { slug: string; title: string; tags: string[] }) {
   const current = terms([slug, title, ...tags].join(" "));
-  const articles = await getEditorialArticles();
+  const { articles } = await getEditorialArticles();
   const related = articles.filter(a => a.slug !== slug).map(a => {
     const words = terms([a.slug, a.title, ...a.tags].join(" "));
     const overlap = [...words].filter(w => current.has(w)).length;

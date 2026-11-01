@@ -219,7 +219,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })
   );
 
-  const publishedBlogs = await getEditorialArticles();
+  const { articles: publishedBlogs } = await getEditorialArticles();
   const blogEntries: MetadataRoute.Sitemap = publishedBlogs.map((article) => ({
     url: `${SITE_URL}/blog/${encodeURIComponent(article.slug)}`,
     ...(Number.isFinite(Date.parse(article.updatedAt)) ? { lastModified: new Date(article.updatedAt) } : {}),

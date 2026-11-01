@@ -20,6 +20,7 @@ interface Props {
   initialFilters?: Partial<FiltersState>;
   title?: string;
   subtitle?: string;
+  marketCountryCode?: string;
 }
 
 function query(filters: FiltersState, page: number, matchRequestId?: string | null) {
@@ -146,7 +147,7 @@ export default function TutorsExplorer({ initialTutors, initialPagination, initi
 
           {!loading && !loadError && ((pagination.pages || pagination.totalPages || 0) > 1) && (
             <div className={styles.paginationWrap}>
-              <Pagination meta={pagination} onPageChange={(page) => { load(page, filters); window.scrollTo({ top: 0, behavior: "smooth" }); }} />
+              <Pagination meta={pagination} onPageChange={(page) => { load(page, filters); window.scrollTo({ top: 0, behavior: "smooth" }); }} hrefBuilder={() => "#"} />
             </div>
           )}
         </section>

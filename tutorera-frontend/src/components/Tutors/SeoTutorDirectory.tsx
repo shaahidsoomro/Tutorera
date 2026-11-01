@@ -3,7 +3,7 @@ import TutorCard from "@/components/Tutors/TutorCard";
 import { fetchTutors,tutorProfileHref,type DirectoryKind,type TutorSearchFilters } from "@/lib/tutor-directory";
 import Link from "next/link";
 
-interface Props { kind: DirectoryKind; value: string; filters?: TutorSearchFilters; title: string; description: string; canonicalPath: string; currency?: string; }
+interface Props { kind: DirectoryKind; value: string; filters?: TutorSearchFilters; title: string; description: string; canonicalPath: string; currency?: string; relatedLinks?: { label: string; href: string }[]; }
 
 export default async function SeoTutorDirectory({ kind, value, filters, title, description, canonicalPath, currency }: Props) {
   const result = await fetchTutors(filters ?? { [kind]: value });

@@ -144,6 +144,13 @@ export interface PostRequestPayload {
   level: string;
   description: string;
   budget: string;
+  schoolOfferingId?: string;
+  learnerType?: string;
+  learnerId?: string;
+  learningNeed?: string;
+  urgency?: string;
+  country?: string;
+  cityRef?: string;
   currency?: string;
   countryCode?: string;
   countryName?: string;

@@ -2,6 +2,24 @@ export interface EditorialArticle {
   _id: string; title: string; slug: string; excerpt: string; content: string; coverImage: string;
   author: { name: string; url: string }; reviewer?: { name: string; url: string };
   tags: string[]; createdAt: string; updatedAt: string;
+  metaDescription?: string; readingTime?: string;
+}
+
+export interface EditorialCategory {
+  category: string;
+  count: number;
+}
+
+export function categoryToSlug(category: string): string {
+  return category.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+}
+
+export interface BlogSidebarProps {
+  categories: EditorialCategory[];
+  activeCategory?: string;
+  featuredPosts: EditorialArticle[];
+  recentPosts: EditorialArticle[];
+  searchIndex: { slug: string; title: string; excerpt: string }[];
 }
 
 const identity = {
@@ -95,19 +113,56 @@ Agree on a measurable goal and a date to assess it. Evidence can include improve
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tutorera.ac.pk/api/v1";
 const normalize = (a: Partial<EditorialArticle>): EditorialArticle => ({ _id: a._id || a.slug || "article", title: a.title || "TUTORERA Guide", slug: a.slug || "", excerpt: a.excerpt || "Practical guidance from TUTORERA.", content: a.content || "", coverImage: a.coverImage || "", author: a.author?.name ? { name: a.author.name, url: a.author.url || "/editorial-policy" } : identity.author, reviewer: a.reviewer?.name ? { name: a.reviewer.name, url: a.reviewer.url || "/content-review-policy" } : undefined, tags: a.tags || [], createdAt: a.createdAt || identity.createdAt, updatedAt: a.updatedAt || a.createdAt || identity.updatedAt });
 
-export async function getEditorialArticles(): Promise<EditorialArticle[]> {
+export async function getEditorialArticles(opts?: { category?: string; page?: number; limit?: number }): Promise<{ articles: EditorialArticle[]; total: number; pages: number }> {
+  const { category, page = 1, limit = 100 } = opts || {};
   try {
-    const r = await fetch(`${API_URL}/blogs?limit=100`, { next: { revalidate: 900 } });
-    if (!r.ok) return STATIC_ARTICLES;
+    const qs = new URLSearchParams({ limit: String(limit), page: String(page) });
+    if (category) qs.set("category", category);
+    const r = await fetch(`${API_URL}/blogs?${qs}`, { next: { revalidate: 900 } });
+    if (!r.ok) {
+      const filtered = category ? STATIC_ARTICLES.filter(a => a.tags.includes(category)) : STATIC_ARTICLES;
+      return { articles: filtered, total: filtered.length, pages: 1 };
+    }
     const d = await r.json();
     const published = (Array.isArray(d.blogs) ? d.blogs : [])
       .filter((a: Partial<EditorialArticle>) => a.slug && a.title)
       .map(normalize);
     const slugs = new Set(published.map((a: EditorialArticle) => a.slug));
-    return [...published, ...STATIC_ARTICLES.filter(a => !slugs.has(a.slug))];
+    const merged = [...published, ...STATIC_ARTICLES.filter(a => !slugs.has(a.slug))];
+    const filtered = category ? merged.filter(a => a.tags.includes(category)) : merged;
+    const total = d.total ?? filtered.length;
+    const pages = Math.max(1, Math.ceil(total / limit));
+    return { articles: filtered, total, pages };
   } catch {
-    return STATIC_ARTICLES;
+    const filtered = category ? STATIC_ARTICLES.filter(a => a.tags.includes(category)) : STATIC_ARTICLES;
+    return { articles: filtered, total: filtered.length, pages: 1 };
   }
+}
+
+export async function getEditorialCategories(): Promise<EditorialCategory[]> {
+  const { articles } = await getEditorialArticles();
+  const counts = new Map<string, number>();
+  for (const a of articles) {
+    for (const tag of a.tags) {
+      counts.set(tag, (counts.get(tag) || 0) + 1);
+    }
+  }
+  return Array.from(counts.entries())
+    .map(([category, count]) => ({ category, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
+export async function getBlogSidebarData(): Promise<BlogSidebarProps> {
+  const [{ articles }, categories] = await Promise.all([
+    getEditorialArticles(),
+    getEditorialCategories(),
+  ]);
+  return {
+    categories,
+    featuredPosts: articles.slice(0, 3),
+    recentPosts: articles.slice(0, 5),
+    searchIndex: articles.map(a => ({ slug: a.slug, title: a.title, excerpt: a.excerpt })),
+  };
 }
 export async function getEditorialArticle(slug: string): Promise<EditorialArticle | null> {
   const fallback = STATIC_ARTICLES.find(a => a.slug === slug) || null;
