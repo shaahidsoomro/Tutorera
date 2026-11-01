@@ -4,6 +4,7 @@ import Booking from "../models/Booking.model";
 import BookedSlot from "../models/BookedSlot.model";
 import Bid from "../models/Bid.model";
 import RequestModel from "../models/Request.model";
+import SafetyCase from "../models/SafetyCase.model";
 import { creditReferrerOnFirstBooking } from "../controllers/referral.controller";
 import sendEmail from "../utils/sendEmail";
 import { bookingCancelledEmail } from "../utils/emailTemplates";
@@ -251,5 +252,73 @@ export const bookAgainFromBooking = async (req: AuthRequest, res: Response): Pro
     message: "Repeat booking details prepared.",
     prefill,
     redirectTo: "/post-tuition-request",
+  });
+};
+
+// @desc    Student raises a dispute on a booking
+// @route   POST /api/bookings/:id/dispute
+// @access  Private (student)
+export const raiseBookingDispute = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { reason, details } = req.body;
+  const userId = req.user?._id;
+
+  if (!reason || typeof reason !== "string" || reason.trim().length < 5) {
+    res.status(400).json({ success: false, message: "Please provide a reason for the dispute (min 5 characters)." });
+    return;
+  }
+
+  const booking = await Booking.findById(req.params.id);
+  if (!booking) {
+    res.status(404).json({ success: false, message: "Booking not found." });
+    return;
+  }
+
+  const isStudent = booking.student.toString() === userId?.toString();
+  const isTutor = booking.tutor.toString() === userId?.toString();
+  if (!isStudent && !isTutor) {
+    res.status(403).json({ success: false, message: "You are not a party to this booking." });
+    return;
+  }
+
+  if (["cancelled"].includes(booking.status)) {
+    res.status(400).json({ success: false, message: "Disputes cannot be raised on cancelled bookings." });
+    return;
+  }
+
+  const existingCase = await SafetyCase.findOne({ booking: booking._id });
+  if (existingCase) {
+    res.status(409).json({ success: false, message: "A dispute is already open for this booking.", caseId: existingCase.caseId });
+    return;
+  }
+
+  const reportedUserId = isStudent ? booking.tutor : booking.student;
+  const caseId = `SC-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+
+  const safetyCase = await SafetyCase.create({
+    caseId,
+    reporter: userId,
+    reportedUser: reportedUserId,
+    booking: booking._id,
+    category: "student_protection",
+    severity: "medium",
+    evidence: details ? [{ type: "message", note: details.slice(0, 2000), submittedAt: new Date() }] : [],
+    internalNotes: [{ author: userId, text: `Dispute raised by ${isStudent ? "student" : "tutor"}: ${reason.trim()}`, createdAt: new Date() }],
+  });
+
+  await Booking.findByIdAndUpdate(booking._id, { $set: { paymentStatus: "disputed" } });
+
+  await logAudit({
+    action: "booking_dispute_raised",
+    actor: req.user?.name ?? "Unknown",
+    actorId: userId?.toString(),
+    entity: "Booking",
+    targetId: booking._id.toString(),
+    metadata: { caseId, reason: reason.trim() },
+  });
+
+  res.status(201).json({
+    success: true,
+    message: "Dispute raised. Our team will review it within 24–48 hours.",
+    caseId: safetyCase.caseId,
   });
 };

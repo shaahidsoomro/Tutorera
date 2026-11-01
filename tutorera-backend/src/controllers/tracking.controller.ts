@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { AuthRequest } from "../types";
 import User from "../models/User.model";
+import { syncTutorBadges } from "./review.controller";
 import { IUser } from "../types";
 import TutorProfile, { ITutorProfile } from "../models/TutorProfile.model";
 import { prepareDegreeReplacement, degreeUploadIndex } from "../services/degreeReplacement.service";
@@ -454,6 +455,7 @@ export const updateCnic = async (req: AuthRequest, res: Response): Promise<void>
     await NotificationService.publishEvent(user._id.toString(), "verification.approved", {
       document: "CNIC", ctaArgs: ctaArgs(user), title: "🛡️ CNIC verified", message: "Your ID verification is complete.", link: "/tutor/application-status", type: "verification"
     });
+    syncTutorBadges(user._id.toString()).catch(() => {});
   } else if (status === "rejected") {
     await recordStatusEvent({
       tutorId: user._id.toString(),
@@ -600,6 +602,7 @@ export const updateDegree = async (req: AuthRequest, res: Response): Promise<voi
     await NotificationService.publishEvent(user._id.toString(), "verification.approved", {
       document: "Degree", ctaArgs: ctaArgs(user), title: "Qualification verified", message: `Qualification ${qualificationIndex + 1} has been verified. Overall educational review: ${profile.degreeVerificationStatus}.`, link: "/tutor/application-status", type: "verification"
     });
+    syncTutorBadges(user._id.toString()).catch(() => {});
   } else if (status === "rejected") {
     await NotificationService.publishEvent(user._id.toString(), "verification.rejected", {
       document: "Degree", reason: reason || "", ctaArgs: ctaArgs(user), title: "Action required: Educational documents", message: reason || "Please re-upload your documents.", link: "/tutor/application-status", type: "verification"
@@ -642,6 +645,7 @@ export const updateDemoVideo = async (req: AuthRequest, res: Response): Promise<
     await NotificationService.publishEvent(user._id.toString(), "verification.approved", {
       document: "DemoVideo", ctaArgs: ctaArgs(user), title: "Demo video approved 🎬", message: "Your demo video is live on your public profile.", link: "/tutor/application-status", type: "verification"
     });
+    syncTutorBadges(user._id.toString()).catch(() => {});
   } else if (status === "rejected") {
     await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "DEMO_VIDEO_REJECTED", message: `Demo video rejected${reason ? `: ${reason}` : ""}`, statusAfter: "rejected" });
     await NotificationService.publishEvent(user._id.toString(), "verification.rejected", {
@@ -1261,4 +1265,34 @@ export const getSubjectEligibilityEvidenceUrl = async (req: AuthRequest, res: Re
   if (!evidence?.publicId) { res.status(404).json({ success: false, message: "Supporting evidence is not available." }); return; }
   await logAudit({ action: "subject_eligibility_evidence_viewed", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "TutorProfile", targetId: data.profile._id.toString(), targetName: data.profile.fullName, metadata: { subject, index } });
   res.json({ success: true, url: getSignedViewUrl(evidence.publicId, "raw"), label: evidence.label || "Supporting evidence" });
+};
+
+// @desc    Admin grants or revokes the "Experienced Tutor" trust badge
+// @route   PATCH /tracking/admin/applications/:id/experienced-tutor-badge
+// @access  Admin (tutor.verify)
+export const setExperiencedTutorBadge = async (req: AuthRequest, res: Response): Promise<void> => {
+  const data = await loadProfileOr404(req, res);
+  if (!data) return;
+  const { grant, reason } = req.body;
+  if (typeof grant !== "boolean") {
+    res.status(400).json({ success: false, message: "grant must be boolean" });
+    return;
+  }
+  const { user, profile } = data;
+  const actor = actorFromReq(req);
+  if (!profile.badges) {
+    (profile as any).badges = {};
+  }
+  (profile as any).badges.experiencedTutor = grant;
+  if (grant) {
+    (profile as any).badges.experiencedTutorGrantedAt = new Date();
+    (profile as any).badges.experiencedTutorGrantedBy = req.user?._id;
+  } else {
+    (profile as any).badges.experiencedTutorGrantedAt = undefined;
+    (profile as any).badges.experiencedTutorGrantedBy = undefined;
+  }
+  await profile.save({ validateModifiedOnly: true });
+  await logAudit({ action: `experienced_tutor_badge_${grant ? "granted" : "revoked"}`, actor: actor.name, actorId: actor.id, entity: "TutorProfile", targetId: profile._id.toString(), targetName: user.name, metadata: reason ? { reason } : undefined });
+  await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: grant ? "EXPERIENCED_TUTOR_BADGE_GRANTED" : "EXPERIENCED_TUTOR_BADGE_REVOKED", message: `Experienced Tutor badge ${grant ? "granted" : "revoked"}${reason ? `: ${reason}` : ""}` });
+  res.status(200).json({ success: true, profile });
 };

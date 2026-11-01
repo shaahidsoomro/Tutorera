@@ -58,8 +58,9 @@ export default function HeroMarketplace({ countryCode }: { countryCode?: string 
                 marginBottom: "1rem",
               }}
             >
-              Find the Right Tutor <br />
-              <span style={{ color: "#016ef8" }}>Without Searching Through Hundreds of Profiles</span>
+              Your Learning.{" "}
+              <span style={{ color: "#016ef8" }}>Your Budget.</span>{" "}
+              Your Choice.
             </h1>
 
             <p
@@ -71,7 +72,7 @@ export default function HeroMarketplace({ countryCode }: { countryCode?: string 
                 maxWidth: 540,
               }}
             >
-              Tell TUTORERA what you need, choose home or online tuition, set your budget and receive offers from suitable tutors. Choose the tutor that&apos;s right for you.
+              Post your learning need. Set your budget. Receive offers from verified tutors. Compare qualifications, prices, and availability — then choose the tutor you trust.
             </p>
 
             <div style={{ marginBottom: "1.25rem" }}>

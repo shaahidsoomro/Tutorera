@@ -373,6 +373,20 @@ function AdminApplicationDetailContent({ params }: { params: Params }) {
     }
   };
 
+  const handleExperiencedTutorBadge = async (grant: boolean) => {
+    setBusyKey(`experienced-badge-${grant}`);
+    try {
+      await api.patch(`/tracking/admin/applications/${id}/experienced-tutor-badge`, { grant, reason: reasonFor || undefined });
+      showSuccess(grant ? "Experienced Tutor badge granted" : "Experienced Tutor badge revoked");
+      setReasonFor("");
+      await fetchDetail();
+    } catch (err) {
+      showError(err, "Failed to update badge");
+    } finally {
+      setBusyKey("");
+    }
+  };
+
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [uploadDocType, setUploadDocType] = useState<string>("cnicFront");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -785,6 +799,47 @@ function AdminApplicationDetailContent({ params }: { params: Params }) {
               style={{ ...btnSecondaryStyle, opacity: !p.adminApprovalExempt ? 0.5 : 1 }}
             >
               Revoke exemption
+            </button>
+          </div>
+        </div>
+
+        {/* Trust Badges */}
+        <div className={s.card} style={{ marginBottom: 16, border: `1.5px solid #c4b5fd`, background: "#faf5ff" }}>
+          <p className={s.cardTitle} style={{ marginBottom: 4, color: "#5b21b6" }}>🏅 Trust Badges</p>
+          <p style={{ fontSize: 12, color: "#6d28d9", margin: "0 0 12px", lineHeight: 1.5 }}>
+            Auto-computed badges update when documents are approved. The <strong>Experienced Tutor</strong> badge is admin-granted after reviewing experience evidence.
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 8, marginBottom: 12 }}>
+            {[
+              { key: "identityVerified", label: "Identity Verified", icon: "🛡️", auto: true, active: p.badges?.identityVerified },
+              { key: "credentialsVerified", label: "Credentials Verified", icon: "🎓", auto: true, active: p.badges?.credentialsVerified },
+              { key: "videoVerified", label: "Video Verified", icon: "🎬", auto: true, active: p.badges?.videoVerified },
+              { key: "experiencedTutor", label: "Experienced Tutor", icon: "⭐", auto: false, active: p.badges?.experiencedTutor },
+              { key: "topPerformer", label: "Top Performer", icon: "🏆", auto: true, active: p.badges?.topPerformer },
+            ].map(b => (
+              <div key={b.key} style={{ padding: "8px 12px", borderRadius: 8, border: `1.5px solid ${b.active ? "#a78bfa" : "#e5e7eb"}`, background: b.active ? "#ede9fe" : "#f9fafb", display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 18 }}>{b.icon}</span>
+                <div style={{ flex: 1 }}>
+                  <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: b.active ? "#5b21b6" : "#6b7280" }}>{b.label}</p>
+                  <p style={{ margin: 0, fontSize: 11, color: "#9ca3af" }}>{b.auto ? "Auto" : "Admin-granted"} · {b.active ? "Active" : "Inactive"}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button
+              disabled={!!busyKey || !!p.badges?.experiencedTutor}
+              onClick={() => handleExperiencedTutorBadge(true)}
+              style={{ padding: "8px 14px", borderRadius: 8, background: p.badges?.experiencedTutor ? "#e5e7eb" : "#5b21b6", color: p.badges?.experiencedTutor ? "#6b7280" : "#fff", border: "none", fontSize: 12, fontWeight: 700, cursor: p.badges?.experiencedTutor ? "not-allowed" : "pointer" }}
+            >
+              Grant Experienced Tutor Badge
+            </button>
+            <button
+              disabled={!!busyKey || !p.badges?.experiencedTutor}
+              onClick={() => handleExperiencedTutorBadge(false)}
+              style={{ padding: "8px 14px", borderRadius: 8, background: !p.badges?.experiencedTutor ? "#e5e7eb" : "#fff", color: !p.badges?.experiencedTutor ? "#6b7280" : "#5b21b6", border: "1.5px solid #c4b5fd", fontSize: 12, fontWeight: 700, cursor: !p.badges?.experiencedTutor ? "not-allowed" : "pointer" }}
+            >
+              Revoke Badge
             </button>
           </div>
         </div>

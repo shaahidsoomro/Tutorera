@@ -50,7 +50,9 @@ export type StatusEvent =
   | "ADMIN_APPROVAL_EXEMPT_GRANTED"
   | "ADMIN_APPROVAL_EXEMPT_REVOKED"
   | "POLICE_EXEMPTED"
-  | "POLICE_REQUIREMENT_RESTORED";
+  | "POLICE_REQUIREMENT_RESTORED"
+  | "EXPERIENCED_TUTOR_BADGE_GRANTED"
+  | "EXPERIENCED_TUTOR_BADGE_REVOKED";
 
 export interface ITutorApplicationStatusHistory extends Document {
   tutor: Types.ObjectId;

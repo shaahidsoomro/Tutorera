@@ -52,6 +52,7 @@ export const createReview = async (req: AuthRequest, res: Response): Promise<voi
       totalReviews: allReviews.length,
     }
   );
+  syncTutorBadges(tutorId as string).catch(() => {});
 
   res.status(201).json({ success: true, message: "Review submitted successfully", review });
 };
@@ -85,6 +86,55 @@ export const getTutorReviews = async (req: AuthRequest, res: Response): Promise<
     },
   });
 };
+
+// @desc    Tutor responds to a review
+// @route   PATCH /api/reviews/:tutorId/:reviewId/respond
+// @access  Private (tutor — own review only)
+export const respondToReview = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { response } = req.body;
+  if (!response || typeof response !== "string" || response.trim().length < 10) {
+    res.status(400).json({ success: false, message: "Response must be at least 10 characters." });
+    return;
+  }
+  const tutorUserId = req.user?._id?.toString();
+  const review = await Review.findOne({ _id: req.params.reviewId, tutor: req.params.tutorId });
+  if (!review) {
+    res.status(404).json({ success: false, message: "Review not found." });
+    return;
+  }
+  if (review.tutor.toString() !== tutorUserId) {
+    res.status(403).json({ success: false, message: "You can only respond to reviews of your own profile." });
+    return;
+  }
+  if (review.tutorResponse) {
+    res.status(409).json({ success: false, message: "You have already responded to this review." });
+    return;
+  }
+  review.tutorResponse = response.trim().slice(0, 1000);
+  review.tutorRespondedAt = new Date();
+  await review.save();
+  res.status(200).json({ success: true, message: "Response submitted.", review });
+};
+
+// @desc    Update badges and topPerformer flag after review aggregation
+export async function syncTutorBadges(tutorUserId: string) {
+  const profile = await TutorProfile.findOne({ user: tutorUserId }).select(
+    "cnicVerificationStatus degreeVerificationStatus demoVideoStatus averageRating totalReviews badges"
+  );
+  if (!profile) return;
+  const topPerformer = (profile.averageRating ?? 0) >= 4.5 && (profile.totalReviews ?? 0) >= 10;
+  await TutorProfile.updateOne(
+    { user: tutorUserId },
+    {
+      $set: {
+        "badges.identityVerified": profile.cnicVerificationStatus === "approved",
+        "badges.credentialsVerified": profile.degreeVerificationStatus === "approved",
+        "badges.videoVerified": profile.demoVideoStatus === "approved",
+        "badges.topPerformer": topPerformer,
+      },
+    }
+  );
+}
 
 // @desc    Get all tutor ratings (admin only)
 // @route   GET /api/admin/tutor-ratings

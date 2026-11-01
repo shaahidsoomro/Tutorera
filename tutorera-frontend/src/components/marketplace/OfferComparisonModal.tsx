@@ -200,6 +200,11 @@ export default function OfferComparisonModal({
                   const isCountering = counteringOfferId === offer._id;
                   const isPoliceVerified = offer.tutor?.policeVerificationStatus === "approved";
                   const isDegreeVerified = offer.tutor?.degreeVerificationStatus === "approved";
+                  const badges = (offer.tutor as any)?.badges;
+                  const isIdentityVerified = badges?.identityVerified || offer.tutor?.cnicVerificationStatus === "approved";
+                  const isVideoVerified = badges?.videoVerified || offer.tutor?.demoVideoStatus === "approved";
+                  const isExperiencedTutor = badges?.experiencedTutor;
+                  const isTopPerformer = badges?.topPerformer;
                   const rating = offer.tutor?.rating || 0;
                   const reviewsCount = offer.tutor?.reviewsCount || 0;
                   const hasRating = reviewsCount > 0 && rating > 0;
@@ -283,17 +288,14 @@ export default function OfferComparisonModal({
                           </span>
                         </td>
                         <td style={cellStyle}>
-                          <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-                            <span style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "0.78rem", color: isDegreeVerified ? "#059669" : "#64748b", fontWeight: 600 }}>
-                              {isDegreeVerified ? <ShieldCheck size={14} /> : <AlertCircle size={14} />}
-                              {isDegreeVerified ? "Degree Verified" : "Unverified"}
-                            </span>
-                            <span style={{ fontSize: "0.72rem", color: "#64748b" }}>
-                              {isPoliceVerified ? "Police Cleared" : "No police check"}
-                            </span>
-                            <span style={{ fontSize: "0.72rem", color: offer.tutor?.homeTuitionEligible ? "#059669" : "#64748b" }}>
-                              {offer.tutor?.homeTuitionEligible ? "Home tuition eligible" : "Online tuition only"}
-                            </span>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
+                            {isIdentityVerified && <span style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "0.72rem", color: "#059669", fontWeight: 700 }}>🛡️ Identity Verified</span>}
+                            {isDegreeVerified && <span style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "0.72rem", color: "#059669", fontWeight: 700 }}>🎓 Credentials Verified</span>}
+                            {isVideoVerified && <span style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "0.72rem", color: "#0329b2", fontWeight: 700 }}>🎬 Video Verified</span>}
+                            {isExperiencedTutor && <span style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "0.72rem", color: "#b45309", fontWeight: 700 }}>⭐ Experienced Tutor</span>}
+                            {isTopPerformer && <span style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "0.72rem", color: "#7c3aed", fontWeight: 700 }}>🏆 Top Performer</span>}
+                            {isPoliceVerified && <span style={{ fontSize: "0.72rem", color: "#059669", fontWeight: 600 }}>✓ Police Cleared</span>}
+                            {!isIdentityVerified && !isDegreeVerified && <span style={{ fontSize: "0.72rem", color: "#9ca3af" }}>Verification pending</span>}
                           </div>
                         </td>
                         <td style={cellStyle}>

@@ -245,6 +245,17 @@ export interface ITutorProfile extends Document {
   reVerificationReason: string;
   lastStatusChangeAt: Date;
 
+  // Trust badges (derived from verification statuses + admin grants)
+  badges?: {
+    identityVerified: boolean;   // auto: cnicVerificationStatus === "approved"
+    credentialsVerified: boolean; // auto: degreeVerificationStatus === "approved"
+    videoVerified: boolean;       // auto: demoVideoStatus === "approved"
+    experiencedTutor: boolean;    // admin-granted after experience evidence review
+    topPerformer: boolean;        // auto: averageRating >= 4.5 && totalReviews >= 10
+    experiencedTutorGrantedAt?: Date;
+    experiencedTutorGrantedBy?: Types.ObjectId;
+  };
+
   // Stats
   averageRating: number;
   totalReviews: number;
@@ -462,6 +473,16 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
     reVerificationRequired: { type: Boolean, default: false },
     reVerificationReason: { type: String, default: "" },
     lastStatusChangeAt: { type: Date },
+
+    badges: {
+      identityVerified: { type: Boolean, default: false },
+      credentialsVerified: { type: Boolean, default: false },
+      videoVerified: { type: Boolean, default: false },
+      experiencedTutor: { type: Boolean, default: false },
+      topPerformer: { type: Boolean, default: false },
+      experiencedTutorGrantedAt: { type: Date },
+      experiencedTutorGrantedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    },
 
     // Stats
     averageRating: { type: Number, default: 0 },
