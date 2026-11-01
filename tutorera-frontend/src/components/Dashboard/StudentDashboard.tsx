@@ -936,7 +936,7 @@ function RequestCard({
 
 // ─── Student Dashboard ────────────────────────────────────────────────────────
 
-type Tab = "requests" | "bookings" | "favourites";
+type Tab = "requests" | "bookings" | "negotiations" | "favourites";
 
 interface Props {
   userName: string;
@@ -956,6 +956,12 @@ export default function StudentDashboard({ userName, userAvatar }: Props) {
   const [bookingsPage, setBookingsPage] = useState(1);
   const [loadingMoreBookings, setLoadingMoreBookings] = useState(false);
   const [requestFilter, setRequestFilter] = useState<"active" | "expired" | "all">("active");
+  const [negotiations, setNegotiations] = useState<Array<DashBid & { request: DashRequest }>>([]);
+  const [loadingN, setLoadingN] = useState(false);
+  const [acceptingN, setAcceptingN] = useState<string | null>(null);
+  const [counteringN, setCounteringN] = useState<(DashBid & { request: DashRequest }) | null>(null);
+  const [counterAmountN, setCounterAmountN] = useState("");
+  const [counterMessageN, setCounterMessageN] = useState("");
 
   useEffect(() => {
     const requestedTab = new URLSearchParams(window.location.search).get("tab");
@@ -1014,16 +1020,54 @@ const fetchRequests = useCallback(async () => {
     }
   };
 
-  useEffect(() => { fetchRequests(); fetchBookings(); }, [fetchRequests, fetchBookings]);
+  const fetchNegotiations = useCallback(async () => {
+    setLoadingN(true);
+    try {
+      const res = await axiosInstance.get("/requests/my");
+      const allRequests: DashRequest[] = res.data.requests ?? [];
+      const negotiatingRequests = allRequests.filter(r =>
+        ["open", "published", "receiving_offers", "negotiating"].includes(r.status) && !r.isExpired
+      );
+      const bidResults = await Promise.allSettled(
+        negotiatingRequests.map(r => axiosInstance.get(`/offers/request/${r._id}`).then(res2 => ({
+          request: r,
+          offers: (res2.data.offers ?? []) as DashBid[],
+        })))
+      );
+      const countered: Array<DashBid & { request: DashRequest }> = [];
+      for (const result of bidResults) {
+        if (result.status === "fulfilled") {
+          const { request: req, offers } = result.value;
+          for (const bid of offers) {
+            if (bid.status === "countered" && bid.latestSenderRole === "tutor") {
+              countered.push({ ...bid, request: req });
+            }
+          }
+        }
+      }
+      setNegotiations(countered);
+    } catch {
+      setNegotiations([]);
+    } finally {
+      setLoadingN(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchRequests(); fetchBookings(); fetchNegotiations(); }, [fetchRequests, fetchBookings, fetchNegotiations]);
+
+  useEffect(() => {
+    if (tab === "negotiations") fetchNegotiations();
+  }, [tab, fetchNegotiations]); // re-fetch when switching to tab
 
   const now = useCurrentTime();
   const activeRequests = requests.filter(r => !r.isExpired && r.status !== "expired" && (!r.expiresAt || !now || new Date(r.expiresAt).getTime() > now));
   const expiredRequests = requests.filter(r => r.isExpired || r.status === "expired" || Boolean(r.expiresAt && now > 0 && new Date(r.expiresAt).getTime() <= now));
   const displayedRequests = requestFilter === "active" ? activeRequests : requestFilter === "expired" ? expiredRequests : requests;
 
-  const openCount     = activeRequests.length;
-  const upcomingCount = bookings.filter((b) => b.status === "upcoming").length;
+  const openCount      = activeRequests.length;
+  const upcomingCount  = bookings.filter((b) => b.status === "upcoming").length;
   const completedCount = bookings.filter((b) => b.status === "completed").length;
+  const negotiatingCount = negotiations.length;
 
   return (
     <>
@@ -1094,6 +1138,18 @@ const fetchRequests = useCallback(async () => {
             <div>
               <div className={s.statValue}>{upcomingCount}</div>
               <div className={s.statLabel}>Upcoming Sessions</div>
+            </div>
+          </div>
+
+          <div className={s.statCard} style={{ cursor: negotiatingCount > 0 ? "pointer" : "default" }} onClick={() => negotiatingCount > 0 && setTab("negotiations")}>
+            <div className={s.statIcon} style={{ background: negotiatingCount > 0 ? "rgba(245,158,11,0.15)" : "rgba(107,114,128,0.1)" }}>
+              <svg width={22} height={22} viewBox="0 0 20 20" fill={negotiatingCount > 0 ? "#d97706" : "#6b7280"} aria-hidden="true">
+                <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div>
+              <div className={s.statValue}>{negotiatingCount}</div>
+              <div className={s.statLabel}>Negotiations</div>
             </div>
           </div>
 
@@ -1173,6 +1229,13 @@ const fetchRequests = useCallback(async () => {
           className={`${s.tab} ${tab === "bookings" ? s.tabActive : ""}`}
         >
           My Bookings
+        </button>
+        <button
+          onClick={() => setTab("negotiations")}
+          aria-current={tab === "negotiations" ? "true" : undefined}
+          className={`${s.tab} ${tab === "negotiations" ? s.tabActive : ""}`}
+        >
+          🤝 Negotiations {negotiatingCount > 0 && <span style={{ marginLeft: 4, background: "#dc2626", color: "white", borderRadius: "999px", padding: "1px 7px", fontSize: "0.7rem", fontWeight: 800 }}>{negotiatingCount}</span>}
         </button>
         <button
           onClick={() => setTab("favourites")}
@@ -1313,6 +1376,190 @@ const fetchRequests = useCallback(async () => {
                   </div>
                 )}
               </>
+            )}
+          </section>
+        )}
+
+        {/* Tab: Negotiations */}
+        {tab === "negotiations" && (
+          <section aria-label="Active negotiations">
+            <div className={s.sectionHeader} style={{ flexWrap: "wrap", gap: "0.75rem" }}>
+              <div>
+                <h2 className={s.sectionTitle} style={{ margin: 0 }}>Active Negotiations</h2>
+                <p style={{ margin: "0.35rem 0 0", fontSize: "0.82rem", color: "#6b7280" }}>
+                  Counter-offers waiting for your response. Accept, negotiate, or decline.
+                </p>
+              </div>
+              <button type="button" onClick={fetchNegotiations} style={{ padding: "0.45rem 0.9rem", background: "#f1f5f9", color: "#475569", border: "1px solid #e2e8f0", borderRadius: "0.5rem", fontSize: "0.78rem", fontWeight: 600, cursor: "pointer" }}>
+                ↻ Refresh
+              </button>
+            </div>
+
+            {loadingN ? (
+              <div className={s.spinner} />
+            ) : negotiations.length === 0 ? (
+              <div className={s.empty}>
+                <div className={s.emptyIcon}>🤝</div>
+                <p className={s.emptyTitle}>No active negotiations</p>
+                <p className={s.emptyDesc}>When you counter a tutor offer and they respond, it appears here. Check your requests for incoming offers.</p>
+                <button type="button" onClick={() => setTab("requests")} className={s.btnPrimary}>View My Requests</button>
+              </div>
+            ) : (
+              negotiations.map((neg) => (
+                <div key={neg._id} className={s.card} style={{ borderLeft: "4px solid #f59e0b" }}>
+                  {/* Request context */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.75rem", flexWrap: "wrap", gap: "0.5rem" }}>
+                    <div>
+                      <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#92400e", background: "#fef3c7", border: "1px solid #fde68a", borderRadius: "999px", padding: "2px 8px", display: "inline-block", marginBottom: "0.35rem" }}>
+                        🔄 Tutor Responded to Your Counter
+                      </span>
+                      <p style={{ margin: 0, fontSize: "0.82rem", color: "#6b7280" }}>
+                        Request: <strong style={{ color: "#021550" }}>{neg.request.subject}</strong> · {neg.request.city}
+                      </p>
+                    </div>
+                    <a href={`/requests/${neg.request._id}`} style={{ fontSize: "0.75rem", color: "#0329b2", fontWeight: 600, textDecoration: "none" }}>
+                      View Full Request →
+                    </a>
+                  </div>
+
+                  {/* Tutor info */}
+                  <div className={s.personRow}>
+                    <div className={s.bidAvatar}>
+                      {neg.tutor.avatar
+                        ? <Image src={neg.tutor.avatar} alt={neg.tutor.name} width={100} height={100} unoptimized />
+                        : neg.tutor.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <p className={s.personName}>{neg.tutor.name}</p>
+                      <p className={s.personSub}>
+                        {neg.profile?.averageRating?.toFixed(1) || "New"} ★ · {neg.profile?.experience || 0} yrs exp · {neg.profile?.totalReviews || 0} reviews
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Negotiation summary */}
+                  <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "0.6rem", padding: "0.75rem 1rem", margin: "0.75rem 0" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "0.5rem" }}>
+                      <div>
+                        <p style={{ margin: 0, fontSize: "0.7rem", color: "#92400e", fontWeight: 600 }}>Your Budget</p>
+                        <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: 800, color: "#021550" }}>PKR {neg.initialStudentRate?.toLocaleString() ?? "—"}/{neg.pricingUnit || "hr"}</p>
+                      </div>
+                      <div>
+                        <p style={{ margin: 0, fontSize: "0.7rem", color: "#92400e", fontWeight: 600 }}>Tutor's Latest Offer</p>
+                        <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: 800, color: "#d97706" }}>PKR {neg.amount.toLocaleString()}/{neg.pricingUnit || "hr"}</p>
+                      </div>
+                      <div>
+                        <p style={{ margin: 0, fontSize: "0.7rem", color: "#92400e", fontWeight: 600 }}>Counters Used</p>
+                        <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: 800, color: "#021550" }}>You: {neg.counterCounts?.student ?? 0}/3 · Tutor: {neg.counterCounts?.tutor ?? 0}/3</p>
+                      </div>
+                    </div>
+                    {neg.message && (
+                      <p style={{ margin: "0.6rem 0 0", fontSize: "0.8rem", color: "#374151", fontStyle: "italic", borderTop: "1px solid #fde68a", paddingTop: "0.5rem" }}>
+                        "{neg.message}"
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  {counteringN?._id === neg._id ? (
+                    <div style={{ background: "#EEF5FF", border: "1px solid #bfdbfe", borderRadius: "0.6rem", padding: "0.875rem", marginTop: "0.5rem" }}>
+                      <p style={{ margin: "0 0 0.5rem", fontSize: "0.82rem", fontWeight: 700, color: "#021550" }}>
+                        Counter tutor's PKR {neg.amount.toLocaleString()} offer
+                        <span style={{ marginLeft: 8, fontSize: "0.72rem", fontWeight: 400, color: "#64748b" }}>
+                          ({Math.max(0, 3 - (neg.counterCounts?.student ?? 0))} counter{Math.max(0, 3 - (neg.counterCounts?.student ?? 0)) !== 1 ? "s" : ""} remaining)
+                        </span>
+                      </p>
+                      <div style={{ display: "grid", gap: "0.5rem" }}>
+                        <input
+                          type="number"
+                          min="1"
+                          value={counterAmountN}
+                          onChange={e => setCounterAmountN(e.target.value)}
+                          placeholder="Your counter amount (PKR)"
+                          aria-label="Counter amount"
+                          style={{ padding: "0.55rem 0.75rem", border: "1.5px solid #bfdbfe", borderRadius: "0.4rem", fontSize: "0.85rem", width: "100%", boxSizing: "border-box" }}
+                        />
+                        <textarea
+                          maxLength={500}
+                          value={counterMessageN}
+                          onChange={e => setCounterMessageN(e.target.value)}
+                          placeholder="Optional message to tutor…"
+                          aria-label="Counter message"
+                          rows={2}
+                          style={{ padding: "0.55rem 0.75rem", border: "1.5px solid #bfdbfe", borderRadius: "0.4rem", fontSize: "0.82rem", resize: "vertical", fontFamily: "inherit", width: "100%", boxSizing: "border-box" }}
+                        />
+                        <div style={{ display: "flex", gap: "0.5rem" }}>
+                          <button
+                            type="button"
+                            className={s.btnSuccess}
+                            disabled={!counterAmountN || Number(counterAmountN) <= 0}
+                            onClick={async () => {
+                              if (!counterAmountN || Number(counterAmountN) <= 0) return;
+                              try {
+                                await axiosInstance.post(`/offers/${neg._id}/counter`, { amount: Number(counterAmountN), message: counterMessageN });
+                                showSuccess("Counter offer sent!");
+                                setCounteringN(null); setCounterAmountN(""); setCounterMessageN("");
+                                fetchNegotiations();
+                              } catch (err) { showError(err, "Unable to send counter offer."); }
+                            }}
+                          >
+                            Send Counter
+                          </button>
+                          <button type="button" className={s.btnOutline} onClick={() => { setCounteringN(null); setCounterAmountN(""); setCounterMessageN(""); }}>
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
+                      <button
+                        type="button"
+                        className={s.btnSuccess}
+                        disabled={acceptingN === neg._id}
+                        onClick={async () => {
+                          setAcceptingN(neg._id);
+                          try {
+                            const res = await axiosInstance.post(`/offers/${neg._id}/accept`);
+                            if (res.data?.checkoutUrl) window.location.assign(res.data.checkoutUrl);
+                          } catch (err) { showError(err, "Failed to accept offer."); setAcceptingN(null); }
+                        }}
+                      >
+                        {acceptingN === neg._id ? "Accepting…" : `✓ Accept PKR ${neg.amount.toLocaleString()}/${neg.pricingUnit || "hr"}`}
+                      </button>
+                      {(neg.counterCounts?.student ?? 0) < 3 && (
+                        <button
+                          type="button"
+                          className={s.btnOutline}
+                          onClick={() => { setCounteringN(neg); setCounterAmountN(String(neg.amount)); }}
+                        >
+                          ↩ Counter Offer
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className={s.btnOutline}
+                        onClick={async () => {
+                          try {
+                            await axiosInstance.post(`/offers/${neg._id}/decline`);
+                            showSuccess("Offer declined.");
+                            fetchNegotiations();
+                          } catch (err) { showError(err, "Unable to decline offer."); }
+                        }}
+                      >
+                        ✕ Decline
+                      </button>
+                      <Link
+                        href="/chat"
+                        className={s.btnOutline}
+                        style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}
+                      >
+                        💬 Message
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              ))
             )}
           </section>
         )}
