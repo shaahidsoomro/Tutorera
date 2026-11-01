@@ -858,9 +858,7 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
     res.status(200).json({
       success: true,
       message: "Redirecting to payment. Your offer will be confirmed once payment completes.",
-      sessionId: checkout.sessionId,
-      clientSecret: checkout.clientSecret,
-      publishableKey: checkout.publishableKey,
+      checkoutUrl: checkout.checkoutUrl,
     });
   } catch (err: any) {
     await Request.updateOne({ _id: requestId, status: "awaiting_payment" }, { status: "open" });

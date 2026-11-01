@@ -15,7 +15,6 @@ import { paymentConfirmedEmail, paymentFailedEmail, paymentFailedNotifyTutorEmai
 import { sendNotification } from "../utils/socket";
 import logger from "../config/logger";
 import { isValidObjectId } from "mongoose";
-import { reconcileSwichCheckout } from "../services/paymentReconciliation.service";
 
 const FRONTEND_URL = process.env.CLIENT_URL as string;
 
@@ -100,12 +99,7 @@ export const createBookingCheckout = async (req: AuthRequest, res: Response): Pr
       checkoutUrl: `${FRONTEND_URL}/dashboard?payment=processing&booking=${basketId}`,
     });
 
-    res.status(200).json({
-      success: true,
-      sessionId: checkout.sessionId,
-      clientSecret: checkout.clientSecret,
-      publishableKey: checkout.publishableKey,
-    });
+    res.status(200).json({ success: true, checkoutUrl: checkout.checkoutUrl });
   } catch (err: any) {
     logger.error({ requestId: req.id, err }, "Failed to create payment checkout session");
     const statusCode = err?.statusCode || 502;
@@ -414,44 +408,6 @@ export const getVerifiedPaymentStatus = async (req: AuthRequest, res: Response):
   res.setHeader("Cache-Control", "no-store");
   res.json({ success: true, verified: booking.paymentStatus === "confirmed", paymentStatus: booking.paymentStatus,
     bookingStatus: booking.status, bookingId: booking._id, currency: booking.currency, amount: booking.studentTotal });
-};
-
-export const confirmPaymentCheckout = async (req: AuthRequest, res: Response): Promise<void> => {
-  const basketId = String(req.body?.basketId || "").trim();
-  if (!basketId || basketId.length > 200) {
-    res.status(400).json({ success: false, message: "Invalid payment reference." });
-    return;
-  }
-
-  if (basketId.startsWith("BID-")) {
-    const bid = await Bid.findById(basketId.slice(4)).select("request");
-    const request = bid ? await RequestModel.findOne({ _id: bid.request, student: req.user?._id }).select("_id") : null;
-    if (!request) {
-      res.status(404).json({ success: false, message: "Payment reference not found." });
-      return;
-    }
-  } else if (isValidObjectId(basketId)) {
-    const booking = await Booking.findOne({ _id: basketId, student: req.user?._id }).select("_id");
-    if (!booking) {
-      res.status(404).json({ success: false, message: "Payment reference not found." });
-      return;
-    }
-  } else {
-    res.status(400).json({ success: false, message: "Invalid payment reference." });
-    return;
-  }
-
-  try {
-    const result = await reconcileSwichCheckout(basketId);
-    res.status(200).json({ success: true, ...result });
-  } catch (error: any) {
-    logger.error({ requestId: req.id, basketId, err: error }, "Failed to confirm payment checkout");
-    res.status(error?.statusCode || 502).json({
-      success: false,
-      code: error?.code || "PAYMENT_CONFIRMATION_FAILED",
-      message: "Unable to confirm payment.",
-    });
-  }
 };
 
 // @desc    Get student's transaction history

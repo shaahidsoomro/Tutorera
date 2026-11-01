@@ -57,6 +57,10 @@ export const paymentProvider = {
       reference: params.basketId,
       customerEmail: params.customerEmail,
       customerMobile: params.customerMobileNo,
+      description: params.description,
+      successUrl: params.successUrl,
+      failureUrl: params.failureUrl,
+      checkoutUrl: params.checkoutUrl,
       metadata: {
         bookingId: params.bookingId,
         bidId: params.bidId,
@@ -65,7 +69,7 @@ export const paymentProvider = {
         tutorId: params.tutorId,
       },
     };
-    const session = await rapidPayProvider.createCheckout(checkoutParams);
+    const result = await rapidPayProvider.createCheckout(checkoutParams);
 
     await recordPaymentLedger({
       providerTransactionId: params.basketId,
@@ -80,54 +84,14 @@ export const paymentProvider = {
       tutorId: params.tutorId,
       feeSnapshot: params.feeSnapshot,
       metadata: {
-        sessionId: session.sessionId,
-        clientSecret: session.clientSecret,
-        publishableKey: session.publishableKey,
+        checkoutUrl: result.checkoutUrl,
         platformAmount: params.amount,
         platformCurrency: currency,
         ...(params.metadata || {}),
       },
     });
 
-    return session;
-  },
-
-  async confirmCheckout(basketId: string): Promise<{
-    confirmed: boolean;
-    sessionStatus: string;
-    amount?: number;
-    currency?: string;
-  }> {
-    const checkout = await PaymentLedger.findOne({
-      providerTransactionId: basketId,
-      eventType: "checkout.created",
-      provider: { $in: ["rapidpay", "rapid_gateway"] },
-    }).sort("-createdAt");
-    if (!checkout) {
-      throw Object.assign(new Error("No checkout session found"), { statusCode: 404, code: "PAYMENT_SESSION_MISSING" });
-    }
-
-    const sessionId = String((checkout.metadata as Record<string, unknown> | undefined)?.sessionId || "");
-    if (!sessionId) {
-      throw Object.assign(new Error("Checkout session ID is missing"), { statusCode: 422, code: "PAYMENT_SESSION_MISSING" });
-    }
-
-    const result = await rapidPayProvider.getSessionStatus(sessionId);
-    if (result.status !== "success") {
-      return { confirmed: false, sessionStatus: result.status, amount: result.amount, currency: result.currency };
-    }
-    if (result.amount !== checkout.grossAmount || result.currency.toUpperCase() !== checkout.currency.toUpperCase()) {
-      await PaymentLedger.updateOne(
-        { _id: checkout._id },
-        { $set: { settlementStatus: "exception", "metadata.sessionStatus": result.status } },
-      );
-      throw Object.assign(new Error("RapidPay payment amount or currency did not match checkout"), {
-        statusCode: 422,
-        code: "RAPIDPAY_SESSION_MISMATCH",
-      });
-    }
-
-    return { confirmed: true, sessionStatus: result.status, amount: result.amount, currency: result.currency };
+    return result;
   },
 
   verifyWebhookSignature,
@@ -141,7 +105,7 @@ export const paymentProvider = {
     currency?: string;
   }): ProviderWebhookEvent {
     return {
-      provider: "rapid_gateway",
+      provider: "rapidpay",
       eventId: body.eventId,
       eventType: body.eventType,
       merchantTransactionId: body.merchantTransactionId,

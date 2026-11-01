@@ -213,9 +213,7 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
       res.status(200).json({
         success: true,
         message: "Redirecting to payment. Your booking will be created once payment completes.",
-        sessionId: checkout.sessionId,
-        clientSecret: checkout.clientSecret,
-        publishableKey: checkout.publishableKey,
+        checkoutUrl: checkout.checkoutUrl,
       });
     } catch (err: any) {
       // Checkout creation failed — roll back the reservation immediately.
@@ -288,13 +286,7 @@ export const retryOfferPayment = async (req: AuthRequest, res: Response): Promis
       checkoutUrl: `${process.env.CLIENT_URL}/offers?payment=processing&offer=${offer._id}`,
     });
 
-    res.status(200).json({
-      success: true,
-      message: "Payment session created.",
-      sessionId: checkout.sessionId,
-      clientSecret: checkout.clientSecret,
-      publishableKey: checkout.publishableKey,
-    });
+    res.status(200).json({ success: true, message: "Payment session created.", checkoutUrl: checkout.checkoutUrl });
   } catch (err: any) {
     console.error("Failed to create retry checkout:", err);
     res.status(502).json({ success: false, message: "Unable to start payment. Please try again." });
