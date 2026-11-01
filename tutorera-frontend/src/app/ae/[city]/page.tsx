@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getMarketByRoute } from "@/lib/markets";
 
 const CITIES = {
   dubai:         { name: "Dubai",         country: "UAE", currency: "AED", currencyName: "UAE Dirhams" },
@@ -36,11 +37,11 @@ export async function generateMetadata({ params }: { params: Promise<{ city: str
   const c = CITIES[city as CitySlug];
   return {
     title: `Tutors in ${c.name}, UAE — Find Verified ${c.name} Tutors | TUTORERA`,
-    description: `Find verified private tutors in ${c.name}, UAE for IGCSE, A-Level, IB, American and other curricula. Post your requirement, set a budget in ${c.currency}, and compare tutor offers on TUTORERA.`,
+    description: `Find verified online tutors for learners in ${c.name}, UAE, across IGCSE, A-Level, IB, American and other curricula. Post your requirement, set a budget in ${c.currency}, and compare tutor offers on TUTORERA.`,
     alternates: { canonical: `/ae/${city}` },
     openGraph: {
       title: `Tutors in ${c.name}, UAE | TUTORERA®`,
-      description: `Post a free tuition requirement in ${c.name}. Verified tutors submit offers in ${c.currency} — compare before you choose.`,
+      description: `Post a free online tuition requirement for ${c.name}. Verified tutors submit offers in ${c.currency} — compare before you choose.`,
       url: `/ae/${city}`,
     },
   };
@@ -50,6 +51,7 @@ export default async function UAECityPage({ params }: { params: Promise<{ city: 
   const { city } = await params;
   if (!(city in CITIES)) notFound();
   const c = CITIES[city as CitySlug];
+  const homeTuitionEnabled = getMarketByRoute("ae")?.homeTuitionEnabled ?? false;
   const canonical = `https://tutorera.ac.pk/ae/${city}`;
 
   const jsonLd = {
@@ -82,7 +84,7 @@ export default async function UAECityPage({ params }: { params: Promise<{ city: 
             name: `How do I find a tutor in ${c.name}?`,
             acceptedAnswer: {
               "@type": "Answer",
-              text: `Post a free tuition requirement on TUTORERA — specify your subject, curriculum (IGCSE, A-Level, IB, American), level, schedule, teaching mode (home or online), and preferred budget in ${c.currency}. Eligible verified tutors in ${c.name} can then send you offers to compare before choosing.`,
+              text: `Post a free online tuition requirement on TUTORERA — specify your subject, curriculum (IGCSE, A-Level, IB, American), level, schedule, and preferred budget in ${c.currency}. Eligible verified tutors can then send you offers to compare before choosing.`,
             },
           },
           {
@@ -114,7 +116,7 @@ export default async function UAECityPage({ params }: { params: Promise<{ city: 
           Find a Tutor in {c.name}
         </h1>
         <p style={{ fontSize: "1.1rem", lineHeight: 1.7, color: "#475569", marginBottom: "1.5rem" }}>
-          Post your learning requirement, set a preferred budget in {c.currency}, and compare verified tutor offers before you choose. Home tuition and online lessons available.
+          Post your online learning requirement, set a preferred budget in {c.currency}, and compare verified tutor offers before you choose.
         </p>
         <Link
           href={`/post-tuition-request?country=AE`}
@@ -159,7 +161,7 @@ export default async function UAECityPage({ params }: { params: Promise<{ city: 
         <h2 style={{ color: "#021550" }}>Tuition modes available in {c.name}</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem" }}>
           {[
-            { label: "Home Tuition", desc: `A tutor visits you at your home in ${c.name}.`, href: `/ae/${city}/home-tuition` },
+            ...(homeTuitionEnabled ? [{ label: "Home Tuition", desc: `A tutor visits you at your home in ${c.name}.`, href: `/ae/${city}/home-tuition` }] : []),
             { label: "Online Tuition", desc: "Live online sessions — available worldwide.", href: `/ae/${city}/online-tuition` },
           ].map((mode) => (
             <Link key={mode.label} href={mode.href} style={{ display: "block", padding: "1.25rem", background: "#fff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", textDecoration: "none", color: "#021550" }}>

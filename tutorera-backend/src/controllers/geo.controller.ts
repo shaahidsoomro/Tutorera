@@ -9,6 +9,7 @@ import TutorProfile from "../models/TutorProfile.model";
 import { SUPPORTED_CURRENCIES, getCountryByCode, getCitiesForCountry, MASTER_SUBJECTS, MASTER_LEVELS, EDUCATION_LEVELS_BY_COUNTRY } from "../config/geo/location";
 import Subject from "../models/Subject.model";
 import SchoolOffering from "../models/SchoolOffering.model";
+import { normalizePostalResults } from "../utils/normalizePostalResults";
 
 // Returns the canonical active subject names from the Subject catalogue,
 // falling back to the static MASTER_SUBJECTS array until the DB is seeded.
@@ -171,9 +172,34 @@ export const postalLookup = async (req: Request, res: Response): Promise<void> =
     return;
   }
   
-  const username = process.env.GEONAMES_USERNAME || "demo";
-  
   try {
+    const zipcodebaseKey = process.env.ZIPCODEBASE_API_KEY?.trim();
+    if (zipcodebaseKey && country && /^[A-Z]{2}$/.test(country)) {
+      const isPostalCode = /^[A-Z0-9][A-Z0-9 -]*$/i.test(query) && /\d/.test(query);
+      const endpoint = isPostalCode
+        ? "https://app.zipcodebase.com/api/v1/search"
+        : "https://app.zipcodebase.com/api/v1/code/city";
+      const params = isPostalCode
+        ? { codes: query, country, unit: "km" }
+        : { city: query, country, limit: 20 };
+      try {
+        const response = await axios.get(endpoint, {
+          params,
+          headers: { apikey: zipcodebaseKey },
+          timeout: 5000,
+        });
+        res.json({
+          success: true,
+          provider: "zipcodebase",
+          results: normalizePostalResults(response.data?.results || response.data?.data),
+        });
+        return;
+      } catch (error) {
+        console.warn("Zipcodebase postal lookup failed; falling back to GeoNames:", error);
+      }
+    }
+
+    const username = process.env.GEONAMES_USERNAME || "demo";
     const isNumeric = /^\d+$/.test(query) || /^[A-Z0-9- ]+$/i.test(query);
     const param = isNumeric ? "postalcode_startsWith" : "placename_startsWith";
     const countryParam = country ? `&country=${country}` : "";
@@ -182,9 +208,9 @@ export const postalLookup = async (req: Request, res: Response): Promise<void> =
     
     const response = await axios.get(url);
     if (response.data && response.data.postalCodes) {
-      res.json({ success: true, results: response.data.postalCodes });
+      res.json({ success: true, provider: "geonames", results: normalizePostalResults(response.data.postalCodes) });
     } else {
-      res.json({ success: true, results: [] });
+      res.json({ success: true, provider: "geonames", results: [] });
     }
   } catch (error) {
     console.error("GeoNames API Error:", error);

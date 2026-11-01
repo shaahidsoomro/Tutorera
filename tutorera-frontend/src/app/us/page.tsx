@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, GraduationCap, Home, Laptop, MapPin, ShieldCheck } from "lucide-react";
 import { SITE_URL } from "@/lib/site";
+import { getMarketByRoute } from "@/lib/markets";
 
 const US_URL = `${SITE_URL}/us`;
 
@@ -24,12 +25,12 @@ const faq = [
     a: "Students or parents post a tuition requirement — subject, curriculum (AP, IB, SAT/ACT prep, Common Core), teaching mode, city, schedule and preferred budget in USD. Eligible tutors can submit offers, so the student or parent can compare options before choosing a tutor. Exact addresses and private contact details are not shown before a confirmed booking.",
   },
   {
-    q: "Can I find a home tutor in New York, Los Angeles, Chicago or other US cities?",
-    a: "Yes. Post a home-tuition requirement for your city and neighborhood. Eligible home-tuition tutors matching your subject, curriculum and schedule can send offers you can compare before choosing.",
+    q: "Which tuition modes are currently available in the United States?",
+    a: "Online tuition matching is currently available for US learners. Home tuition will be shown only when the US market enables local delivery and safety requirements.",
   },
   {
     q: "Does TUTORERA support SAT, ACT and AP prep?",
-    a: "Yes. Online and home tuition matching considers subject, exam type (SAT, ACT, AP), language and budget compatibility. Select your prep requirement when posting.",
+    a: "Yes. Online tuition matching considers subject, exam type (SAT, ACT, AP), language and budget compatibility. Select your prep requirement when posting.",
   },
   {
     q: "Who sets the tuition budget?",
@@ -46,18 +47,20 @@ const faq = [
 ];
 
 export const metadata: Metadata = {
-  title: { absolute: "Tuition in US — Home & Online Tutors | TUTORERA" },
+  title: { absolute: "Online Tuition in the US | TUTORERA" },
   description:
-    "Post a tuition requirement in the United States for home or online tuition, set your preferred budget in USD, and compare offers from eligible tutors. New York, Los Angeles, Chicago and nationwide.",
+    "Post an online tuition requirement in the United States, set your preferred budget in USD, and compare offers from eligible tutors. New York, Los Angeles, Chicago and nationwide.",
   alternates: { canonical: "/us" },
   openGraph: {
-    title: "Tuition in US — Home & Online Tutors | TUTORERA",
-    description: "Student-first tuition matching for the US. Post a requirement, receive tutor offers, compare, and choose.",
+    title: "Online Tuition in the US | TUTORERA",
+    description: "Student-first online tuition matching for the US. Post a requirement, receive tutor offers, compare, and choose.",
     url: US_URL,
   },
 };
 
 export default function USLandingPage() {
+  const homeTuitionEnabled = getMarketByRoute("us")?.homeTuitionEnabled ?? false;
+  const availableLearningModes = learningModes.filter((mode) => homeTuitionEnabled || mode.label !== "Home Tuition");
   const schema = {
     "@context": "https://schema.org",
     "@graph": [
@@ -65,7 +68,7 @@ export default function USLandingPage() {
         "@type": "WebPage",
         "@id": `${US_URL}#webpage`,
         name: "Tuition in United States",
-        description: "Post a tuition requirement in the US for home or online tuition and compare eligible tutor offers.",
+        description: "Post an online tuition requirement in the US and compare eligible tutor offers.",
         url: US_URL,
         isPartOf: { "@id": `${SITE_URL}/#website` },
         breadcrumb: { "@id": `${US_URL}#breadcrumb` },
@@ -107,7 +110,7 @@ export default function USLandingPage() {
           Tuition in US — Home &amp; Online Tutors
         </h1>
         <p style={{ fontSize: "1.1rem", lineHeight: 1.7, color: "#475569", marginBottom: "1.5rem" }}>
-          Post your tuition requirement with a preferred budget in USD for home or online tuition. Eligible tutors can submit offers. Compare options and choose the tutor that fits your learning needs.
+          Post your online tuition requirement with a preferred budget in USD. Eligible tutors can submit offers. Compare options and choose the tutor that fits your learning needs.
         </p>
         <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
           <Link href="/post-tuition-request?country=US" style={ctaPrimary}>Post Tuition Requirement <ArrowRight size={18} /></Link>
@@ -123,7 +126,7 @@ export default function USLandingPage() {
       <section style={{ marginTop: "3rem" }}>
         <h2 style={{ color: "#021550" }}>Choose how you want to learn</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1rem", marginTop: "1rem" }}>
-          {learningModes.map((mode) => {
+          {availableLearningModes.map((mode) => {
             const Icon = mode.icon;
             return (
               <div key={mode.href} style={cardStyle}>
@@ -151,7 +154,7 @@ export default function USLandingPage() {
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: "0.9rem" }}>
                 <Link href={`/us/${c.slug}/tuition`} style={linkStyle}>{c.label} tuition</Link>
-                <Link href={`/us/${c.slug}/home-tuition`} style={linkStyle}>{c.label} home tuition</Link>
+                {homeTuitionEnabled && <Link href={`/us/${c.slug}/home-tuition`} style={linkStyle}>{c.label} home tuition</Link>}
                 <Link href={`/us/${c.slug}/online-tuition`} style={linkStyle}>{c.label} online tuition</Link>
               </div>
             </div>

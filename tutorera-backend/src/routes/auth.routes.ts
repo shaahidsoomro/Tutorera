@@ -4,11 +4,13 @@ import { register, login, logout, getMe, updateProfile, changePassword, googleAu
 import { protect } from "../middlewares/auth.middleware";
 import { resendGuardianConsent, listGuardianConsentRequests, approveGuardianConsent } from "../controllers/guardianConsent.controller";
 import { validate, registerSchema, loginSchema, googleAuthSchema, selectRoleSchema, forgotPasswordSchema, resetPasswordSchema } from "../validators/auth.validator";
-import { loginLimiter, registerLimiter, otpRequestLimiter, otpVerifyLimiter, googleAuthLimiter } from "../middlewares/rateLimiters";
+import { loginLimiter, registerLimiter, otpRequestLimiter, otpVerifyLimiter, googleAuthLimiter, providerLookupLimiter } from "../middlewares/rateLimiters";
+import { validateContacts } from "../controllers/externalValidation.controller";
 
 const router = Router();
 
 router.post("/register", registerLimiter, validate(registerSchema), register);
+router.post("/validate-contacts", providerLookupLimiter, validateContacts);
 router.post("/login", loginLimiter, validate(loginSchema), login);
 router.post("/google", googleAuthLimiter, validate(googleAuthSchema), googleAuth);
 router.patch("/select-role", protect, validate(selectRoleSchema), selectRole);

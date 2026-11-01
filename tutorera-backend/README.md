@@ -83,12 +83,17 @@ ZIPCODEBASE_API_KEY=<server-side Zipcodebase API key>
 The BigDataCloud key must also remain server-side. `GET /api/v1/geo/visitor-market`
 uses the request IP for configured-market personalization, while
 `POST /api/v1/auth/validate-contacts` checks email and optional phone details
-before registration. If the provider is unavailable, registration continues
-without treating the external check as proof of identity.
+before registration. If the provider is unavailable, the endpoint returns
+`validation.available: false` and registration continues without treating the
+external check as proof of identity.
 
 When configured, `GET /api/v1/geo/postal-lookup?q=<postal-code-or-city>&country=<ISO2>`
 uses Zipcodebase for postal and city lookups. GeoNames remains the fallback when
 the key or country is unavailable.
+
+The public postal lookup, visitor-market, and contact-validation endpoints share
+a provider limiter of 60 requests per IP per 15 minutes. A `429` response means
+the caller must wait before retrying; it does not indicate a provider outage.
 
 ### 4. Run development server
 ```bash

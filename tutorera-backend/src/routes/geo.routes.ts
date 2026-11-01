@@ -1,7 +1,9 @@
 // src/routes/geo.routes.ts
 import { Router } from "express";
 import { getCities, getCountries, getCountryCities, getCurrencies, getGlobalSearch, getLocalities, getRegions, getSubjects, getSchoolOfferings, postalLookup } from "../controllers/geo.controller";
+import { getVisitorMarket } from "../controllers/externalValidation.controller";
 import { cachePublic } from "../middlewares/cacheControl.middleware";
+import { providerLookupLimiter } from "../middlewares/rateLimiters";
 
 const router = Router();
 
@@ -18,6 +20,7 @@ router.get("/localities", cachePublic(300), getLocalities);
 router.get("/search", getGlobalSearch);
 router.get("/countries/:code/cities", cachePublic(300), getCountryCities);
 router.get("/currencies", cachePublic(600), getCurrencies);
-router.get("/postal-lookup", postalLookup);
+router.get("/postal-lookup", providerLookupLimiter, postalLookup);
+router.get("/visitor-market", providerLookupLimiter, getVisitorMarket);
 
 export default router;

@@ -7,6 +7,7 @@ import { resolveCountry, liveCountryCodeParams } from "@/lib/geo-server";
 import type { FiltersState } from "@/types/tutor";
 import { SITE_URL } from "@/lib/site";
 import { SeoEligibilityService } from "@/lib/seo-eligibility";
+import { getMarketByCountryCode } from "@/lib/markets";
 
 interface Props {
   params: Promise<{ countryCode: string }>;
@@ -24,11 +25,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const country = await resolveCountry(countryCode);
   if (!country) return { title: "Tutors Directory", robots: { index: false, follow: true } };
 
-  const title = `Find Verified Tutors in ${country.name} | Online & Home Tuition`;
-  const description = `Connect with verified tutors in ${country.name} (${country.currency}). Compare rates, explore ${country.curricula.slice(0, 3).join(", ")} curricula, and book with verified satisfaction guarantee.`;
+  const market = getMarketByCountryCode(country.code);
+  const homeTuitionEnabled = market?.homeTuitionEnabled ?? country.homeTuitionEnabled;
+  const checkoutEnabled = market?.checkoutEnabled ?? country.paymentsEnabled;
+  const title = `Find Verified Tutors in ${country.name} | ${homeTuitionEnabled ? "Online & Home Tuition" : "Online Tuition"}`;
+  const description = `Connect with verified ${homeTuitionEnabled ? "online and home " : "online "}tutors in ${country.name} (${country.currency}). Compare rates and explore ${country.curricula.slice(0, 3).join(", ")} curricula${checkoutEnabled ? ", then book securely." : "."}`;
   const canonical = `/${countryCode.toLowerCase()}/tutors`;
   const { total } = await fetchTutors({ countryCode: country.code }, 1);
-  const eligibility = SeoEligibilityService.evaluatePage({ activeApprovedTutors: total, homeTuitionEnabled: true });
+  const eligibility = SeoEligibilityService.evaluatePage({ activeApprovedTutors: total, homeTuitionEnabled });
   const robots = eligibility === "INDEX" ? "index, follow" : "noindex, follow";
 
   return {
@@ -48,6 +52,9 @@ export default async function CountryTutorsPage({ params, searchParams }: Props)
   const { countryCode } = await params;
   const country = await resolveCountry(countryCode);
   if (!country) notFound();
+  const market = getMarketByCountryCode(country.code);
+  const homeTuitionEnabled = market?.homeTuitionEnabled ?? country.homeTuitionEnabled;
+  const checkoutEnabled = market?.checkoutEnabled ?? country.paymentsEnabled;
 
   const queryParams = await searchParams;
   const initialFilters: Partial<FiltersState> = {
@@ -85,7 +92,7 @@ export default async function CountryTutorsPage({ params, searchParams }: Props)
     "@context": "https://schema.org",
     "@type": "CollectionPage",
     name: `Verified Tutors in ${country.name}`,
-    description: `Find verified online and home tutors in ${country.name} across ${country.curricula.join(", ")}.`,
+    description: `Find verified ${homeTuitionEnabled ? "online and home" : "online"} tutors in ${country.name} across ${country.curricula.join(", ")}.`,
     url: `${SITE_URL}/${countryCode.toLowerCase()}/tutors`,
     breadcrumb: {
       "@type": "BreadcrumbList",
@@ -121,10 +128,10 @@ export default async function CountryTutorsPage({ params, searchParams }: Props)
           fontSize: "0.85rem", fontWeight: 700
         }}>
           TUTORERA {country.name} is in beta
-          {country.paymentsEnabled === false && " · Online payment is not yet enabled in this market"}
+          {!checkoutEnabled && " · Online payment is not yet enabled in this market"}
         </div>
       )}
-      {country.launchStatus !== "coming_soon" && country.launchStatus !== "beta" && country.paymentsEnabled === false && (
+      {country.launchStatus !== "coming_soon" && country.launchStatus !== "beta" && !checkoutEnabled && (
         <div role="status" style={{
           background: "#021550", color: "white",
           textAlign: "center", padding: "0.65rem 1rem",
@@ -138,7 +145,7 @@ export default async function CountryTutorsPage({ params, searchParams }: Props)
           Tutors in {country.name}
         </h1>
         <p style={{ maxWidth: 800, margin: "1rem auto 0", color: "#475569", fontSize: "1.1rem", lineHeight: 1.6 }}>
-          Connect with top-rated educators offering online tutoring and in-person home tuition across {country.name}. 
+          Connect with top-rated educators offering {homeTuitionEnabled ? "online tutoring and in-person home tuition" : "online tutoring"} across {country.name}.
           Explore verified profiles, compare subjects, and find the perfect match for your academic goals.
         </p>
       </div>
@@ -160,7 +167,7 @@ export default async function CountryTutorsPage({ params, searchParams }: Props)
             : `Browse verified educators in ${country.name} for ${country.curricula.slice(0, 3).join(", ")} and academic subjects`
         }
       />
-      {country.cities && country.cities.length > 0 && (
+      {homeTuitionEnabled && country.cities && country.cities.length > 0 && (
         <section style={{ maxWidth: 1120, margin: "2rem auto 4rem", padding: "0 1.5rem" }}>
           <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "#021550", marginBottom: "1rem" }}>
             Explore In-Person & Home Tuition Cities in {country.name}

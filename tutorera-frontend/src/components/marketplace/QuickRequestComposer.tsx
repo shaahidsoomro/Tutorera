@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -15,7 +15,9 @@ import {
   DollarSign
 } from "lucide-react";
 import { COUNTRIES, getCountryByCode, Country } from "@/lib/location";
+import { getMarketByCountryCode } from "@/lib/markets";
 import { useGeoData } from "@/lib/geoService";
+import { detectVisitorMarket, saveVisitorMarket } from "@/lib/visitorMarket";
 import CountryCityPickerModal from "./CountryCityPickerModal";
 
 function defaultBudget(code: string): string {
@@ -37,7 +39,22 @@ export default function QuickRequestComposer({ initialCountryCode }: { initialCo
 
   const [locationModalOpen, setLocationModalOpen] = useState(false);
 
+  useEffect(() => {
+    if (initialCountryCode) return;
+    let active = true;
+    detectVisitorMarket().then((detectedCountryCode) => {
+      if (active && detectedCountryCode) {
+        setCountryCode(detectedCountryCode);
+        setBudget(defaultBudget(detectedCountryCode));
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [initialCountryCode]);
+
   const currentCountry = (geo.countries && geo.countries.find((c) => c.code === countryCode)) || getCountryByCode(countryCode) || COUNTRIES[0];
+  const homeTuitionEnabled = getMarketByCountryCode(currentCountry.code)?.homeTuitionEnabled ?? currentCountry.homeTuitionEnabled;
   const popularSubjects = geo.subjects && geo.subjects.length > 0 ? geo.subjects : [
     "Mathematics", "Physics", "Chemistry", "Biology", "English", "Computer Science", "Economics", "O / A Level"
   ];
@@ -46,9 +63,13 @@ export default function QuickRequestComposer({ initialCountryCode }: { initialCo
   ];
 
   const handleLocationSelect = (country: Country, pickedCity: string) => {
+    saveVisitorMarket(country.code);
     setCountryCode(country.code);
     setCity(pickedCity || "");
     setBudget(defaultBudget(country.code));
+    if (!(getMarketByCountryCode(country.code)?.homeTuitionEnabled ?? country.homeTuitionEnabled)) {
+      setMode("online");
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -150,7 +171,7 @@ export default function QuickRequestComposer({ initialCountryCode }: { initialCo
             </button>
 
             {/* Home */}
-            <button
+            {homeTuitionEnabled && <button
               type="button"
               onClick={() => setMode("in-person")}
               style={modeCardStyle(mode === "in-person")}
@@ -165,10 +186,10 @@ export default function QuickRequestComposer({ initialCountryCode }: { initialCo
               <span style={{ fontSize: "0.78rem", color: "#64748b", lineHeight: "1.4" }}>
                 Verified tutor comes to your home location.
               </span>
-            </button>
+            </button>}
 
             {/* Either */}
-            <button
+            {homeTuitionEnabled && <button
               type="button"
               onClick={() => setMode("both")}
               style={modeCardStyle(mode === "both")}
@@ -183,7 +204,7 @@ export default function QuickRequestComposer({ initialCountryCode }: { initialCo
               <span style={{ fontSize: "0.78rem", color: "#64748b", lineHeight: "1.4" }}>
                 Compare local home tutors and global online tutors.
               </span>
-            </button>
+            </button>}
           </div>
         </div>
 

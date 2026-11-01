@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getMarketByRoute } from "@/lib/markets";
 
 const CITIES = {
   "new-york":    "New York",
@@ -11,7 +12,7 @@ const CITIES = {
 } as const;
 
 const INTENTS = {
-  tuition:          { label: "Tuition",        mode: "home or online tuition", action: "Post a tuition requirement" },
+  tuition:          { label: "Tuition",        mode: "online tuition",         action: "Post an online-tuition requirement" },
   "home-tuition":   { label: "Home Tuition",   mode: "home tuition",           action: "Post a home-tuition requirement" },
   "online-tuition": { label: "Online Tuition", mode: "online tuition",         action: "Post an online-tuition requirement" },
 } as const;
@@ -21,7 +22,9 @@ type Intent = keyof typeof INTENTS;
 
 export function generateStaticParams() {
   return (Object.keys(CITIES) as City[]).flatMap((city) =>
-    (Object.keys(INTENTS) as Intent[]).map((intent) => ({ city, intent })),
+    (Object.keys(INTENTS) as Intent[])
+      .filter((intent) => intent !== "home-tuition" || getMarketByRoute("us")?.homeTuitionEnabled)
+      .map((intent) => ({ city, intent })),
   );
 }
 
@@ -39,7 +42,7 @@ export async function generateMetadata({ params }: { params: Promise<{ city: str
 
 export default async function USCityTuitionIntentPage({ params }: { params: Promise<{ city: string; intent: string }> }) {
   const { city, intent } = await params;
-  if (!(city in CITIES) || !(intent in INTENTS)) notFound();
+  if (!(city in CITIES) || !(intent in INTENTS) || (intent === "home-tuition" && !getMarketByRoute("us")?.homeTuitionEnabled)) notFound();
   const cityName = CITIES[city as City];
   const page = INTENTS[intent as Intent];
   const postHref =

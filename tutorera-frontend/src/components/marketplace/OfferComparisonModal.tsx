@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import api from "@/lib/axios";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
+import TrustEvidencePanel from "./TrustEvidencePanel";
+import MatchScoreBadge from "./MatchScoreBadge";
 
 export interface TutorOfferItem {
   _id: string;
@@ -40,7 +42,9 @@ export interface TutorOfferItem {
   message?: string;
   availability?: string;
   matchScore?: number;
+  matchTier?: "excellent" | "great" | "good" | "fair";
   matchReasons?: string[];
+  matchScoreBreakdown?: Record<string, number | undefined>;
   status: "pending" | "accepted" | "rejected" | "countered" | "withdrawn";
   createdAt: string;
 }
@@ -246,10 +250,15 @@ export default function OfferComparisonModal({
                                 {offer.tutor?.title || "Verified Tutor"} · {offer.tutor?.city || "Online"}
                               </div>
                               {matchScore !== undefined && (
-                                <div style={{ marginTop: "0.25rem" }}>
-                                  <span style={{ fontSize: "0.72rem", fontWeight: 800, color: "#0329b2", background: "#eef5ff", padding: "0.15rem 0.45rem", borderRadius: 999 }}>
-                                    {matchScore}% Match
-                                  </span>
+                                <div style={{ marginTop: "0.35rem" }}>
+                                  <MatchScoreBadge
+                                    score={matchScore}
+                                    tier={offer.matchTier}
+                                    reasons={offer.matchReasons}
+                                    breakdown={offer.matchScoreBreakdown}
+                                    compact
+                                    showBreakdown
+                                  />
                                 </div>
                               )}
                             </div>
@@ -298,6 +307,7 @@ export default function OfferComparisonModal({
                             {isPoliceVerified && <span style={{ fontSize: "0.72rem", color: "#059669", fontWeight: 600 }}>✓ Police Cleared</span>}
                             {!isIdentityVerified && !isDegreeVerified && <span style={{ fontSize: "0.72rem", color: "#9ca3af" }}>Verification pending</span>}
                           </div>
+                          <TrustEvidencePanel profile={offer.tutor} />
                         </td>
                         <td style={cellStyle}>
                           <span style={{ fontSize: "0.8rem", color: "#334155" }}>

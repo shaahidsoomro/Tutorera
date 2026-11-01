@@ -102,14 +102,14 @@ export default async function Home() {
               Share TUTORERA®.<br />Both of you get rewarded.
             </h2>
             <p style={{ color: "#94a3b8", fontSize: "0.95rem", lineHeight: 1.6, margin: 0 }}>
-              Invite a friend — they get <strong style={{ color: "white" }}>PKR 200 off</strong> their first booking, and you earn <strong style={{ color: "white" }}>PKR 200+ credit</strong> once they complete it. Rewards grow as you refer more.
+              Invite a friend — they receive a market-specific reward on their first completed booking, and you earn credit when they complete it. Rewards may grow as you refer more.
             </p>
           </div>
           <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "center" }}>
             <div style={{ display: "flex", gap: "1.5rem", color: "white" }}>
               {[
                 { emoji: "🔗", label: "Share your link" },
-                { emoji: "🎁", label: "Friend gets PKR 200 off" },
+                { emoji: "🎁", label: "Friend gets a reward" },
                 { emoji: "💰", label: "You earn credit" },
               ].map(item => (
                 <div key={item.label} style={{ textAlign: "center" }}>

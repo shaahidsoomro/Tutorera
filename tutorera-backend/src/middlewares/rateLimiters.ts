@@ -63,6 +63,16 @@ export const contactLimiter = rateLimit({
     message: { success: false, message: "Too many messages sent. Please try again later." },
 });
 
+// External geo/contact providers incur per-request cost and should not be
+// reachable as an unbounded public proxy.
+export const providerLookupLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 60,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, message: "Too many lookup requests. Please try again later." },
+});
+
 // AI chat — prevent runaway API costs
 // Uses user ID from JWT as key so each authenticated user gets their own
 // bucket (10 msg/min). Falls back to IP so unauthenticated burst attempts

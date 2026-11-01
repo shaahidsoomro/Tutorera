@@ -67,6 +67,21 @@ function RegisterForm() {
     }
     setLoading(true);
     try {
+    const contactValidation = await api.post("/auth/validate-contacts", {
+      email: form.email,
+      phone: form.phone || undefined,
+    });
+    const validation = contactValidation.data?.validation;
+    if (validation?.email && (!validation.email.valid || validation.email.disposable)) {
+      setError(validation.email.disposable
+        ? "Please use a non-disposable email address."
+        : "Please enter a valid, deliverable email address.");
+      return;
+    }
+    if (validation?.phone && !validation.phone.valid) {
+      setError("Please enter a valid phone number in international format.");
+      return;
+    }
     await register(form);
 
     // Apply referral code after registration if provided

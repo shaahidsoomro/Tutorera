@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, GraduationCap, Home, Laptop, MapPin, ShieldCheck } from "lucide-react";
 import { SITE_URL } from "@/lib/site";
+import { getMarketByRoute } from "@/lib/markets";
 
 // Explicit /ae national hub beats the (countries)/[countryCode] catch-all
 // for the UAE and mirrors /pk/page.tsx — second-country parity per spec
@@ -27,8 +28,8 @@ const faq = [
     a: "Students or parents post a tuition requirement — subject, curriculum (IGCSE, A-Level, IB, American), teaching mode, emirate or online timezone, schedule and preferred budget in AED. Eligible tutors can submit offers, so the student or parent can compare options before choosing a tutor. Exact addresses and private contact details are not shown before a confirmed booking.",
   },
   {
-    q: "Can I find a home tutor in Dubai, Abu Dhabi or Sharjah on TUTORERA?",
-    a: "Yes. Post a home-tuition requirement for your emirate and area. Eligible home-tuition tutors matching your subject, curriculum and schedule can send offers you can compare before choosing.",
+    q: "Which tuition modes are currently available in the UAE?",
+    a: "Online tuition matching is currently available for UAE learners. Home tuition will be shown only when the UAE market enables local delivery and safety requirements.",
   },
   {
     q: "Does TUTORERA support online tuition for UAE curricula?",
@@ -49,18 +50,21 @@ const faq = [
 ];
 
 export const metadata: Metadata = {
-  title: { absolute: "Tuition in UAE — Home & Online Tutors | TUTORERA" },
+  title: { absolute: "Online Tuition in UAE | TUTORERA" },
   description:
-    "Post a tuition requirement in the UAE for home or online tuition, set your preferred budget in AED, and compare offers from eligible tutors. Dubai, Abu Dhabi, Sharjah and nationwide.",
+    "Post an online tuition requirement in the UAE, set your preferred budget in AED, and compare offers from eligible tutors. Dubai, Abu Dhabi, Sharjah and nationwide.",
   alternates: { canonical: "/ae" },
   openGraph: {
-    title: "Tuition in UAE — Home & Online Tutors | TUTORERA",
-    description: "Student-first tuition matching for the UAE. Post a requirement, receive tutor offers, compare, and choose.",
+    title: "Online Tuition in UAE | TUTORERA",
+    description: "Student-first online tuition matching for the UAE. Post a requirement, receive tutor offers, compare, and choose.",
     url: AE_URL,
   },
 };
 
 export default function UAELandingPage() {
+  const market = getMarketByRoute("ae");
+  const homeTuitionEnabled = market?.homeTuitionEnabled ?? false;
+  const availableLearningModes = learningModes.filter((mode) => homeTuitionEnabled || mode.label !== "Home Tuition");
   const schema = {
     "@context": "https://schema.org",
     "@graph": [
@@ -68,7 +72,7 @@ export default function UAELandingPage() {
         "@type": "WebPage",
         "@id": `${AE_URL}#webpage`,
         name: "Tuition in UAE",
-        description: "Post a tuition requirement in the UAE for home or online tuition and compare eligible tutor offers.",
+        description: "Post an online tuition requirement in the UAE and compare eligible tutor offers.",
         url: AE_URL,
         isPartOf: { "@id": `${SITE_URL}/#website` },
         breadcrumb: { "@id": `${AE_URL}#breadcrumb` },
@@ -107,10 +111,10 @@ export default function UAELandingPage() {
           Student-First Tutoring Marketplace · UAE
         </p>
         <h1 style={{ fontSize: "clamp(2rem, 5vw, 3.25rem)", lineHeight: 1.1, color: "#021550", margin: "0 0 1rem" }}>
-          Tuition in UAE — Home &amp; Online Tutors
+          Tuition in UAE — Online Tutors
         </h1>
         <p style={{ fontSize: "1.1rem", lineHeight: 1.7, color: "#475569", marginBottom: "1.5rem" }}>
-          Post your tuition requirement with a preferred budget in AED for home or online tuition. Eligible tutors can submit offers. Compare options and choose the tutor that fits your learning needs.
+          Post your online tuition requirement with a preferred budget in AED. Eligible tutors can submit offers. Compare options and choose the tutor that fits your learning needs.
         </p>
         <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
           <Link href="/post-tuition-request?country=AE" style={ctaPrimary}>Post Tuition Requirement <ArrowRight size={18} /></Link>
@@ -128,7 +132,7 @@ export default function UAELandingPage() {
       <section style={{ marginTop: "3rem" }}>
         <h2 style={{ color: "#021550" }}>Choose how you want to learn</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1rem", marginTop: "1rem" }}>
-          {learningModes.map((mode) => {
+          {availableLearningModes.map((mode) => {
             const Icon = mode.icon;
             return (
               <div key={mode.href} style={cardStyle}>
@@ -157,7 +161,7 @@ export default function UAELandingPage() {
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: "0.9rem" }}>
                 <Link href={`/ae/${c.slug}/tuition`} style={linkStyle}>{c.label} tuition</Link>
-                <Link href={`/ae/${c.slug}/home-tuition`} style={linkStyle}>{c.label} home tuition</Link>
+                {homeTuitionEnabled && <Link href={`/ae/${c.slug}/home-tuition`} style={linkStyle}>{c.label} home tuition</Link>}
                 <Link href={`/ae/${c.slug}/online-tuition`} style={linkStyle}>{c.label} online tuition</Link>
               </div>
             </div>

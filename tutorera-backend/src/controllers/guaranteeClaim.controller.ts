@@ -130,6 +130,15 @@ export const submitClaim = async (req: AuthRequest, res: Response): Promise<void
   });
 };
 
+export const getMyClaims = async (req: AuthRequest, res: Response): Promise<void> => {
+  const claims = await GuaranteeClaim.find({ student: req.user?._id })
+    .populate("booking", "amount studentTotal currency createdAt subject")
+    .populate("tutor", "name")
+    .sort("-createdAt");
+
+  res.status(200).json({ success: true, total: claims.length, claims });
+};
+
 // @desc    Get all guarantee claims (admin)
 // @route   GET /api/guarantee/claims
 // @access  Private (admin)

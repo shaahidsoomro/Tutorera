@@ -11,6 +11,7 @@ import { useCurrentTime } from "@/hooks/useCurrentTime";
 import axiosInstance from "@/lib/axios";
 import { SUPPORT_EMAIL,formatPKR } from "@/lib/site";
 import { showError,showSuccess } from "@/lib/toast";
+import { trackMarketplaceEvent } from "@/lib/analytics";
 import { tutorProfileHref } from "@/lib/tutor-directory";
 import { DashBid,DashBooking,DashRequest } from "@/types/dashboard";
 import { TutorProfile } from "@/types/tutor";
@@ -164,6 +165,12 @@ function BookingCard({ booking, onClaimSubmitted }: {
     setRebooking(true);
     try {
       const res = await axiosInstance.post(`/bookings/${booking._id}/book-again`);
+      trackMarketplaceEvent("repeat_booking_started", {
+        bookingId: booking._id,
+        teachingMode: booking.teachingMode,
+        currency: booking.currency,
+        subject: typeof booking.request === "object" ? booking.request.subject : undefined,
+      });
       const prefill = res.data?.prefill;
       if (prefill) {
         sessionStorage.setItem("tutorera_quick_request", JSON.stringify(prefill));

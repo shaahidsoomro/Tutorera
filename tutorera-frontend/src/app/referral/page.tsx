@@ -2,8 +2,10 @@
 import { UI_COLORS } from "@/lib/brand";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/axios";
+import { trackMarketplaceEvent } from "@/lib/analytics";
 import { showError } from "@/lib/toast";
 import { Check, Coins, Copy, Gift, Users, TrendingUp } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -68,13 +70,22 @@ export default function ReferralPage() {
   useEffect(() => {
     if (!user) return;
     api.get("/referral/my")
-      .then(res => { if (res.data?.referralCode) setData(res.data); })
+      .then(res => {
+        if (res.data?.referralCode) {
+          setData(res.data);
+          trackMarketplaceEvent("referral_dashboard_viewed", {
+            creditedCount: res.data.stats?.creditedCount,
+            pendingCount: res.data.stats?.pendingCount,
+          });
+        }
+      })
       .catch(err => { console.error(err); showError(err, "Failed to load referral data."); })
       .finally(() => setFetching(false));
   }, [user]);
 
-  const handleCopy = (text: string) => {
+  const handleCopy = (text: string, source: "code" | "link") => {
     navigator.clipboard.writeText(text);
+    trackMarketplaceEvent("referral_link_copied", { source });
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -94,7 +105,7 @@ export default function ReferralPage() {
     <div style={{ minHeight: "60vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1rem", padding: "3rem 1.5rem", textAlign: "center" }}>
       <Gift size={40} color="#94a3b8" />
       <p style={{ color: "#64748b", fontSize: "1rem" }}>Your referral dashboard is not available yet.<br />Make sure you&apos;re logged in, then try again.</p>
-      <a href="/login" style={{ padding: "0.65rem 1.5rem", background: "#0329b2", color: "white", borderRadius: "0.5rem", fontWeight: 700, textDecoration: "none", fontSize: "0.9rem" }}>Log in</a>
+      <Link href="/login" style={{ padding: "0.65rem 1.5rem", background: "#0329b2", color: "white", borderRadius: "0.5rem", fontWeight: 700, textDecoration: "none", fontSize: "0.9rem" }}>Log in</Link>
     </div>
   );
 
@@ -134,7 +145,7 @@ export default function ReferralPage() {
               <div style={{ flex: 1, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: "0.5rem", padding: "0.75rem 1rem", color: "white", fontWeight: 800, fontSize: "1.1rem", letterSpacing: "0.1em", textAlign: "center" }}>
                 {data.referralCode}
               </div>
-              <button onClick={() => handleCopy(data.referralCode)}
+              <button onClick={() => handleCopy(data.referralCode, "code")}
                 style={{ padding: "0.75rem 1.25rem", backgroundColor: copied ? "#16a34a" : C.accent, color: "white", border: "none", borderRadius: "0.5rem", fontWeight: 700, fontSize: "0.875rem", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.4rem", flexShrink: 0 }}>
                 {copied ? <><Check size={16} /> Copied!</> : <><Copy size={16} /> Copy Code</>}
               </button>
@@ -142,11 +153,12 @@ export default function ReferralPage() {
 
             <p style={{ color: "#6b7280", fontSize: "0.75rem", marginBottom: "0.75rem" }}>Or share your full referral link:</p>
             <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-              <button onClick={() => handleCopy(data.referralLink)}
+              <button onClick={() => handleCopy(data.referralLink, "link")}
                 style={{ flex: 1, padding: "0.6rem 1rem", backgroundColor: "rgba(255,255,255,0.1)", color: "white", border: "1px solid rgba(255,255,255,0.2)", borderRadius: "0.5rem", fontWeight: 600, fontSize: "0.8rem", cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {data.referralLink}
               </button>
               <a href={whatsappShare} target="_blank" rel="noopener noreferrer"
+                onClick={() => trackMarketplaceEvent("referral_shared", { channel: "whatsapp" })}
                 style={{ padding: "0.6rem 1.25rem", backgroundColor: "#16a34a", color: "white", borderRadius: "0.5rem", fontWeight: 700, fontSize: "0.8rem", textDecoration: "none", display: "flex", alignItems: "center", gap: "0.4rem", whiteSpace: "nowrap" }}>
                 📱 Share on WhatsApp
               </a>

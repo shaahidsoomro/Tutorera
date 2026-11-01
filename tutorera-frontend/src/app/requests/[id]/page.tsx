@@ -1,23 +1,30 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import api from "@/lib/axios";
 import { useAuth } from "@/context/AuthContext";
 import { showError, showSuccess } from "@/lib/toast";
+import { trackMarketplaceEvent } from "@/lib/analytics";
 import { ArrowLeft, Clock, Sparkles, ShieldCheck, BookOpen, MapPin, Calendar, DollarSign } from "lucide-react";
 import OfferComparisonModal from "@/components/marketplace/OfferComparisonModal";
+import TrustEvidencePanel from "@/components/marketplace/TrustEvidencePanel";
+import ProgressReportPanel from "@/components/Dashboard/ProgressReportPanel";
+import MatchScoreBadge from "@/components/marketplace/MatchScoreBadge";
 
 type Badge = { identityVerified?: boolean; credentialsVerified?: boolean; videoVerified?: boolean; experiencedTutor?: boolean; topPerformer?: boolean };
 type TutorProfile = { averageRating?: number; totalReviews?: number; experience?: number; degreeVerificationStatus?: string; cnicVerificationStatus?: string; demoVideoStatus?: string; policeVerificationStatus?: string; homeTuitionEligible?: boolean; videoIntro?: string; badges?: Badge };
 type Tutor = { _id: string; name: string; avatar?: string; city?: string; tutorProfile?: TutorProfile };
-type Bid = { _id: string; amount: number; currency?: string; pricingUnit?: string; status: string; message?: string; expiresAt?: string; matchScore?: number; shortlistedAt?: string; tutor: Tutor };
+type Bid = { _id: string; amount: number; currency?: string; pricingUnit?: string; status: string; message?: string; expiresAt?: string; matchScore?: number; matchTier?: "excellent" | "great" | "good" | "fair"; matchReasons?: string[]; matchScoreBreakdown?: Record<string, number | undefined>; shortlistedAt?: string; tutor: Tutor };
 type StudentReputation = { totalBookings: number; completedBookings: number; cancelledByStudent: number; paymentSuccessRate: number; averageRatingByTutors: number | null; totalRatingsByTutors: number; reliabilityTier: "excellent" | "good" | "fair" | "new"; reliabilityScore: number };
 type Request = {
-  _id: string; subject: string; description?: string; level?: string; city?: string; teachingMode?: string; schedule?: string; budget: number; currency?: string; pricingUnit?: string; status: string; expiresAt?: string; offersCount: number; isExpired: boolean; canExtend: boolean; canRepost: boolean; secondsRemaining: number; createdAt: string; bids?: Bid[]; student?: { name: string; avatar?: string }; studentReputation?: StudentReputation;
+  _id: string; subject: string; description?: string; learningObjectives?: string; learningNeed?: string; level?: string; city?: string; teachingMode?: string; schedule?: string; budget: number; currency?: string; pricingUnit?: string; status: string; expiresAt?: string; offersCount: number; isExpired: boolean; canExtend: boolean; canRepost: boolean; secondsRemaining: number; createdAt: string; bids?: Bid[]; student?: { name: string; avatar?: string }; studentReputation?: StudentReputation;
 };
+type TimelineEntry = { _id: string; fromStatus: string; toStatus: string; action: string; reason?: string; createdAt: string };
+type BookingReference = { _id: string; request?: { _id?: string } };
+type OfferSort = "best_match" | "lowest_rate" | "highest_rated" | "most_experienced" | "fastest_response" | "most_sessions";
 
 function statusColor(status: string) {
   const map: Record<string, string> = { open: "#059669", receiving_offers: "#0329b2", negotiating: "#d97706", awaiting_payment: "#7c3aed", booked: "#059669", completed: "#6b7280", closed: "#6b7280", cancelled: "#dc2626", expired: "#dc2626" };
@@ -55,7 +62,9 @@ function BidCard({ bid, requestId, onAction }: { bid: Bid; requestId: string; on
     setActing("accept");
     try {
       const res = await api.post(`/offers/${bid._id}/accept`);
+      trackMarketplaceEvent("tutor_offer_accepted", { requestId, offerId: bid._id, amount: bid.amount, currency: bid.currency });
       if (res.data?.checkoutUrl) {
+        trackMarketplaceEvent("checkout_started", { requestId, offerId: bid._id });
         window.location.assign(res.data.checkoutUrl);
       } else {
         showSuccess("Offer accepted! Proceed to payment.");
@@ -70,6 +79,7 @@ function BidCard({ bid, requestId, onAction }: { bid: Bid; requestId: string; on
     setActing("shortlist");
     try {
       await api.post(`/offers/${bid._id}/shortlist`);
+      trackMarketplaceEvent("offer_shortlisted", { requestId, offerId: bid._id });
       showSuccess("Offer shortlisted.");
       onAction();
     } catch (err) {
@@ -106,6 +116,19 @@ function BidCard({ bid, requestId, onAction }: { bid: Bid; requestId: string; on
           </div>
 
           <TrustBadges badges={profile?.badges} profile={profile} />
+          <TrustEvidencePanel profile={profile} />
+          {bid.matchScore !== undefined && (
+            <div style={{ marginTop: 8 }}>
+              <MatchScoreBadge
+                score={bid.matchScore}
+                tier={bid.matchTier}
+                reasons={bid.matchReasons}
+                breakdown={bid.matchScoreBreakdown}
+                compact
+                showBreakdown
+              />
+            </div>
+          )}
 
           {bid.message && <p style={{ margin: "10px 0 0", fontSize: 13, color: "#475569", lineHeight: 1.55 }}>{bid.message}</p>}
         </div>
@@ -139,19 +162,60 @@ export default function RequestDetailPage() {
   const [loading, setLoading] = useState(true);
   const [showComparison, setShowComparison] = useState(false);
   const [acting, setActing] = useState<string | null>(null);
+  const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
+  const [bookingId, setBookingId] = useState<string | null>(null);
+  const [offerSort, setOfferSort] = useState<OfferSort>("best_match");
+  const firstOfferTracked = useRef(false);
+  const progressViewedTracked = useRef(false);
+  const userRole = user?.role;
 
   const load = useCallback(async () => {
     try {
       const res = await api.get(`/requests/${id}`);
-      setRequest(res.data.request);
+      let loadedRequest = res.data.request as Request;
+      if (userRole === "student" || userRole === "parent") {
+        try {
+          const offersRes = await api.get(`/offers/request/${id}`, { params: { sort: offerSort } });
+          const offers = (offersRes.data.offers ?? []).map((offer: Bid & { profile?: TutorProfile }) => ({
+            ...offer,
+            tutor: { ...offer.tutor, tutorProfile: offer.profile || offer.tutor?.tutorProfile },
+          }));
+          if (offers.length > 0 && !firstOfferTracked.current) {
+            trackMarketplaceEvent("first_offer_received", { requestId: id, offerCount: offers.length });
+            firstOfferTracked.current = true;
+          }
+          loadedRequest = { ...loadedRequest, bids: offers };
+        } catch (err) {
+          showError(err, "Could not load offer matching details.");
+        }
+      }
+      setRequest(loadedRequest);
+      try {
+        const [timelineRes, bookingsRes] = await Promise.all([
+          api.get(`/requests/${id}/timeline`),
+          api.get("/bookings"),
+        ]);
+        setTimeline(timelineRes.data.timeline ?? []);
+        const booking = (bookingsRes.data.bookings ?? []).find((item: BookingReference) => item.request?._id === id);
+        setBookingId(booking?._id ?? null);
+      } catch (err) {
+        showError(err, "Could not load request activity and learning progress.");
+      }
     } catch (err) {
       showError(err, "Could not load request details.");
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, offerSort, userRole]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (bookingId && !progressViewedTracked.current) {
+      trackMarketplaceEvent("progress_report_viewed", { requestId: id, bookingId });
+      progressViewedTracked.current = true;
+    }
+  }, [bookingId, id]);
 
   const handleExtend = async () => {
     setActing("extend");
@@ -194,6 +258,21 @@ export default function RequestDetailPage() {
   const activeBids = (request.bids || []).filter(b => ["pending", "submitted", "viewed", "countered"].includes(b.status));
   const otherBids = (request.bids || []).filter(b => !["pending", "submitted", "viewed", "countered"].includes(b.status));
   const isOwner = user?.role === "student" || user?.role === "parent";
+  const journeySteps = [
+    { key: "request", label: "Request posted", done: true },
+    { key: "offers", label: "Compare offers", done: ["negotiating", "awaiting_payment", "booked", "in_progress", "completed"].includes(request.status) || request.offersCount > 0 },
+    { key: "booking", label: "Book a tutor", done: ["awaiting_payment", "booked", "in_progress", "completed"].includes(request.status) },
+    { key: "learning", label: "Start learning", done: ["in_progress", "completed"].includes(request.status) },
+  ];
+  const nextAction = request.status === "completed"
+    ? { title: "Learning engagement completed", detail: "Review your tutor and continue from your learning history.", tone: "#059669" }
+    : request.status === "booked" || request.status === "in_progress"
+      ? { title: "Continue learning", detail: "Review your booking and keep your learning progress up to date.", tone: "#0329b2" }
+      : request.status === "awaiting_payment"
+        ? { title: "Complete payment", detail: "Your tutor has been selected. Finish payment to confirm the booking.", tone: "#7c3aed" }
+        : request.offersCount > 0
+          ? { title: "Compare tutor offers", detail: "Review qualifications, trust evidence, availability, and price before choosing.", tone: "#0329b2" }
+          : { title: "Waiting for tutor offers", detail: "Matched tutors have been notified. We will show offers here as they arrive.", tone: "#d97706" };
 
   return (
     <main style={{ padding: "2rem 1.25rem 5rem", maxWidth: 860, margin: "auto" }}>
@@ -232,7 +311,7 @@ export default function RequestDetailPage() {
             {request.offersCount} offer{request.offersCount !== 1 ? "s" : ""} received
           </span>
           {activeBids.length > 1 && isOwner && (
-            <button onClick={() => setShowComparison(true)} style={{ padding: "7px 14px", background: "#0329b2", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}>
+            <button onClick={() => { trackMarketplaceEvent("offer_comparison_opened", { requestId: id, offerCount: request.bids?.length ?? 0 }); setShowComparison(true); }} style={{ padding: "7px 14px", background: "#0329b2", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}>
               <Sparkles size={13} /> Compare Offers
             </button>
           )}
@@ -253,6 +332,61 @@ export default function RequestDetailPage() {
           )}
         </div>
       </div>
+
+      {isOwner && (request.learningObjectives || request.learningNeed) && (
+        <section style={{ background: "#fff", borderRadius: 16, border: "1.5px solid #dbeafe", padding: "1.25rem", marginBottom: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+            <BookOpen size={18} color="#0329b2" />
+            <h2 style={{ margin: 0, color: "#021550", fontSize: 17, fontWeight: 800 }}>Learning goal</h2>
+          </div>
+          {request.learningNeed && <p style={{ margin: "0 0 6px", color: "#0329b2", fontSize: 12, fontWeight: 800, textTransform: "capitalize" }}>{request.learningNeed.replace(/_/g, " ")}</p>}
+          {request.learningObjectives && <p style={{ margin: 0, color: "#475569", fontSize: 14, lineHeight: 1.6 }}>{request.learningObjectives}</p>}
+          <p style={{ margin: "10px 0 0", color: "#64748b", fontSize: 12, lineHeight: 1.5 }}>
+            This goal is shared with your selected tutor and can be revisited through session progress reports.
+          </p>
+        </section>
+      )}
+
+      {isOwner && bookingId && (
+        <section style={{ background: "#fff", borderRadius: 16, border: "1.5px solid #dbeafe", padding: "1.25rem", marginBottom: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+            <BookOpen size={18} color="#0329b2" />
+            <h2 style={{ margin: 0, color: "#021550", fontSize: 17, fontWeight: 800 }}>Learning progress</h2>
+          </div>
+          <p style={{ margin: "0 0 8px", color: "#64748b", fontSize: 12, lineHeight: 1.5 }}>
+            Session reports connect your tutor&apos;s work back to the learning goal above.
+          </p>
+          <ProgressReportPanel bookingId={bookingId} role="student" />
+        </section>
+      )}
+
+      {isOwner && (
+        <section style={{ background: "#fff", borderRadius: 16, border: "1.5px solid #e2e8f0", padding: "1.25rem", marginBottom: 20 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
+            <div>
+              <p style={{ margin: 0, color: nextAction.tone, fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase" }}>Your next step</p>
+              <h2 style={{ margin: "4px 0 4px", color: "#021550", fontSize: 18, fontWeight: 800 }}>{nextAction.title}</h2>
+              <p style={{ margin: 0, color: "#64748b", fontSize: 13, lineHeight: 1.5 }}>{nextAction.detail}</p>
+            </div>
+            {request.offersCount > 0 && ["open", "published", "receiving_offers", "negotiating"].includes(request.status) && (
+              <button onClick={() => { trackMarketplaceEvent("offer_comparison_opened", { requestId: id, offerCount: request.bids?.length ?? 0 }); setShowComparison(true); }} style={{ padding: "8px 14px", background: "#0329b2", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                Open offer comparison
+              </button>
+            )}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 8, marginTop: 18 }}>
+            {journeySteps.map((step, index) => (
+              <div key={step.key} style={{ position: "relative", paddingTop: 26, color: step.done ? "#0329b2" : "#94a3b8", fontSize: 11, fontWeight: 700 }}>
+                <span style={{ position: "absolute", top: 0, left: 0, width: 20, height: 20, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", background: step.done ? "#dbeafe" : "#f1f5f9", color: step.done ? "#0329b2" : "#94a3b8" }}>
+                  {step.done ? "✓" : index + 1}
+                </span>
+                {index < journeySteps.length - 1 && <span style={{ position: "absolute", top: 9, left: 24, right: 0, height: 2, background: journeySteps[index + 1].done ? "#bfdbfe" : "#e2e8f0" }} />}
+                <span style={{ position: "relative" }}>{step.label}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Student reliability — visible to tutors only */}
       {!isOwner && request.studentReputation && (() => {
@@ -288,7 +422,24 @@ export default function RequestDetailPage() {
         <>
           {activeBids.length > 0 ? (
             <section>
-              <h2 style={{ fontSize: 16, fontWeight: 700, color: "#021550", margin: "0 0 12px" }}>Active Offers ({activeBids.length})</h2>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+                <h2 style={{ fontSize: 16, fontWeight: 700, color: "#021550", margin: 0 }}>Active Offers ({activeBids.length})</h2>
+                <label style={{ display: "inline-flex", alignItems: "center", gap: 7, color: "#64748b", fontSize: 12, fontWeight: 700 }}>
+                  Prioritize
+                  <select
+                    value={offerSort}
+                    onChange={(event) => setOfferSort(event.target.value as OfferSort)}
+                    style={{ padding: "7px 9px", border: "1px solid #cbd5e1", borderRadius: 8, color: "#334155", background: "#fff", fontSize: 12 }}
+                  >
+                    <option value="best_match">Best match</option>
+                    <option value="lowest_rate">Lowest rate</option>
+                    <option value="highest_rated">Highest rated</option>
+                    <option value="most_experienced">Most experienced</option>
+                    <option value="fastest_response">Fastest response</option>
+                    <option value="most_sessions">Most completed sessions</option>
+                  </select>
+                </label>
+              </div>
               {activeBids.map(bid => <BidCard key={bid._id} bid={bid} requestId={id} onAction={load} />)}
             </section>
           ) : (
@@ -308,12 +459,33 @@ export default function RequestDetailPage() {
         </>
       )}
 
-      {/* Timeline link */}
-      <div style={{ marginTop: 24, textAlign: "center" }}>
-        <Link href={`/requests/${id}/timeline`} style={{ fontSize: 13, color: "#64748b", fontWeight: 600, textDecoration: "underline" }}>
-          View full request timeline →
-        </Link>
-      </div>
+      {isOwner && (
+        <section style={{ marginTop: 24, background: "#fff", borderRadius: 16, border: "1.5px solid #e2e8f0", padding: "1.25rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 12 }}>
+            <div>
+              <h2 style={{ margin: 0, color: "#021550", fontSize: 16, fontWeight: 800 }}>Request activity</h2>
+              <p style={{ margin: "3px 0 0", color: "#64748b", fontSize: 12 }}>A single view of how your request is progressing.</p>
+            </div>
+            <Link href={`/requests/${id}/timeline`} style={{ fontSize: 12, color: "#0329b2", fontWeight: 700, textDecoration: "none" }}>View details →</Link>
+          </div>
+          {timeline.length > 0 ? (
+            <div style={{ display: "grid", gap: 10 }}>
+              {timeline.slice(-5).reverse().map((entry) => (
+                <div key={entry._id} style={{ display: "flex", gap: 10, alignItems: "flex-start", paddingBottom: 10, borderBottom: "1px solid #f1f5f9" }}>
+                  <span style={{ width: 8, height: 8, marginTop: 5, borderRadius: "50%", background: "#0329b2", flexShrink: 0 }} />
+                  <div>
+                    <p style={{ margin: 0, color: "#334155", fontSize: 13, fontWeight: 700 }}>{entry.action.replace(/_/g, " ")}</p>
+                    <p style={{ margin: "2px 0 0", color: "#64748b", fontSize: 12 }}>{entry.fromStatus.replace(/_/g, " ")} → {entry.toStatus.replace(/_/g, " ")} · {new Date(entry.createdAt).toLocaleString()}</p>
+                    {entry.reason && <p style={{ margin: "3px 0 0", color: "#94a3b8", fontSize: 12 }}>{entry.reason}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p style={{ margin: 0, color: "#94a3b8", fontSize: 13 }}>Activity will appear here as your request progresses.</p>
+          )}
+        </section>
+      )}
 
       {showComparison && request.bids && (
         <OfferComparisonModal
@@ -325,7 +497,7 @@ export default function RequestDetailPage() {
           pricingUnit={request.pricingUnit || "hr"}
           onClose={() => setShowComparison(false)}
           onAcceptOffer={async () => { setShowComparison(false); await load(); }}
-          onCounterOffer={() => setShowComparison(false)}
+          onCounterOffer={(offerId) => { trackMarketplaceEvent("offer_counter_sent", { requestId: id, offerId }); setShowComparison(false); }}
         />
       )}
     </main>

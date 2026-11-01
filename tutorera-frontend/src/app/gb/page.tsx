@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, GraduationCap, Home, Laptop, MapPin, ShieldCheck } from "lucide-react";
 import { SITE_URL } from "@/lib/site";
+import { getMarketByRoute } from "@/lib/markets";
 
 const GB_URL = `${SITE_URL}/gb`;
 
@@ -24,12 +25,12 @@ const faq = [
     a: "Students or parents post a tuition requirement — subject, qualification (GCSE, A-Level, 11+, IB, Common Entrance), teaching mode, city, schedule and preferred budget in GBP. Eligible tutors can submit offers, so the student or parent can compare options before choosing a tutor. Exact addresses and private contact details are not shown before a confirmed booking.",
   },
   {
-    q: "Can I find a home tutor in London, Manchester or other UK cities?",
-    a: "Yes. Post a home-tuition requirement for your city and postcode area. Eligible home-tuition tutors matching your subject, qualification level and schedule can send offers you can compare before choosing.",
+    q: "Which tuition modes are currently available in the United Kingdom?",
+    a: "Online tuition matching is currently available for UK learners. Home tuition will be shown only when the UK market enables local delivery and safety requirements.",
   },
   {
     q: "Does TUTORERA support GCSE, A-Level, 11+ and IB tuition?",
-    a: "Yes. Online and home tuition matching considers subject, qualification (GCSE, A-Level, 11+, IB, Common Entrance), language and budget compatibility. Select your qualification when posting a requirement.",
+    a: "Yes. Online tuition matching considers subject, qualification (GCSE, A-Level, 11+, IB, Common Entrance), language and budget compatibility. Select your qualification when posting a requirement.",
   },
   {
     q: "Who sets the tuition budget?",
@@ -46,18 +47,20 @@ const faq = [
 ];
 
 export const metadata: Metadata = {
-  title: { absolute: "Tuition in UK — Home & Online Tutors | TUTORERA" },
+  title: { absolute: "Online Tuition in the UK | TUTORERA" },
   description:
-    "Post a tuition requirement in the UK for home or online tuition, set your preferred budget in GBP, and compare offers from eligible tutors. London, Manchester, Birmingham and nationwide.",
+    "Post an online tuition requirement in the UK, set your preferred budget in GBP, and compare offers from eligible tutors. London, Manchester, Birmingham and nationwide.",
   alternates: { canonical: "/gb" },
   openGraph: {
-    title: "Tuition in UK — Home & Online Tutors | TUTORERA",
-    description: "Student-first tuition matching for the UK. Post a requirement, receive tutor offers, compare, and choose.",
+    title: "Online Tuition in the UK | TUTORERA",
+    description: "Student-first online tuition matching for the UK. Post a requirement, receive tutor offers, compare, and choose.",
     url: GB_URL,
   },
 };
 
 export default function GBLandingPage() {
+  const homeTuitionEnabled = getMarketByRoute("uk")?.homeTuitionEnabled ?? false;
+  const availableLearningModes = learningModes.filter((mode) => homeTuitionEnabled || mode.label !== "Home Tuition");
   const schema = {
     "@context": "https://schema.org",
     "@graph": [
@@ -65,7 +68,7 @@ export default function GBLandingPage() {
         "@type": "WebPage",
         "@id": `${GB_URL}#webpage`,
         name: "Tuition in United Kingdom",
-        description: "Post a tuition requirement in the UK for home or online tuition and compare eligible tutor offers.",
+        description: "Post an online tuition requirement in the UK and compare eligible tutor offers.",
         url: GB_URL,
         isPartOf: { "@id": `${SITE_URL}/#website` },
         breadcrumb: { "@id": `${GB_URL}#breadcrumb` },
@@ -107,7 +110,7 @@ export default function GBLandingPage() {
           Tuition in UK — Home &amp; Online Tutors
         </h1>
         <p style={{ fontSize: "1.1rem", lineHeight: 1.7, color: "#475569", marginBottom: "1.5rem" }}>
-          Post your tuition requirement with a preferred budget in GBP for home or online tuition. Eligible tutors can submit offers. Compare options and choose the tutor that fits your learning needs.
+          Post your online tuition requirement with a preferred budget in GBP. Eligible tutors can submit offers. Compare options and choose the tutor that fits your learning needs.
         </p>
         <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
           <Link href="/post-tuition-request?country=GB" style={ctaPrimary}>Post Tuition Requirement <ArrowRight size={18} /></Link>
@@ -123,7 +126,7 @@ export default function GBLandingPage() {
       <section style={{ marginTop: "3rem" }}>
         <h2 style={{ color: "#021550" }}>Choose how you want to learn</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1rem", marginTop: "1rem" }}>
-          {learningModes.map((mode) => {
+          {availableLearningModes.map((mode) => {
             const Icon = mode.icon;
             return (
               <div key={mode.href} style={cardStyle}>
@@ -151,7 +154,7 @@ export default function GBLandingPage() {
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: "0.9rem" }}>
                 <Link href={`/gb/${c.slug}/tuition`} style={linkStyle}>{c.label} tuition</Link>
-                <Link href={`/gb/${c.slug}/home-tuition`} style={linkStyle}>{c.label} home tuition</Link>
+                {homeTuitionEnabled && <Link href={`/gb/${c.slug}/home-tuition`} style={linkStyle}>{c.label} home tuition</Link>}
                 <Link href={`/gb/${c.slug}/online-tuition`} style={linkStyle}>{c.label} online tuition</Link>
               </div>
             </div>

@@ -22,6 +22,7 @@ import WhatsAppChatButton from "@/components/WhatsAppChatButton";
 import RateRangeHint from "@/components/marketplace/RateRangeHint";
 import { Country } from "@/lib/location";
 import { useGeoData, convertToPKR } from "@/lib/geoService";
+import { trackMarketplaceEvent } from "@/lib/analytics";
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const CONTACT_INFO_REGEX = /(\+?\d[\d\s\-().]{8,}\d)|([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})|(whatsapp|wa\.me|wechat|telegram|viber|skype)/i;
@@ -51,6 +52,14 @@ export default function RequestWizard({
   const [parsingNLP, setParsingNLP] = useState(false);
   const [linkedLearners, setLinkedLearners] = useState<{ _id: string; name: string; level?: string }[]>([]);
   const stepHeadingRef = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    trackMarketplaceEvent("request_wizard_started", {
+      initialMode,
+      isModal,
+      countryCode: prefill.countryCode,
+    });
+  }, [initialMode, isModal, prefill.countryCode]);
 
   const handleNLPParse = async () => {
     if (!freeText.trim()) return;
@@ -204,10 +213,12 @@ export default function RequestWizard({
       if (!form.subject) return showError("Please select a subject.");
       if (!geo.subjects.includes(form.subject)) return showError("Please select a subject from the current catalogue.");
       if (!form.level) return showError("Please select your academic level / class.");
+      trackMarketplaceEvent("request_subject_selected", { subject: form.subject, level: form.level });
     }
     if (step === 2) {
       if (!form.teachingMode) return showError("Please select your preferred teaching mode.");
       if (form.teachingMode !== "online" && !form.city) return showError("Please select your city.");
+      trackMarketplaceEvent("request_mode_selected", { teachingMode: form.teachingMode, countryCode: form.countryCode });
     }
     if (step === 3) {
       if (!form.schedule && form.preferredDays.length === 0) {
@@ -222,6 +233,7 @@ export default function RequestWizard({
       if (form.maximumBudget && Number(form.maximumBudget) < Number(form.budget)) {
         return showError("Private max budget cannot be lower than your proposed rate.");
       }
+      trackMarketplaceEvent("request_budget_entered", { budget: Number(form.budget), currency: form.currency, pricingUnit: form.pricingUnit });
     }
     setStep((s) => Math.min(s + 1, 6));
   };
@@ -276,6 +288,12 @@ export default function RequestWizard({
       }
 
       await api.post("/requests", payload);
+      trackMarketplaceEvent("request_published", {
+        countryCode: form.countryCode,
+        teachingMode: form.teachingMode,
+        currency: form.currency,
+        budget: Number(form.budget),
+      });
       setIsPublished(true);
       showSuccess("Tuition request published successfully!");
       if (onSuccess) onSuccess();
