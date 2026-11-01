@@ -248,6 +248,24 @@ export const downloadEarningsPDF = async (req: AuthRequest, res: Response): Prom
 // @desc    Tutor requests payout for a completed booking
 // @route   POST /api/earnings/payouts/:bookingId/request
 // @access  Private (tutor)
+// @desc    List bookings eligible for payout request
+// @route   GET /api/earnings/payouts/eligible
+// @access  Private (tutor)
+export const getEligiblePayouts = async (req: AuthRequest, res: Response): Promise<void> => {
+  const tutorId = req.user?._id;
+  const eligible = await Booking.find({
+    tutor: tutorId, status: "completed", paymentStatus: "confirmed",
+    payoutStatus: "pending", payoutRequestedAt: { $exists: false },
+  })
+    .populate("request", "subject")
+    .select("_id tutorPayout tutorNet currency completedAt request student")
+    .populate("student", "name")
+    .sort("-completedAt")
+    .limit(50)
+    .lean();
+  res.status(200).json({ success: true, bookings: eligible });
+};
+
 export const requestPayout = async (req: AuthRequest, res: Response): Promise<void> => {
   const { bookingId } = req.params;
   const tutorId = req.user?._id;

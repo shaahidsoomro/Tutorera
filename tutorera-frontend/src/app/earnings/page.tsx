@@ -132,6 +132,92 @@ function EmptyState({ isTutor }: { isTutor: boolean }) {
   );
 }
 
+// ── Payout Request Panel ──────────────────────────────────────────────────────
+interface EligibleBooking { _id: string; tutorNet?: number; tutorPayout?: number; currency?: string; completedAt?: string; request?: { subject?: string }; student?: { name?: string } }
+
+function PayoutRequestPanel() {
+  const [open, setOpen] = useState(false);
+  const [bookings, setBookings] = useState<EligibleBooking[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [requesting, setRequesting] = useState<string | null>(null);
+  const [requested, setRequested] = useState<Set<string>>(new Set());
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get("/earnings/payouts/eligible");
+      setBookings(res.data.bookings ?? []);
+    } catch { /* ignore */ } finally { setLoading(false); }
+  };
+
+  const handleOpen = () => { setOpen(true); load(); };
+
+  const handleRequest = async (bookingId: string) => {
+    setRequesting(bookingId);
+    try {
+      await api.post(`/earnings/payouts/${bookingId}/request`);
+      setRequested(prev => new Set(prev).add(bookingId));
+    } catch (e: any) {
+      alert(e?.response?.data?.message || "Request failed. Please try again.");
+    } finally { setRequesting(null); }
+  };
+
+  return (
+    <div>
+      <button type="button" onClick={handleOpen}
+        style={{ padding: "0.4rem 1rem", background: "#0329b2", color: "#fff", border: "none", borderRadius: 8, fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>
+        💳 Request Payout
+      </button>
+      {open && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
+          <div style={{ background: "#fff", borderRadius: 16, padding: "1.5rem", maxWidth: 560, width: "100%", maxHeight: "80vh", overflowY: "auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: "#021550" }}>💳 Request Payout</h3>
+              <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", fontSize: "1.25rem", cursor: "pointer", color: "#6b7280" }}>✕</button>
+            </div>
+            <p style={{ margin: "0 0 1rem", fontSize: "0.8rem", color: "#64748b" }}>
+              Select completed sessions to request payment. Finance will process within 3–5 business days.
+            </p>
+            {loading ? (
+              <p style={{ color: "#64748b", fontSize: "0.85rem" }}>Loading eligible sessions…</p>
+            ) : bookings.length === 0 ? (
+              <p style={{ color: "#64748b", fontSize: "0.85rem" }}>No eligible sessions found. Payouts are available for completed, confirmed-payment bookings.</p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+                {bookings.map(b => {
+                  const done = requested.has(b._id);
+                  const amount = b.tutorNet ?? b.tutorPayout ?? 0;
+                  const currency = b.currency || "PKR";
+                  return (
+                    <div key={b._id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.75rem 1rem", background: done ? "#f0fdf4" : "#f8fafc", border: `1px solid ${done ? "#bbf7d0" : "#e2e8f0"}`, borderRadius: 10 }}>
+                      <div>
+                        <p style={{ margin: "0 0 2px", fontSize: "0.85rem", fontWeight: 700, color: "#021550" }}>
+                          {b.request?.subject || "Session"} — {b.student?.name || "Student"}
+                        </p>
+                        <p style={{ margin: 0, fontSize: "0.75rem", color: "#64748b" }}>
+                          {currency} {amount.toLocaleString()} net · {b.completedAt ? new Date(b.completedAt).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" }) : ""}
+                        </p>
+                      </div>
+                      {done ? (
+                        <span style={{ fontSize: "0.8rem", color: "#16a34a", fontWeight: 700 }}>✓ Requested</span>
+                      ) : (
+                        <button onClick={() => handleRequest(b._id)} disabled={requesting === b._id}
+                          style={{ padding: "0.4rem 0.875rem", background: requesting === b._id ? "#e5e7eb" : "#0329b2", color: requesting === b._id ? "#9ca3af" : "#fff", border: "none", borderRadius: 7, fontSize: "0.8rem", fontWeight: 700, cursor: requesting === b._id ? "not-allowed" : "pointer" }}>
+                          {requesting === b._id ? "…" : "Request"}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function EarningsPage() {
   const { user }         = useAuth();
@@ -254,9 +340,7 @@ export default function EarningsPage() {
                     </p>
                   </div>
                 </div>
-                <span style={{ fontSize: '0.72rem', fontWeight: '700', color: '#d97706', backgroundColor: 'white', padding: '0.35rem 0.85rem', borderRadius: '999px', border: '1px solid #fde68a' }}>
-                  Pending Release
-                </span>
+                <PayoutRequestPanel />
               </div>
             )}
 
