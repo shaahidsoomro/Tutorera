@@ -4,6 +4,7 @@ import { UI_COLORS } from "@/lib/brand";
 // components/dashboard/TutorDashboard.tsx
 import s from "@/app/dashboard/dashboard.module.css";
 import BookingMeetingPanel from "./BookingMeetingPanel";
+import ProgressReportPanel from "./ProgressReportPanel";
 import MatchScoreBadge from "@/components/marketplace/MatchScoreBadge";
 import { useCurrentTime } from "@/hooks/useCurrentTime";
 import axiosInstance from "@/lib/axios";
@@ -222,6 +223,7 @@ function BookingCard({ booking }: { booking: DashBooking }) {
         <span className={s.infoChip}>{booking.teachingMode}</span>
       </div>
       <BookingMeetingPanel bookingId={booking._id} role="tutor" teachingMode={booking.teachingMode} status={booking.status} paymentStatus={booking.paymentStatus} />
+      <ProgressReportPanel bookingId={booking._id} role="tutor" />
       <details style={{marginTop:"0.75rem",background:"#f8fafc",padding:"0.75rem",borderRadius:"0.5rem"}}><summary style={{fontWeight:700,cursor:"pointer"}}>Booking & fee summary</summary><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:8,marginTop:10,fontSize:12}}><span>Subject: <b>{typeof booking.request==="object"?booking.request.subject:"Tutoring session"}</b></span><span>Mode: <b>{booking.teachingMode}</b></span><span>Rate: <b>PKR {(booking.finalAgreedRate||booking.amount).toLocaleString()}/{booking.pricingUnit||"hour"}</b></span><span>Sessions: <b>{booking.sessionCount||1}</b></span><span>Subtotal: <b>PKR {(booking.subtotal||booking.amount).toLocaleString()}</b></span><span>Tutor fee: <b>PKR {(booking.tutorFee||0).toLocaleString()}</b></span><span>Tax: <b>PKR {(booking.tax||0).toLocaleString()}</b></span><span>Tutor net: <b>PKR {(booking.tutorNet||booking.amount).toLocaleString()}</b></span><span>Payment: <b>{booking.paymentStatus}</b></span></div><p style={{fontSize:11,color:"#64748b",marginTop:8}}>The stored cancellation and refund policy applies to this booking.</p></details>
       <p className={s.cardMeta} style={{ marginTop: 8 }}>Booked {timeAgo(booking.createdAt)}</p>
     </div>

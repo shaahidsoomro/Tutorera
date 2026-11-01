@@ -20,6 +20,7 @@ import { useRouter } from "next/navigation";
 import { useCallback,useEffect,useState } from "react";
 import PostRequestModal from "./PostRequestModal";
 import RatingModal from "./RatingModal";
+import ProgressReportPanel from "./ProgressReportPanel";
 
 const C = UI_COLORS;
 
@@ -351,6 +352,7 @@ function BookingCard({ booking, onClaimSubmitted }: {
       )}
 
       <BookingMeetingPanel bookingId={booking._id} role="student" teachingMode={booking.teachingMode} status={booking.status} paymentStatus={booking.paymentStatus} />
+      <ProgressReportPanel bookingId={booking._id} role="student" />
       <details style={{marginBottom:"0.75rem",background:"#f8fafc",padding:"0.75rem",borderRadius:"0.5rem"}}><summary style={{fontWeight:700,cursor:"pointer"}}>Booking & fee summary</summary><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:8,marginTop:10,fontSize:12}}><span>Subject: <b>{typeof booking.request==="object"?booking.request.subject:"Tutoring session"}</b></span><span>Mode: <b>{booking.teachingMode || "online"}</b></span><span>Rate: <b>PKR {((booking.finalAgreedRate || booking.amount || booking.totalAmount || 0)).toLocaleString()}/{booking.pricingUnit||"hour"}</b></span><span>Sessions: <b>{booking.sessionCount||1}</b></span><span>Subtotal: <b>PKR {((booking.subtotal || booking.amount || booking.totalAmount || 0)).toLocaleString()}</b></span><span>Student fee: <b>PKR {(booking.studentFee||0).toLocaleString()}</b></span><span>Total: <b>PKR {((booking.studentTotal || booking.amount || booking.totalAmount || 0)).toLocaleString()}</b></span><span>Payment: <b>{booking.paymentStatus || "pending"}</b></span></div><p style={{fontSize:11,color:"#64748b",marginTop:8}}>The cancellation and refund policy applies to this booking.</p></details>
 
       {/* Claim submitted confirmation */}
@@ -1245,6 +1247,7 @@ const fetchRequests = useCallback(async () => {
           ❤️ Saved Tutors {favourites.length > 0 && `(${favourites.length})`}
         </button>
         <Link href="/offers" className={s.tab}>Tutor Offers & Negotiations</Link>
+        <Link href="/referral" className={s.tab}>🎁 Referral & Rewards</Link>
         <Link href="/chat" className={s.tab}>Messages</Link>
         <Link href="/transactions" className={s.tab}>Payments</Link>
         <Link href="/notifications" className={s.tab}>Notifications</Link>
