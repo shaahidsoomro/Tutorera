@@ -17,10 +17,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback,useEffect,useState } from "react";
 import AvailabilityManager from "./AvailabilityManager";
+import ProfileCompletenessCard from "./ProfileCompletenessCard";
 import SessionPackagesEditor from "./SessionPackagesEditor";
 import CommissionCalculator from "./CommissionCalculator";
 import PlaceBidModal from "./PlaceBidModal";
 import RatingModal from "./RatingModal";
+import RescheduleModal from "./RescheduleModal";
 
 const C = UI_COLORS;
 
@@ -124,6 +126,11 @@ function BookingCard({ booking }: { booking: DashBooking }) {
   const [creatingChat, setCreatingChat] = useState(false);
   const [showStudentRatingModal, setShowStudentRatingModal] = useState(false);
   const [studentRated, setStudentRated] = useState(false);
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [rescheduleProposal, setRescheduleProposal] = useState<{ proposedBy: string; proposedByRole: string; proposedStartAt: string; proposedEndAt: string; note?: string } | undefined>(
+    (booking as unknown as { rescheduleProposal?: { proposedBy: string; proposedByRole: string; proposedStartAt: string; proposedEndAt: string; note?: string } }).rescheduleProposal
+  );
+  const [rescheduleAction, setRescheduleAction] = useState<"idle" | "accepting" | "rejecting">("idle");
   const router = useRouter();
 
   const handleRateStudent = async (rating: number, comment: string) => {
@@ -191,7 +198,15 @@ function BookingCard({ booking }: { booking: DashBooking }) {
         {creatingChat ? "Opening..." : "💬 Chat"}
       </button>
 
-      {/* ── NEW: Need Help button ── */}
+      {/* ── Reschedule — upcoming confirmed bookings ── */}
+        {booking.status === "upcoming" && booking.paymentStatus === "confirmed" && !rescheduleProposal && (
+          <button type="button" onClick={() => setShowRescheduleModal(true)}
+            style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", padding: "0.5rem 1rem", backgroundColor: "#f0fdf4", color: "#15803d", borderRadius: "0.5rem", border: "1px solid #bbf7d0", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer", marginBottom: "0.5rem" }}>
+            📅 Reschedule
+          </button>
+        )}
+
+      {/* ── Need Help button ── */}
         <button type="button" className={s.btnWarning} style={{ marginBottom: '0.5rem' }} onClick={() => router.push(`/support?bookingId=${booking._id}`)}>
           🆘 Need Help?
         </button>
@@ -228,6 +243,56 @@ function BookingCard({ booking }: { booking: DashBooking }) {
       <details style={{marginTop:"0.75rem",background:"#f8fafc",padding:"0.75rem",borderRadius:"0.5rem"}}><summary style={{fontWeight:700,cursor:"pointer"}}>Booking & fee summary</summary><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:8,marginTop:10,fontSize:12}}><span>Subject: <b>{typeof booking.request==="object"?booking.request.subject:"Tutoring session"}</b></span><span>Mode: <b>{booking.teachingMode}</b></span><span>Rate: <b>PKR {(booking.finalAgreedRate||booking.amount).toLocaleString()}/{booking.pricingUnit||"hour"}</b></span><span>Sessions: <b>{booking.sessionCount||1}</b></span><span>Subtotal: <b>PKR {(booking.subtotal||booking.amount).toLocaleString()}</b></span><span>Tutor fee: <b>PKR {(booking.tutorFee||0).toLocaleString()}</b></span><span>Tax: <b>PKR {(booking.tax||0).toLocaleString()}</b></span><span>Tutor net: <b>PKR {(booking.tutorNet||booking.amount).toLocaleString()}</b></span><span>Payment: <b>{booking.paymentStatus}</b></span></div><p style={{fontSize:11,color:"#64748b",marginTop:8}}>The stored cancellation and refund policy applies to this booking.</p></details>
       <p className={s.cardMeta} style={{ marginTop: 8 }}>Booked {timeAgo(booking.createdAt)}</p>
     </div>
+
+    {/* Reschedule proposal banner — shown when student proposed a time change */}
+      {rescheduleProposal && rescheduleProposal.proposedByRole === "student" && (
+        <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: "0.75rem", padding: "1rem", marginBottom: "0.75rem" }}>
+          <p style={{ margin: "0 0 0.25rem", fontWeight: 700, fontSize: "0.85rem", color: "#1e40af" }}>📅 Reschedule Proposed by Student</p>
+          <p style={{ margin: "0 0 0.5rem", fontSize: "0.8rem", color: "#1e3a8a" }}>
+            New time: <strong>{new Date(rescheduleProposal.proposedStartAt).toLocaleString()}</strong>
+            {" → "}<strong>{new Date(rescheduleProposal.proposedEndAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</strong>
+          </p>
+          {rescheduleProposal.note && <p style={{ margin: "0 0 0.5rem", fontSize: "0.75rem", color: "#374151" }}>Note: {rescheduleProposal.note}</p>}
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <button type="button" disabled={rescheduleAction !== "idle"}
+              onClick={async () => {
+                setRescheduleAction("accepting");
+                try {
+                  await axiosInstance.post(`/bookings/${booking._id}/reschedule/accept`);
+                  setRescheduleProposal(undefined);
+                } catch { /* handled silently */ } finally { setRescheduleAction("idle"); }
+              }}
+              style={{ padding: "0.4rem 1rem", background: "#1d4ed8", color: "#fff", border: "none", borderRadius: "0.5rem", fontSize: "0.8rem", fontWeight: 700, cursor: rescheduleAction !== "idle" ? "wait" : "pointer" }}>
+              {rescheduleAction === "accepting" ? "Accepting…" : "✓ Accept"}
+            </button>
+            <button type="button" disabled={rescheduleAction !== "idle"}
+              onClick={async () => {
+                setRescheduleAction("rejecting");
+                try {
+                  await axiosInstance.post(`/bookings/${booking._id}/reschedule/reject`);
+                  setRescheduleProposal(undefined);
+                } catch { /* handled silently */ } finally { setRescheduleAction("idle"); }
+              }}
+              style={{ padding: "0.4rem 1rem", background: "#fff", color: "#374151", border: "1px solid #d1d5db", borderRadius: "0.5rem", fontSize: "0.8rem", fontWeight: 600, cursor: rescheduleAction !== "idle" ? "wait" : "pointer" }}>
+              {rescheduleAction === "rejecting" ? "Declining…" : "✗ Decline"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Reschedule modal */}
+      {showRescheduleModal && (
+        <RescheduleModal
+          bookingId={booking._id}
+          currentSchedule={booking.schedule ?? ""}
+          onClose={() => setShowRescheduleModal(false)}
+          onSuccess={(updated) => {
+            const b = updated as { rescheduleProposal?: typeof rescheduleProposal };
+            setRescheduleProposal(b?.rescheduleProposal);
+            setShowRescheduleModal(false);
+          }}
+        />
+      )}
 
     {/* Rating modal rendered OUTSIDE the card div */}
       {showStudentRatingModal && (
@@ -868,6 +933,8 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
     ⭐ My Reviews {myReviews.length > 0 && `(${myReviews.length})`}
   </button>
   <Link href="/offers" className={s.tab}>My Offers & Negotiations</Link>
+  <Link href="/opportunities" className={s.tab}>📈 Opportunities</Link>
+  <Link href="/tutor/school-offerings" className={s.tab}>🎓 Board Preferences</Link>
   <Link href="/chat" className={s.tab}>Messages</Link>
   <Link href="/earnings" className={s.tab}>Earnings</Link>
   <button
@@ -1039,6 +1106,7 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
             <div className={s.sectionHeader}>
               <h2 className={s.sectionTitle}>My Profile</h2>
             </div>
+            <ProfileCompletenessCard />
             {loadingP ? (
               <div className={s.spinner} />
             ) : !profile ? (

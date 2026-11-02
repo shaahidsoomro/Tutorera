@@ -255,6 +255,180 @@ export const bookAgainFromBooking = async (req: AuthRequest, res: Response): Pro
   });
 };
 
+// @desc    Propose a new date/time for an upcoming booking
+// @route   POST /api/bookings/:id/reschedule
+// @access  Private (student or tutor party to the booking)
+export const proposeReschedule = async (req: AuthRequest, res: Response): Promise<void> => {
+  const userId = req.user?._id;
+  const role = req.user?.role as "student" | "tutor" | "parent";
+  const { proposedStartAt, proposedEndAt, note } = req.body;
+
+  if (!proposedStartAt || !proposedEndAt) {
+    res.status(400).json({ success: false, message: "proposedStartAt and proposedEndAt are required." });
+    return;
+  }
+  const start = new Date(proposedStartAt);
+  const end = new Date(proposedEndAt);
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    res.status(400).json({ success: false, message: "Invalid date values." });
+    return;
+  }
+  if (start <= new Date()) {
+    res.status(400).json({ success: false, message: "The proposed start time must be in the future." });
+    return;
+  }
+  if (end <= start) {
+    res.status(400).json({ success: false, message: "End time must be after start time." });
+    return;
+  }
+  if ((end.getTime() - start.getTime()) > 8 * 60 * 60 * 1000) {
+    res.status(400).json({ success: false, message: "Session cannot exceed 8 hours." });
+    return;
+  }
+
+  const booking = await Booking.findOne({
+    _id: req.params.id,
+    $or: [{ student: userId }, { tutor: userId }],
+    status: "upcoming",
+    paymentStatus: "confirmed",
+  });
+  if (!booking) {
+    res.status(404).json({ success: false, message: "Upcoming confirmed booking not found." });
+    return;
+  }
+
+  const isStudent = booking.student.toString() === userId?.toString();
+  const isTutor = booking.tutor.toString() === userId?.toString();
+  if (!isStudent && !isTutor) {
+    res.status(403).json({ success: false, message: "You are not a party to this booking." });
+    return;
+  }
+  if (role !== "student" && role !== "tutor") {
+    res.status(403).json({ success: false, message: "Only students and tutors can propose a reschedule." });
+    return;
+  }
+
+  booking.rescheduleProposal = {
+    proposedBy: userId!,
+    proposedByRole: role,
+    proposedStartAt: start,
+    proposedEndAt: end,
+    proposedAt: new Date(),
+    note: typeof note === "string" ? note.slice(0, 500) : undefined,
+  };
+  await booking.save({ validateModifiedOnly: true });
+
+  const recipientId = isStudent ? booking.tutor.toString() : booking.student.toString();
+  await sendNotification(req.app.get("io"), recipientId, {
+    title: "Reschedule Requested",
+    message: `${req.user?.name} has proposed a new session time. Please accept or decline.`,
+    type: "booking",
+    link: "/dashboard",
+  });
+
+  await logAudit({
+    action: "booking_reschedule_proposed",
+    actor: req.user?.name,
+    actorId: userId?.toString(),
+    entity: "Booking",
+    targetId: booking._id.toString(),
+    metadata: { proposedStartAt: start, proposedEndAt: end, role },
+  });
+
+  res.status(200).json({ success: true, message: "Reschedule proposal sent to the other party.", booking });
+};
+
+// @desc    Accept a pending reschedule proposal
+// @route   POST /api/bookings/:id/reschedule/accept
+// @access  Private (the party who did NOT propose)
+export const acceptReschedule = async (req: AuthRequest, res: Response): Promise<void> => {
+  const userId = req.user?._id;
+
+  const booking = await Booking.findOne({
+    _id: req.params.id,
+    $or: [{ student: userId }, { tutor: userId }],
+    status: "upcoming",
+    "rescheduleProposal.proposedBy": { $exists: true },
+  });
+  if (!booking?.rescheduleProposal) {
+    res.status(404).json({ success: false, message: "No pending reschedule proposal found for this booking." });
+    return;
+  }
+
+  if (booking.rescheduleProposal.proposedBy.toString() === userId?.toString()) {
+    res.status(400).json({ success: false, message: "You cannot accept your own reschedule proposal." });
+    return;
+  }
+
+  const { proposedStartAt, proposedEndAt } = booking.rescheduleProposal;
+  booking.scheduledStartAt = proposedStartAt;
+  booking.scheduledEndAt = proposedEndAt;
+  booking.rescheduleProposal = undefined;
+  await booking.save({ validateModifiedOnly: true });
+
+  const proposerId = booking.rescheduleProposal?.proposedBy?.toString() ??
+    (booking.student.toString() === userId?.toString() ? booking.tutor.toString() : booking.student.toString());
+  await sendNotification(req.app.get("io"), proposerId, {
+    title: "Reschedule Accepted",
+    message: `Your reschedule proposal was accepted. The session is now rescheduled.`,
+    type: "booking",
+    link: "/dashboard",
+  });
+
+  await logAudit({
+    action: "booking_reschedule_accepted",
+    actor: req.user?.name,
+    actorId: userId?.toString(),
+    entity: "Booking",
+    targetId: booking._id.toString(),
+    metadata: { newStartAt: proposedStartAt, newEndAt: proposedEndAt },
+  });
+
+  res.status(200).json({ success: true, message: "Session rescheduled successfully.", booking });
+};
+
+// @desc    Reject a pending reschedule proposal
+// @route   POST /api/bookings/:id/reschedule/reject
+// @access  Private (the party who did NOT propose)
+export const rejectReschedule = async (req: AuthRequest, res: Response): Promise<void> => {
+  const userId = req.user?._id;
+
+  const booking = await Booking.findOne({
+    _id: req.params.id,
+    $or: [{ student: userId }, { tutor: userId }],
+    "rescheduleProposal.proposedBy": { $exists: true },
+  });
+  if (!booking?.rescheduleProposal) {
+    res.status(404).json({ success: false, message: "No pending reschedule proposal found." });
+    return;
+  }
+  if (booking.rescheduleProposal.proposedBy.toString() === userId?.toString()) {
+    res.status(400).json({ success: false, message: "You cannot reject your own proposal. Cancel it instead by proposing a new time." });
+    return;
+  }
+
+  const proposerId = booking.rescheduleProposal.proposedBy.toString();
+  booking.rescheduleProposal = undefined;
+  await booking.save({ validateModifiedOnly: true });
+
+  await sendNotification(req.app.get("io"), proposerId, {
+    title: "Reschedule Declined",
+    message: `Your reschedule proposal was declined. The original session time remains.`,
+    type: "booking",
+    link: "/dashboard",
+  });
+
+  await logAudit({
+    action: "booking_reschedule_rejected",
+    actor: req.user?.name,
+    actorId: userId?.toString(),
+    entity: "Booking",
+    targetId: booking._id.toString(),
+  });
+
+  res.status(200).json({ success: true, message: "Reschedule proposal declined. Original time stands." });
+};
+
 // @desc    Student raises a dispute on a booking
 // @route   POST /api/bookings/:id/dispute
 // @access  Private (student)

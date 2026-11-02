@@ -15,7 +15,9 @@
     "promote:super-admin": "ts-node src/scripts/promoteSuperAdmin.ts",
     "geo:import": "ts-node src/scripts/importGeoNames.ts",
     "migrate:pk": "ts-node src/scripts/migrateLegacyPakistan.ts",
-    "smoke:api": "node scripts/smoke-api.mjs https://api.tutorera.ac.pk"
+    "smoke:api": "node scripts/smoke-api.mjs https://api.tutorera.ac.pk",
+    "seed:zoology-rules": "ts-node src/scripts/seedZoologyEligibilityRules.ts",
+    "migrate:matches-discipline": "ts-node src/scripts/recalculateMatchesDiscipline.ts"
   },
   "keywords": [],
   "author": "",

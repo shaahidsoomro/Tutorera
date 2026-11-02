@@ -25,7 +25,8 @@ import { resolveMarket } from "../services/market.service";
 import { syncReviewQueueForProfile } from "../services/verification.service";
 import { syncMarketplaceAndHomeTuition } from "./tracking.controller";
 import { calculateMarketplaceFees } from "../services/pricing.service";
-import { requestSubjectEligibility, syncApprovedSubjects } from "../services/subjectEligibility.service";
+import { requestSubjectEligibility, syncApprovedSubjects, resolveTeachingEligibility } from "../services/subjectEligibility.service";
+import AcademicDiscipline from "../models/AcademicDiscipline.model";
 import SchoolOffering from "../models/SchoolOffering.model";
 import { assignUniqueTutorSlug } from "../services/tutorSlug.service";
 import { logAudit } from "../utils/logAudit";
@@ -877,6 +878,43 @@ export const saveOnboardingStep = async (
     // services/subjectEligibility.service.ts).
     const selectedSubjects: string[] = parsedData.subjects || [];
     const disciplines = (profile.education || []).map((education) => education.discipline).filter(Boolean) as string[];
+
+    // Enforce discipline-subject alignment: reject subjects that are completely
+    // unrelated to every declared qualification discipline.
+    if (disciplines.length > 0 && selectedSubjects.length > 0) {
+      const blockedSubjects: string[] = [];
+      for (const subject of selectedSubjects) {
+        const resolutions = await Promise.all(
+          disciplines.map((d) => resolveTeachingEligibility(d, subject))
+        );
+        const anyEligible = resolutions.some((r) => r.eligibilityType !== "unmapped");
+        if (!anyEligible) {
+          // Only block if at least one canonical AcademicDiscipline record exists
+          // for the tutor's disciplines — meaning rules are actually defined.
+          const canonicalExists = await Promise.all(
+            disciplines.map((d) =>
+              AcademicDiscipline.findOne({
+                name: new RegExp(`^${d.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i"),
+                status: "active",
+              }).lean()
+            )
+          );
+          if (canonicalExists.some(Boolean)) {
+            blockedSubjects.push(subject);
+          }
+        }
+      }
+      if (blockedSubjects.length > 0) {
+        res.status(422).json({
+          success: false,
+          code: "SUBJECTS_OFF_DISCIPLINE",
+          message: `The following subject(s) are not eligible based on your declared qualification(s): ${blockedSubjects.join(", ")}. Please select only subjects that align with your qualification discipline(s).`,
+          blockedSubjects,
+        });
+        return;
+      }
+    }
+
     for (const subject of selectedSubjects) {
       await requestSubjectEligibility(profile, subject, { disciplines });
     }
@@ -1307,4 +1345,42 @@ export const saveOnboardingStep = async (
     console.error("[TutorOnboarding] saveOnboardingStep unhandled error:", err);
     next(err);
   }
+};
+
+// @desc  Profile completeness score with per-item checklist
+// @route GET /api/tutors/profile/score
+// @access Private (tutor)
+export const getProfileScore = async (req: AuthRequest, res: Response): Promise<void> => {
+  const [profile, user, availability] = await Promise.all([
+    TutorProfile.findOne({ user: req.user?._id }).lean(),
+    User.findById(req.user?._id).select("avatar name").lean(),
+    TutorAvailability.findOne({ tutor: req.user?._id }).lean(),
+  ]);
+
+  if (!profile) {
+    res.status(404).json({ success: false, message: "Tutor profile not found." });
+    return;
+  }
+
+  const needsPolice = profile.teachingMode !== "online";
+  const hasAvailability = (availability?.weeklySlots?.length ?? 0) >= 3;
+
+  type CheckItem = { key: string; label: string; done: boolean; points: number; cta?: string };
+  const items: CheckItem[] = [
+    { key: "avatar",       label: "Profile photo",              done: Boolean(user?.avatar),                                     points: 10, cta: "/settings" },
+    { key: "bio",          label: "Bio (100+ characters)",      done: (profile.bio?.length ?? 0) >= 100,                         points: 10, cta: "/profile" },
+    { key: "videoIntro",   label: "Demo video",                 done: Boolean(profile.videoIntro),                               points: 15, cta: "/tutor/resubmit-docs" },
+    { key: "cnic",         label: "Identity verified",          done: profile.cnicVerificationStatus === "approved",             points: 15 },
+    { key: "degree",       label: "Credentials verified",       done: profile.degreeVerificationStatus === "approved",           points: 10 },
+    { key: "subjects",     label: "At least 1 approved subject",done: (profile.approvedSubjects?.length ?? 0) > 0,               points: 15, cta: "/onboarding/tutor" },
+    { key: "availability", label: "Availability set (3+ slots)",done: hasAvailability,                                           points: 10, cta: "/dashboard" },
+    { key: "offerings",    label: "Board & qualification preferences", done: (profile.schoolOfferingIds?.length ?? 0) > 0,      points: 5,  cta: "/tutor/school-offerings" },
+    ...(needsPolice ? [{ key: "police", label: "Police clearance certificate", done: profile.policeVerificationStatus === "approved", points: 10, cta: "/tutor/resubmit-docs" } as CheckItem] : []),
+  ];
+
+  const totalPoints = items.reduce((sum, item) => sum + item.points, 0);
+  const earnedPoints = items.filter(item => item.done).reduce((sum, item) => sum + item.points, 0);
+  const score = Math.round((earnedPoints / totalPoints) * 100);
+
+  res.json({ success: true, score, earnedPoints, totalPoints, items });
 };

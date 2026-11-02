@@ -67,6 +67,14 @@ export interface IBooking extends Document {
   flaggedForReview?: boolean;
   flagReason?: string;
   flaggedAt?: Date;
+  rescheduleProposal?: {
+    proposedBy: Types.ObjectId;
+    proposedByRole: "student" | "tutor";
+    proposedStartAt: Date;
+    proposedEndAt: Date;
+    proposedAt: Date;
+    note?: string;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -135,6 +143,14 @@ const bookingSchema = new Schema<IBooking>(
     flaggedForReview: { type: Boolean, default: false, index: true },
     flagReason: { type: String, trim: true, default: "" },
     flaggedAt: { type: Date },
+    rescheduleProposal: {
+      proposedBy: { type: Schema.Types.ObjectId, ref: "User" },
+      proposedByRole: { type: String, enum: ["student", "tutor"] },
+      proposedStartAt: { type: Date },
+      proposedEndAt: { type: Date },
+      proposedAt: { type: Date },
+      note: { type: String, trim: true, maxlength: 500 },
+    },
   },
   { timestamps: true }
 );

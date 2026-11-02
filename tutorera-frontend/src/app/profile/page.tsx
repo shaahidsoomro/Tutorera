@@ -9,6 +9,7 @@ import api from "@/lib/axios";
 import { useAppGuard } from "@/hooks/useAppGuard";
 import { useGeoData } from "@/lib/geoService";
 import { getCitiesForCountry } from "@/lib/location";
+import { catalogueSubjectNames } from "@/lib/subject-catalogue";
 
 const C = UI_COLORS;
 
@@ -22,7 +23,7 @@ export default function ProfilePage() {
   const router = useRouter();
 
   const subjects = useMemo(
-    () => geo.subjects && geo.subjects.length > 0 ? geo.subjects : ["Mathematics", "Physics", "Chemistry", "Biology", "English", "Urdu", "Computer Science", "Islamiyat", "Pakistan Studies", "Economics", "Statistics", "Other"],
+    () => geo.subjects && geo.subjects.length > 0 ? geo.subjects : catalogueSubjectNames,
     [geo.subjects]
   );
   const levels = useMemo(

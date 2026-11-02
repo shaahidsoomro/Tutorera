@@ -87,6 +87,53 @@ export const getTutorReviews = async (req: AuthRequest, res: Response): Promise<
   });
 };
 
+// @desc    List completed bookings the current student has not yet reviewed
+// @route   GET /api/reviews/pending
+// @access  Private (student)
+export const getPendingReviews = async (req: AuthRequest, res: Response): Promise<void> => {
+  const studentId = req.user?._id;
+  if (req.user?.role !== "student" && req.user?.role !== "parent") {
+    res.status(403).json({ success: false, message: "Students only." });
+    return;
+  }
+
+  const completedBookings = await Booking.find({
+    ...(req.user.role === "parent" ? { parent: studentId } : { student: studentId }),
+    status: "completed",
+  })
+    .populate("tutor", "name avatar _id")
+    .populate("request", "subject")
+    .sort("-completedAt")
+    .limit(20)
+    .lean();
+
+  if (completedBookings.length === 0) {
+    res.status(200).json({ success: true, pending: [] });
+    return;
+  }
+
+  const bookingIds = completedBookings.map((b) => b._id);
+  const existingReviews = await Review.find({
+    booking: { $in: bookingIds },
+    student: studentId,
+  }).select("booking").lean();
+
+  const reviewedBookingIds = new Set(existingReviews.map((r) => r.booking.toString()));
+
+  const pending = completedBookings
+    .filter((b) => !reviewedBookingIds.has(b._id.toString()))
+    .map((b) => ({
+      bookingId: b._id,
+      tutorId: (b.tutor as any)?._id,
+      tutorName: (b.tutor as any)?.name || "Your tutor",
+      tutorAvatar: (b.tutor as any)?.avatar || null,
+      subject: (b.request as any)?.subject || "your session",
+      completedAt: b.completedAt,
+    }));
+
+  res.status(200).json({ success: true, pending });
+};
+
 // @desc    Tutor responds to a review
 // @route   PATCH /api/reviews/:tutorId/:reviewId/respond
 // @access  Private (tutor — own review only)

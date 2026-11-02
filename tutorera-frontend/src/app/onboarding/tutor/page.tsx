@@ -3,7 +3,7 @@ import CountryCitySelector from "@/components/marketplace/CountryCitySelector";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/axios";
 import { UI_COLORS } from "@/lib/brand";
-import { catalogueSubjectNames, subjectCatalogue } from "@/lib/subject-catalogue";
+import { catalogueSubjectNames, getCanonicalSubjectName, subjectCatalogue } from "@/lib/subject-catalogue";
 import { convertToPKR,useGeoData } from "@/lib/geoService";
 import { Country } from "@/lib/location";
 import { AlertTriangle,BookOpen } from "lucide-react";
@@ -64,7 +64,9 @@ export default function TutorOnboardingPage() {
   const curriculumOptions = Array.from(new Set(subjectCatalogue.map(group => group.curriculum)));
   const [qualificationSelection, setQualificationSelection] = useState("");
   const selectedCatalogueGroups = subjectCatalogue.filter(group => group.curriculum === curriculumSelection);
-  const qualificationSubjects = subjectCatalogue.find(group => group.curriculum === curriculumSelection && group.qualification === qualificationSelection)?.subjects.map(subject => subject.name) ?? [];
+  // Use canonical names so curriculum variants ("Mathematics A", "English Language") resolve
+  // to the same eligibility entry as their canonical counterparts ("Mathematics", "English").
+  const qualificationSubjects = subjectCatalogue.find(group => group.curriculum === curriculumSelection && group.qualification === qualificationSelection)?.subjects.map(getCanonicalSubjectName) ?? [];
 
   const levels = geo.levels && geo.levels.length > 0 ? geo.levels : [
     "Primary (Grades 1-5)", "Middle (Grades 6-8)", "Matric (9th & 10th)", "Intermediate / FSc", "O-Level (Cambridge / Edexcel)", "A-Level (Cambridge / Edexcel)", "IB (Middle Years / Diploma)", "University / Degree", "Test Preparation", "Other"
@@ -369,8 +371,12 @@ export default function TutorOnboardingPage() {
       try {
         await api.post("/tutors/onboarding/step", formData);
       } catch (err: any) {
-        const msg = err?.response?.data?.message || err?.message || "Failed to save. Please try again.";
-        setError(msg);
+        const errData = err?.response?.data;
+        if (errData?.code === "SUBJECTS_OFF_DISCIPLINE" && errData?.blockedSubjects?.length) {
+          setError(`These subjects don't match your declared qualification: ${errData.blockedSubjects.join(", ")}. Please deselect them and choose only subjects related to your qualification discipline.`);
+        } else {
+          setError(errData?.message || err?.message || "Failed to save. Please try again.");
+        }
         setSaving(false);
         return;
       }

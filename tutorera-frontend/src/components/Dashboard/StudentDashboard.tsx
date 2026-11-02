@@ -21,6 +21,7 @@ import { useRouter } from "next/navigation";
 import { useCallback,useEffect,useState } from "react";
 import PostRequestModal from "./PostRequestModal";
 import RatingModal from "./RatingModal";
+import RescheduleModal from "./RescheduleModal";
 import ProgressReportPanel from "./ProgressReportPanel";
 
 const C = UI_COLORS;
@@ -135,6 +136,11 @@ function BookingCard({ booking, onClaimSubmitted }: {
   const [disputeReason, setDisputeReason] = useState("");
   const [submittingDispute, setSubmittingDispute] = useState(false);
   const [disputeRaised, setDisputeRaised] = useState(booking.paymentStatus === "disputed");
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [rescheduleProposal, setRescheduleProposal] = useState<{ proposedBy: string; proposedByRole: string; proposedStartAt: string; proposedEndAt: string; note?: string } | undefined>(
+    (booking as unknown as { rescheduleProposal?: { proposedBy: string; proposedByRole: string; proposedStartAt: string; proposedEndAt: string; note?: string } }).rescheduleProposal
+  );
+  const [rescheduleAction, setRescheduleAction] = useState<"idle" | "accepting" | "rejecting">("idle");
 
   const handlePay = async () => {
     setPaying(true);
@@ -272,6 +278,14 @@ function BookingCard({ booking, onClaimSubmitted }: {
           {creatingChat ? "Opening..." : "💬 Chat"}
         </button>
 
+        {/* ── Reschedule — upcoming confirmed bookings ── */}
+        {booking.status === "upcoming" && booking.paymentStatus === "confirmed" && !rescheduleProposal && (
+          <button type="button" onClick={() => setShowRescheduleModal(true)}
+            style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", padding: "0.5rem 1rem", backgroundColor: "#f0fdf4", color: "#15803d", borderRadius: "0.5rem", border: "1px solid #bbf7d0", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer" }}>
+            📅 Reschedule
+          </button>
+        )}
+
         <button type="button" className={s.btnWarning} onClick={() => router.push(`/support?bookingId=${booking._id}`)}>
           🆘 Need Help?
         </button>
@@ -324,6 +338,56 @@ function BookingCard({ booking, onClaimSubmitted }: {
           <span style={{ fontSize: '0.8rem', color: '#b45309', fontWeight: 600, padding: '0.5rem 0' }}>⚠️ Dispute Raised</span>
         )}
       </div>
+
+      {/* ── Reschedule proposal banner ── */}
+      {rescheduleProposal && (
+        <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: "0.75rem", padding: "1rem", marginBottom: "0.75rem" }}>
+          <p style={{ margin: "0 0 0.25rem", fontWeight: 700, fontSize: "0.85rem", color: "#1e40af" }}>📅 Reschedule Proposed by Tutor</p>
+          <p style={{ margin: "0 0 0.5rem", fontSize: "0.8rem", color: "#1e3a8a" }}>
+            New time: <strong>{new Date(rescheduleProposal.proposedStartAt).toLocaleString()}</strong>
+            {" → "}<strong>{new Date(rescheduleProposal.proposedEndAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</strong>
+          </p>
+          {rescheduleProposal.note && <p style={{ margin: "0 0 0.5rem", fontSize: "0.75rem", color: "#374151" }}>Note: {rescheduleProposal.note}</p>}
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <button type="button" disabled={rescheduleAction !== "idle"}
+              onClick={async () => {
+                setRescheduleAction("accepting");
+                try {
+                  await axiosInstance.post(`/bookings/${booking._id}/reschedule/accept`);
+                  setRescheduleProposal(undefined);
+                } catch { /* handled silently */ } finally { setRescheduleAction("idle"); }
+              }}
+              style={{ padding: "0.4rem 1rem", background: "#1d4ed8", color: "#fff", border: "none", borderRadius: "0.5rem", fontSize: "0.8rem", fontWeight: 700, cursor: rescheduleAction !== "idle" ? "wait" : "pointer" }}>
+              {rescheduleAction === "accepting" ? "Accepting…" : "✓ Accept"}
+            </button>
+            <button type="button" disabled={rescheduleAction !== "idle"}
+              onClick={async () => {
+                setRescheduleAction("rejecting");
+                try {
+                  await axiosInstance.post(`/bookings/${booking._id}/reschedule/reject`);
+                  setRescheduleProposal(undefined);
+                } catch { /* handled silently */ } finally { setRescheduleAction("idle"); }
+              }}
+              style={{ padding: "0.4rem 1rem", background: "#fff", color: "#374151", border: "1px solid #d1d5db", borderRadius: "0.5rem", fontSize: "0.8rem", fontWeight: 600, cursor: rescheduleAction !== "idle" ? "wait" : "pointer" }}>
+              {rescheduleAction === "rejecting" ? "Declining…" : "✗ Decline"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Reschedule modal ── */}
+      {showRescheduleModal && (
+        <RescheduleModal
+          bookingId={booking._id}
+          currentSchedule={booking.schedule ?? ""}
+          onClose={() => setShowRescheduleModal(false)}
+          onSuccess={(updated) => {
+            const b = updated as { rescheduleProposal?: typeof rescheduleProposal };
+            setRescheduleProposal(b?.rescheduleProposal);
+            setShowRescheduleModal(false);
+          }}
+        />
+      )}
 
       {/* ── Dispute inline form ── */}
       {showDisputeForm && !disputeRaised && (
@@ -1030,11 +1094,34 @@ export default function StudentDashboard({ userName, userAvatar }: Props) {
   const [counterAmountN, setCounterAmountN] = useState("");
   const [counterMessageN, setCounterMessageN] = useState("");
 
+  // Post-session review auto-prompt
+  type PendingReview = { bookingId: string; tutorId: string; tutorName: string; tutorAvatar: string | null; subject: string };
+  const [pendingReviews, setPendingReviews] = useState<PendingReview[]>([]);
+  const [autoReviewIndex, setAutoReviewIndex] = useState(0);
+  const [showAutoReview, setShowAutoReview] = useState(false);
+
   useEffect(() => {
     const requestedTab = new URLSearchParams(window.location.search).get("tab");
     if (requestedTab === "requests" || requestedTab === "bookings" || requestedTab === "favourites") {
       setTab(requestedTab);
     }
+  }, []);
+
+  // Fetch pending reviews once per session and auto-prompt the first one
+  useEffect(() => {
+    const seenKey = "tutorera_review_prompt_shown";
+    try { if (sessionStorage.getItem(seenKey)) return; } catch { return; }
+    axiosInstance.get("/reviews/pending")
+      .then(res => {
+        const list: PendingReview[] = res.data?.pending ?? [];
+        if (list.length === 0) return;
+        setPendingReviews(list);
+        setAutoReviewIndex(0);
+        setShowAutoReview(true);
+        try { sessionStorage.setItem(seenKey, "1"); } catch { /* ignore */ }
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchFavourites = useCallback(async () => {
@@ -1137,8 +1224,35 @@ const fetchRequests = useCallback(async () => {
   const completedCount = bookings.filter((b) => b.status === "completed").length;
   const negotiatingCount = negotiations.length;
 
+  const currentAutoReview = pendingReviews[autoReviewIndex];
+
+  const handleAutoReviewSubmit = async (rating: number, comment: string) => {
+    if (!currentAutoReview) return;
+    await axiosInstance.post(`/reviews/${currentAutoReview.tutorId}`, {
+      rating,
+      comment,
+      bookingId: currentAutoReview.bookingId,
+    });
+    const next = autoReviewIndex + 1;
+    if (next < pendingReviews.length) {
+      setAutoReviewIndex(next);
+    } else {
+      setShowAutoReview(false);
+    }
+  };
+
   return (
     <>
+      {/* Auto review prompt — appears once per session for unreviewed completed sessions */}
+      {showAutoReview && currentAutoReview && (
+        <RatingModal
+          title={`How was your session with ${currentAutoReview.tutorName.split(" ")[0]}?`}
+          subtitle={`${currentAutoReview.subject} · Share your feedback to help other students find great tutors.`}
+          onSubmit={handleAutoReviewSubmit}
+          onClose={() => setShowAutoReview(false)}
+        />
+      )}
+
       {/* Header */}
       <div className={s.header} style={{ background: "linear-gradient(135deg, #021550 0%, #0329b2 100%)", color: "white", padding: "2rem 1.5rem", borderRadius: "1rem", marginBottom: "1.5rem" }}>
         <div className={s.headerInner} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1.25rem" }}>
