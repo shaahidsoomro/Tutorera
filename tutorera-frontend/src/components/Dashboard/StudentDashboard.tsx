@@ -23,6 +23,7 @@ import PostRequestModal from "./PostRequestModal";
 import RatingModal from "./RatingModal";
 import RescheduleModal from "./RescheduleModal";
 import ProgressReportPanel from "./ProgressReportPanel";
+import { addToCalendar } from "@/lib/addToCalendar";
 
 const C = UI_COLORS;
 
@@ -283,6 +284,14 @@ function BookingCard({ booking, onClaimSubmitted }: {
           <button type="button" onClick={() => setShowRescheduleModal(true)}
             style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", padding: "0.5rem 1rem", backgroundColor: "#f0fdf4", color: "#15803d", borderRadius: "0.5rem", border: "1px solid #bbf7d0", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer" }}>
             📅 Reschedule
+          </button>
+        )}
+
+        {/* ── Add to Calendar — upcoming confirmed bookings ── */}
+        {booking.status === "upcoming" && booking.paymentStatus === "confirmed" && (booking.nextOccurrence || booking.scheduledStartAt) && (
+          <button type="button" onClick={() => addToCalendar(booking, "student")}
+            style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", padding: "0.5rem 1rem", backgroundColor: "#f5f3ff", color: "#7c3aed", borderRadius: "0.5rem", border: "1px solid #ddd6fe", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer" }}>
+            🗓 Add to Calendar
           </button>
         )}
 

@@ -109,6 +109,16 @@ export interface DashBooking {
   paymentStatus?: "pending" | "received" | "confirmed" | "paid" | "refunded" | "partially_refunded" | "failed" | "chargeback" | "disputed";
   status: "pending" | "confirmed" | "upcoming" | "ongoing" | "in_progress" | "completed" | "cancelled" | "disputed";
   scheduledAt?: string;
+  scheduledStartAt?: string;
+  scheduledEndAt?: string;
+  scheduleTimezone?: string;
+  nextOccurrence?: {
+    startAt: string;
+    endAt: string;
+    dayLabel: string;
+    dateLabel: string;
+    timeLabel: string;
+  } | null;
   createdAt: string;
 }
 
