@@ -196,11 +196,21 @@ export async function approveSubjectEligibility(
   )) {
     return { success: false, message: "Complete education credentials and approved educational documents are required before subject approval." };
   }
-  if (!entry.matchesDiscipline && !approvalReason.trim()) {
-    return {
-      success: false,
-      message: "An off-discipline subject requires documented supporting evidence and an explicit approval rationale.",
-    };
+  if (!entry.matchesDiscipline) {
+    if (!approvalReason.trim()) {
+      return {
+        success: false,
+        message: "An off-discipline subject requires documented supporting evidence and an explicit approval rationale.",
+      };
+    }
+    // Unmapped subjects (no eligibility rule at all for this discipline) need a
+    // substantive rationale — "ok" or a two-word note is not sufficient.
+    if (entry.eligibilityType === "unmapped" && approvalReason.trim().length < 30) {
+      return {
+        success: false,
+        message: "This subject has no defined relationship to the tutor's declared qualification. Provide a detailed rationale (minimum 30 characters) explaining why approval is warranted.",
+      };
+    }
   }
   if (entry.evidenceRequired && !(entry.evidence || []).some((item) => Boolean(item.url))) {
     return { success: false, message: "Supporting evidence must be uploaded before this conditional subject request can be approved." };

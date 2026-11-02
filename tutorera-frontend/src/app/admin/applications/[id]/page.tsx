@@ -70,6 +70,7 @@ interface ApplicationDetail {
       levels: string[];
       status: "pending" | "needs_evidence" | "approved" | "rejected" | "revoked" | "suspended";
       matchesDiscipline: boolean;
+      eligibilityType?: "direct" | "conditional" | "unmapped";
       evidenceRequired?: boolean;
       evidence?: ReviewedSubjectEvidence[];
       reason?: string;
@@ -588,7 +589,29 @@ function AdminApplicationDetailContent({ params }: { params: Params }) {
           </section>
           <section className={s.card} aria-labelledby="teaching-profile">
             <p id="teaching-profile" className={s.cardTitle} style={{ marginBottom: 10 }}>Teaching profile</p>
-            <p style={{ margin: "0 0 6px", fontSize: 13 }}><strong>Subjects:</strong> {p.subjects?.join(", ") || "Not provided"}</p>
+            <div style={{ margin: "0 0 6px" }}>
+              <strong style={{ fontSize: 13 }}>Subjects:</strong>{" "}
+              {p.subjects?.length ? (
+                <span style={{ fontSize: 13 }}>
+                  {p.subjects.map((subj, idx) => {
+                    const entry = p.subjectEligibility?.find(e => e.subject === subj);
+                    const eType = entry?.eligibilityType;
+                    const tagColor = eType === "direct" ? "#16a34a" : eType === "conditional" ? "#d97706" : "#dc2626";
+                    const tagBg   = eType === "direct" ? "#f0fdf4"  : eType === "conditional" ? "#fffbeb"  : "#fff1f2";
+                    const tagLabel = eType === "direct" ? "✓ matches" : eType === "conditional" ? "⚠ conditional" : "✗ off-discipline";
+                    return (
+                      <span key={subj} style={{ display: "inline-flex", alignItems: "center", gap: 4, marginRight: 8, marginBottom: 4 }}>
+                        {subj}
+                        <span style={{ fontSize: 10, fontWeight: 800, background: tagBg, color: tagColor, padding: "1px 5px", borderRadius: 4, border: `1px solid ${tagColor}33` }}>
+                          {tagLabel}
+                        </span>
+                        {idx < p.subjects.length - 1 ? "" : ""}
+                      </span>
+                    );
+                  })}
+                </span>
+              ) : "Not provided"}
+            </div>
             <p style={{ margin: "0 0 6px", fontSize: 13 }}><strong>Levels:</strong> {p.levels?.join(", ") || "Not provided"}</p>
             <p style={{ margin: "0 0 6px", fontSize: 13 }}><strong>Mode:</strong> {p.teachingMode || "Not provided"}</p>
             <p style={{ margin: 0, fontSize: 13 }}><strong>Rate:</strong> {p.hourlyRate ? `${p.hourlyRate} / hour` : "Not provided"}</p>
@@ -625,10 +648,12 @@ function AdminApplicationDetailContent({ params }: { params: Params }) {
                       <strong style={{ fontSize: 14 }}>{entry.subject}</strong>
                       {" "}
                       <StatusBadge status={entry.status} />
-                      {entry.matchesDiscipline ? (
-                        <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: STATUS_COLORS.success.color }}>Matches discipline</span>
+                      {entry.matchesDiscipline || entry.eligibilityType === "direct" ? (
+                        <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: STATUS_COLORS.success.color }}>✓ Matches discipline</span>
+                      ) : entry.eligibilityType === "conditional" ? (
+                        <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: STATUS_COLORS.warning.color }}>⚠ Conditional — evidence required</span>
                       ) : (
-                        <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: STATUS_COLORS.warning.color }}>Adjacent — needs evidence</span>
+                        <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: STATUS_COLORS.danger.color }}>✗ Off-discipline — not related to declared qualification</span>
                       )}
                     </div>
                     {entry.levels?.length > 0 && (
@@ -651,7 +676,13 @@ function AdminApplicationDetailContent({ params }: { params: Params }) {
                     <input
                       type="text"
                       aria-label={`Reason or rationale for ${entry.subject}`}
-                      placeholder={entry.matchesDiscipline ? "Reason (required to reject/revoke)" : "Supporting evidence & rationale (required to approve)"}
+                      placeholder={
+                        entry.matchesDiscipline || entry.eligibilityType === "direct"
+                          ? "Reason (required to reject/revoke)"
+                          : entry.eligibilityType === "conditional"
+                          ? "Evidence rationale (required — describe supporting qualification)"
+                          : "Explicit off-discipline justification required — explain why this unrelated subject should be approved"
+                      }
                       value={eligibilityReasons[entry.subject] || ""}
                       onChange={e => setEligibilityReasons(current => ({ ...current, [entry.subject]: e.target.value }))}
                       style={{ flex: "1 1 220px", padding: "6px 10px", border: `1px solid ${UI_COLORS.border}`, borderRadius: 8, fontSize: 12 }}
