@@ -360,14 +360,13 @@ export const acceptReschedule = async (req: AuthRequest, res: Response): Promise
     return;
   }
 
-  const { proposedStartAt, proposedEndAt } = booking.rescheduleProposal;
+  const { proposedStartAt, proposedEndAt, proposedBy } = booking.rescheduleProposal;
+  const proposerId = proposedBy?.toString() ??
+    (booking.student.toString() === userId?.toString() ? booking.tutor.toString() : booking.student.toString());
   booking.scheduledStartAt = proposedStartAt;
   booking.scheduledEndAt = proposedEndAt;
   booking.rescheduleProposal = undefined;
   await booking.save({ validateModifiedOnly: true });
-
-  const proposerId = booking.rescheduleProposal?.proposedBy?.toString() ??
-    (booking.student.toString() === userId?.toString() ? booking.tutor.toString() : booking.student.toString());
   await sendNotification(req.app.get("io"), proposerId, {
     title: "Reschedule Accepted",
     message: `Your reschedule proposal was accepted. The session is now rescheduled.`,

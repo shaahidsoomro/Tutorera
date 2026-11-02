@@ -57,6 +57,7 @@ import {
   listSafetyCases,
   createSafetyCase,
   resolveSafetyCase,
+  getDisputedBookings,
   getFeeConfig,
   updateFeeConfig,
   getMarketConfigs,
@@ -119,6 +120,9 @@ router.post("/safety/age-reviews/:id/close", requirePermission("safety.resolve")
 router.get("/safety/cases", requirePermission("safety.read"), listSafetyCases);
 router.post("/safety/cases", requirePermission("safety.create"), createSafetyCase);
 router.post("/safety/cases/:id/resolve", requirePermission("safety.resolve"), resolveSafetyCase);
+
+// Disputed Bookings (finance triage)
+router.get("/disputes", requirePermission("claims.read"), getDisputedBookings);
 
 // Global Market Operations
 router.get("/markets", requirePermission("market.read"), getMarketConfigs);

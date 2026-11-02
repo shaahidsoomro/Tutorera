@@ -49,7 +49,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response): Promis
   const [
     totalUsers, totalTutors, totalStudents,
     pendingVerifications, approvedTutors,
-    totalBookings, totalContacts,
+    totalBookings, totalContacts, disputedBookings,
   ] = await Promise.all([
     User.countDocuments(),
     User.countDocuments({ role: "tutor" }),
@@ -58,6 +58,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response): Promis
     TutorProfile.countDocuments({ verificationStatus: "approved" }),
     Booking.countDocuments(),
     Contact.countDocuments(),
+    Booking.countDocuments({ paymentStatus: "disputed" }),
   ]);
 
   res.status(200).json({
@@ -70,6 +71,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response): Promis
       approvedTutors,
       totalBookings,
       totalContacts,
+      disputedBookings,
     },
   });
 };

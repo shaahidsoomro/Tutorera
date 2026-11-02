@@ -36,6 +36,7 @@ export const getControlTowerPulse = async (_req: AuthRequest, res: Response): Pr
     verificationBacklog,
     failedPayments,
     openSafetyCases,
+    disputedBookings,
     atRiskItems,
   ] = await Promise.all([
     Request.countDocuments({
@@ -58,6 +59,7 @@ export const getControlTowerPulse = async (_req: AuthRequest, res: Response): Pr
     }),
     Booking.countDocuments({ paymentStatus: "failed" }),
     SafetyCase.countDocuments({ status: { $in: ["open", "under_investigation"] } }),
+    Booking.countDocuments({ paymentStatus: "disputed" }),
     AtRiskRequestService.getAtRiskRequests(15, _req.app.get("io")),
   ]);
 
@@ -124,6 +126,18 @@ export const getControlTowerPulse = async (_req: AuthRequest, res: Response): Pr
     });
   }
 
+  if (disputedBookings > 0) {
+    urgentActions.push({
+      id: "disputed-bookings",
+      type: "finance",
+      severity: "high",
+      title: `${disputedBookings} booking payment dispute${disputedBookings !== 1 ? "s" : ""} awaiting resolution`,
+      detail: "Students or tutors have contested payment — needs finance decision.",
+      link: "/admin/disputes",
+      actionLabel: "Resolve Disputes",
+    });
+  }
+
   res.json({
     success: true,
     pulse: {
@@ -135,6 +149,7 @@ export const getControlTowerPulse = async (_req: AuthRequest, res: Response): Pr
       verificationBacklog,
       failedPayments,
       openSafetyCases,
+      disputedBookings,
     },
     urgentActions,
     atRiskPreview: atRiskItems.slice(0, 5),
@@ -462,9 +477,9 @@ export const createSafetyCase = async (req: AuthRequest, res: Response): Promise
 
 export const resolveSafetyCase = async (req: AuthRequest, res: Response): Promise<void> => {
   const { id } = req.params;
-  const { actionTaken, resolutionSummary } = req.body;
+  const { actionTaken, resolutionSummary, paymentAction } = req.body;
 
-  const safetyCase = await SafetyCase.findById(id);
+  const safetyCase = await SafetyCase.findById(id).populate("booking");
   if (!safetyCase) {
     res.status(404).json({ success: false, message: "Safety case not found" });
     return;
@@ -480,8 +495,68 @@ export const resolveSafetyCase = async (req: AuthRequest, res: Response): Promis
     await User.findByIdAndUpdate(safetyCase.reportedUser, { isActive: false });
   }
 
+  // Finance resolution for disputed bookings
+  if (safetyCase.booking && paymentAction) {
+    const bookingId = (safetyCase.booking as any)._id ?? safetyCase.booking;
+    if (paymentAction === "refund") {
+      await Booking.findByIdAndUpdate(bookingId, { $set: { paymentStatus: "refunded" } });
+    } else if (paymentAction === "dismiss") {
+      await Booking.findByIdAndUpdate(bookingId, { $set: { paymentStatus: "confirmed" } });
+    }
+  }
+
   await safetyCase.save();
+
+  await logAudit({
+    action: "safety_case_resolved",
+    actor: req.user?.name ?? "admin",
+    actorId: req.user?._id?.toString(),
+    entity: "SafetyCase",
+    targetId: safetyCase._id.toString(),
+    metadata: { actionTaken, paymentAction: paymentAction ?? null },
+  });
+
   res.json({ success: true, message: "Safety case resolved successfully." });
+};
+
+// @desc    List disputed bookings for finance triage
+// @route   GET /api/admin/disputes
+// @access  Private (admin, claims.read)
+export const getDisputedBookings = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { page = "1", limit = "20", status = "disputed" } = req.query;
+  const pageNum = Math.max(1, parseInt(page as string) || 1);
+  const limitNum = Math.min(50, Math.max(1, parseInt(limit as string) || 20));
+  const skip = (pageNum - 1) * limitNum;
+
+  const validStatuses = ["disputed", "refunded"] as const;
+  type PSFilter = typeof validStatuses[number];
+  const paymentStatusFilter: PSFilter = validStatuses.includes(status as PSFilter) ? (status as PSFilter) : "disputed";
+
+  const [bookings, total] = await Promise.all([
+    Booking.find({ paymentStatus: paymentStatusFilter })
+      .populate("student", "name email avatar")
+      .populate("tutor", "name email avatar")
+      .populate("request", "subject")
+      .sort("-updatedAt")
+      .skip(skip)
+      .limit(limitNum)
+      .lean(),
+    Booking.countDocuments({ paymentStatus: paymentStatusFilter }),
+  ]);
+
+  // Attach linked safety case info
+  const bookingIds = bookings.map((b) => b._id);
+  const cases = await SafetyCase.find({ booking: { $in: bookingIds } })
+    .select("booking caseId status category severity resolvedAt actionTaken")
+    .lean();
+  const casesByBooking = new Map(cases.map((c) => [c.booking?.toString() ?? "", c]));
+
+  const enriched = bookings.map((b) => ({
+    ...b,
+    safetyCase: casesByBooking.get(b._id.toString()) ?? null,
+  }));
+
+  res.json({ success: true, total, page: pageNum, pages: Math.ceil(total / limitNum), bookings: enriched });
 };
 
 // ─── 7. Fee Configuration ────────────────────────────────────────────────────

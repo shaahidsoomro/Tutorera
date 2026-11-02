@@ -294,6 +294,16 @@ export default function AdminControlTowerPage() {
       link: "/admin/safety-cases?status=open",
       highlight: (pulse?.openSafetyCases ?? 0) > 0,
     },
+    {
+      title: "Disputed Bookings",
+      value: pulse?.disputedBookings ?? 0,
+      label: "Awaiting Resolution",
+      icon: <AlertTriangle size={20} color={STATUS_COLORS.warning?.color ?? "#d97706"} />,
+      bg: STATUS_COLORS.warning?.bg ?? "#fffbeb",
+      border: STATUS_COLORS.warning?.border ?? "#fde68a",
+      link: "/admin/disputes",
+      highlight: (pulse?.disputedBookings ?? 0) > 0,
+    },
   ];
 
   // Filter at-risk preview based on tab
@@ -846,6 +856,7 @@ export default function AdminControlTowerPage() {
             { title: "Smart Matching Engine", desc: "Configure weights & inspect affinity scores", link: "/admin/matching", icon: <Sparkles size={18} color={UI_COLORS.accent} />, bg: STATUS_COLORS.info.bg },
             { title: "Financial Reconciliation", desc: "Audit gateway fees, refunds & platform margins", link: "/admin/reconciliation", icon: <CreditCard size={18} color={STATUS_COLORS.success.color} />, bg: STATUS_COLORS.success.bg },
             { title: "Refunds & Claims Desk", desc: "Dispute resolution and money-back requests", link: "/admin/refund-requests", icon: <ShieldAlert size={18} color={STATUS_COLORS.danger.color} />, bg: STATUS_COLORS.danger.bg },
+            { title: "Disputed Bookings", desc: "Review and resolve payment disputes from students", link: "/admin/disputes", icon: <ShieldAlert size={18} color={STATUS_COLORS.warning?.color ?? "#d97706"} />, bg: STATUS_COLORS.warning?.bg ?? "#fffbeb" },
             { title: "Global Markets & Tax", desc: "Country rules, currency, and tax configurations", link: "/admin/markets", icon: <Globe size={18} color={STATUS_COLORS.purple.color} />, bg: STATUS_COLORS.purple.bg },
           ].map((item) => (
             <Link key={item.title} href={item.link} style={{ textDecoration: "none" }}>
