@@ -23,6 +23,7 @@ interface ControlTowerData {
     verificationBacklog: number;
     failedPayments: number;
     openSafetyCases: number;
+    disputedBookings: number;
   };
   urgentActions: {
     id: string;
