@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Bell, Settings, LogOut,
   ChevronLeft, ChevronRight, MessageSquare,
   CreditCard, User, Search, Menu, TrendingUp, BriefcaseBusiness, BookOpen,
-  PlusCircle, FileText, Handshake, Calendar, Wallet, ShieldCheck, HelpCircle, Users,
+  PlusCircle, FileText, Handshake, Calendar, Wallet, ShieldCheck, HelpCircle, Users, Gift, ShieldAlert,
 } from "lucide-react";
 
 const C = UI_COLORS;
@@ -31,7 +31,8 @@ const studentNav: NavItem[] = [
   { href: "/transactions",          label: "Payments",          icon: <Wallet size={18} /> },
   { href: "/notifications",         label: "Notifications",     icon: <Bell size={18} /> },
   { href: "/safety",                label: "Safety",            icon: <ShieldCheck size={18} /> },
-  { href: "/protection",            label: "Protection Center", icon: <ShieldCheck size={18} /> },
+  { href: "/protection",            label: "Protection Center", icon: <ShieldAlert size={18} /> },
+  { href: "/refer-and-earn",        label: "Refer & Earn",      icon: <Gift size={18} /> },
   { href: "/support",               label: "Support",           icon: <HelpCircle size={18} /> },
   { href: "/profile",               label: "Profile",           icon: <User size={18} /> },
   { href: "/student/guidebook",     label: "Student Guidebook", icon: <BookOpen size={18} /> },
@@ -48,7 +49,11 @@ const tutorNav: NavItem[] = [
   { href: "/students",              label: "Students",            icon: <Users size={18} /> },
   { href: "/chat",                  label: "Messages",            icon: <MessageSquare size={18} /> },
   { href: "/earnings",              label: "Earnings",            icon: <TrendingUp size={18} /> },
+  { href: "/transactions",          label: "Payments",            icon: <Wallet size={18} /> },
   { href: "/notifications",         label: "Notifications",       icon: <Bell size={18} /> },
+  { href: "/safety",                label: "Safety",              icon: <ShieldCheck size={18} /> },
+  { href: "/protection",            label: "Protection Center",   icon: <ShieldAlert size={18} /> },
+  { href: "/refer-and-earn",        label: "Refer & Earn",        icon: <Gift size={18} /> },
   { href: "/profile",               label: "Profile",             icon: <User size={18} /> },
   { href: "/support",               label: "Support",             icon: <HelpCircle size={18} /> },
   { href: "/tutor/guidebook",       label: "Tutor Guidebook",     icon: <BookOpen size={18} /> },
@@ -84,6 +89,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/profile':              'Profile',
   '/student/guidebook':    'Student Guidebook',
   '/tutor/guidebook':      'Tutor Guidebook',
+  '/refer-and-earn':       'Refer & Earn',
 };
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

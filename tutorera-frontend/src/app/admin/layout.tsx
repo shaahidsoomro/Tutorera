@@ -115,6 +115,7 @@ const navSections: NavSection[] = [
     title: "Trust & Safety",
     items: [
       { href: "/admin/safety-cases", label: "Safety Cases", icon: <ShieldAlert size={17} />, badge: "Cases", permission: "safety.read" },
+      { href: "/admin/disputes", label: "Disputes", icon: <AlertTriangle size={17} />, badge: "Action", permission: "claims.read" },
       { href: "/admin/guarantee-claims", label: "Guarantee Claims", icon: <Shield size={17} />, permission: "claims.read" },
     ],
   },
