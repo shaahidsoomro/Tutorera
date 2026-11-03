@@ -978,7 +978,7 @@ export const seedZoologyEligibilityRules = async (req: AuthRequest, res: Respons
   const report = { created: 0, skipped: 0, missing_subjects: [] as string[] };
 
   for (const spec of ZOOLOGY_RULES) {
-    const subject = await Subject.findOne({ name: new RegExp(`^${spec.subjectName.replace(/[.*+?^${}()|[\]\]/g, "\$&")}$`, "i"), status: "active" }).lean();
+    const subject = await Subject.findOne({ name: new RegExp(`^${spec.subjectName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i"), status: "active" }).lean();
     if (!subject) { report.missing_subjects.push(spec.subjectName); continue; }
 
     const exists = await TeachingEligibilityRule.exists({ discipline: zoologyDiscipline._id, subject: subject._id });
