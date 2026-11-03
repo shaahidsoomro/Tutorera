@@ -215,25 +215,11 @@ export const getRequestSeoFacets = async (
   res.status(200).json({ success: true, ...result });
 };
 
-// @desc    Get all open requests (tutors browse)
+// @desc    Get all open requests (visible to all users; tutors also get their own bid overlay)
 // @route   GET /api/requests
-// @access  Private
+// @access  Public (optionalAuth)
 export const getAllRequests = async (req: AuthRequest, res: Response): Promise<void> => {
-  // Block unapproved tutors
-  if (req.user?.role === "tutor") {
-    const TutorProfile = (await import("../models/TutorProfile.model")).default;
-    const profile = await TutorProfile.findOne({ user: req.user._id });
-    if (!profile || !isMarketplaceEligible(profile)) {
-      res.status(403).json({
-        success: false,
-        code: "TUTOR_NOT_APPROVED",
-        message: "Your profile must be fully verified before you can browse requests.",
-      });
-      return;
-    }
-  }
-
-  const { subject, level, city, country, teachingMode, currency, page = "1", limit = "10" } = req.query;
+  const { subject, level, city, country, teachingMode, currency, page = "1", limit = "12" } = req.query;
   const filter: Record<string, unknown> = {
     status: { $in: ["open", "published", "receiving_offers", "negotiating"] },
     isDirect: { $ne: true },
@@ -255,8 +241,8 @@ export const getAllRequests = async (req: AuthRequest, res: Response): Promise<v
   }
   if (currency) filter.currency = (currency as string).toUpperCase();
 
-  const pageNum = parseInt(page as string);
-  const limitNum = parseInt(limit as string);
+  const pageNum = Math.max(1, parseInt(page as string) || 1);
+  const limitNum = Math.min(50, Math.max(1, parseInt(limit as string) || 12));
   const skip = (pageNum - 1) * limitNum;
 
   const total = await Request.countDocuments(filter);
@@ -266,21 +252,39 @@ export const getAllRequests = async (req: AuthRequest, res: Response): Promise<v
     .skip(skip)
     .limit(limitNum);
 
-  if (req.user?.role === "tutor") {
-    const requestsWithOffer = await Promise.all(
-      requests.map(async (request) => {
-        const [bid, offersCount] = await Promise.all([
-          Bid.findOne({ request: request._id, tutor: req.user?._id }).select("amount currency status expiresAt pricingUnit createdAt").lean(),
-          Bid.countDocuments({ request: request._id, status: { $nin: ["withdrawn", "rejected"] } }),
-        ]);
-        return { ...request.toObject(), bid, offersCount };
-      })
-    );
-    res.status(200).json({ success: true, total, page: pageNum, requests: requestsWithOffer });
-    return;
-  }
+  const isTutor = req.user?.role === "tutor";
 
-  res.status(200).json({ success: true, total, page: pageNum, requests });
+  const enriched = await Promise.all(
+    requests.map(async (request) => {
+      const obj = request.toObject();
+      const offersCount = await Bid.countDocuments({ request: request._id, status: { $nin: ["withdrawn", "rejected"] } });
+
+      // Redact student identity for non-tutors and unauthenticated users
+      const rawName: string = (obj.student as any)?.name || "Student";
+      const nameParts = rawName.trim().split(" ");
+      const redactedName = nameParts.length > 1
+        ? `${nameParts[0]} ${nameParts[1].charAt(0)}.`
+        : nameParts[0] || "Verified Student";
+      const studentCity: string = (obj.student as any)?.city || obj.city || "";
+      const studentCountry: string = (obj.student as any)?.countryName || obj.countryName || "";
+
+      const studentField = isTutor
+        ? obj.student
+        : { name: redactedName, city: studentCity, countryName: studentCountry, displayTitle: `${redactedName} in ${studentCity || studentCountry || "Online"}` };
+
+      const base = { ...obj, student: studentField, offersCount };
+
+      if (isTutor) {
+        const bid = await Bid.findOne({ request: request._id, tutor: req.user?._id })
+          .select("amount currency status expiresAt pricingUnit createdAt").lean();
+        return { ...base, bid };
+      }
+
+      return base;
+    })
+  );
+
+  res.status(200).json({ success: true, total, page: pageNum, requests: enriched });
 };
 
 // @desc    Get my requests (student)

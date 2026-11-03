@@ -2,13 +2,14 @@
 import { UI_COLORS } from "@/lib/brand";
 import { useEffect, useState, useCallback } from "react";
 import api from "@/lib/axios";
-import { MapPin, BookOpen, Clock, Send } from "lucide-react";
+import { MapPin, BookOpen, Clock, Send, PlusCircle } from "lucide-react";
 import Link from "next/link";
 import PlaceBidModal from "@/components/Dashboard/PlaceBidModal";
 import { DashRequest } from "@/types/dashboard";
 import { formatMoney } from "@/lib/site";
 import { COUNTRIES, getCitiesForCountry } from "@/lib/location";
 import { useGeoData } from "@/lib/geoService";
+import { useAuth } from "@/context/AuthContext";
 
 const C = UI_COLORS;
 
@@ -34,6 +35,8 @@ interface RequestItem {
 const LEVELS = ["Primary (Grades 1-5)", "Middle (Grades 6-8)", "Matric (9th & 10th)", "Intermediate / FSc", "O-Level (Cambridge / Edexcel)", "A-Level (Cambridge / Edexcel)", "IB (Middle Years / Diploma)", "University / Degree", "Test Preparation", "Other"];
 
 export default function BrowseRequestsPage() {
+  const { user } = useAuth();
+  const isTutor = user?.role === "tutor";
   const [requests, setRequests] = useState<RequestItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [subject, setSubject] = useState("");
@@ -101,11 +104,18 @@ export default function BrowseRequestsPage() {
       <div style={{ backgroundColor: C.primary, padding: '3rem 1.5rem' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto', textAlign: 'center' }}>
           <h1 style={{ fontSize: '2rem', fontWeight: '800', color: 'white', marginBottom: '0.5rem' }}>
-            Browse Student Requests
+            Open Tuition Requests
           </h1>
           <p style={{ color: '#9ca3af', fontSize: '1rem' }}>
-            Find relevant tuition requests worldwide or locally and send students a transparent offer.
+            {isTutor
+              ? "Find relevant tuition requests worldwide or locally and send students a transparent offer."
+              : "Browse open tuition requests from students and parents. Qualified tutors can send offers directly."}
           </p>
+          {(user?.role === "student" || user?.role === "parent") && (
+            <Link href="/post-tuition-request" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginTop: '1rem', backgroundColor: C.accent, color: 'white', padding: '0.65rem 1.5rem', borderRadius: '0.5rem', textDecoration: 'none', fontWeight: '700', fontSize: '0.9rem' }}>
+              <PlusCircle size={16} /> Post Your Requirement
+            </Link>
+          )}
         </div>
       </div>
 
@@ -202,16 +212,22 @@ export default function BrowseRequestsPage() {
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid #f3f4f6' }}>
                   <span style={{ fontSize: '0.8rem', color: C.gray500 }}>By {r.student?.name}</span>
-                  {r.bid ? (
-                    <Link href="/offers" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', backgroundColor: C.accentLight, color: C.accent, padding: '0.5rem 1rem', borderRadius: '0.5rem', border: '1px solid #bfdbfe', fontWeight: '600', fontSize: '0.8rem', textDecoration: 'none' }}>
-                      Offer sent · {r.bid.status.replaceAll("_", " ")}
+                  {isTutor ? (
+                    r.bid ? (
+                      <Link href="/offers" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', backgroundColor: C.accentLight, color: C.accent, padding: '0.5rem 1rem', borderRadius: '0.5rem', border: '1px solid #bfdbfe', fontWeight: '600', fontSize: '0.8rem', textDecoration: 'none' }}>
+                        Offer sent · {r.bid.status.replaceAll("_", " ")}
+                      </Link>
+                    ) : (
+                      <button onClick={() => setBidModalRequest(r)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', backgroundColor: C.accent, color: 'white', padding: '0.5rem 1rem', borderRadius: '0.5rem', border: 'none', fontWeight: '600', fontSize: '0.8rem', cursor: 'pointer' }}>
+                        <Send size={13} /> Send Offer
+                      </button>
+                    )
+                  ) : !user ? (
+                    <Link href="/register?role=tutor" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', backgroundColor: C.accent, color: 'white', padding: '0.5rem 1rem', borderRadius: '0.5rem', fontWeight: '600', fontSize: '0.8rem', textDecoration: 'none' }}>
+                      Apply as Tutor
                     </Link>
-                  ) : (
-                    <button onClick={() => setBidModalRequest(r)}
-                      style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', backgroundColor: C.accent, color: 'white', padding: '0.5rem 1rem', borderRadius: '0.5rem', border: 'none', fontWeight: '600', fontSize: '0.8rem', cursor: 'pointer' }}>
-                      <Send size={13} /> Send Offer
-                    </button>
-                  )}
+                  ) : null}
                 </div>
               </div>
             ))}

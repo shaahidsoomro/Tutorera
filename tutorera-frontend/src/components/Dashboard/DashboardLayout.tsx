@@ -26,6 +26,7 @@ const studentNav: NavItem[] = [
   { href: "/post-tuition-request",  label: "Post Requirement",  icon: <PlusCircle size={18} /> },
   { href: "/requests",              label: "My Requirements",   icon: <FileText size={18} /> },
   { href: "/offers",                label: "Tutor Offers",      icon: <Handshake size={18} /> },
+  { href: "/browse-requests",       label: "Tutor Market",      icon: <Search size={18} /> },
   { href: "/book",                  label: "Bookings",          icon: <Calendar size={18} /> },
   { href: "/chat",                  label: "Messages",          icon: <MessageSquare size={18} /> },
   { href: "/transactions",          label: "Payments",          icon: <Wallet size={18} /> },
@@ -90,6 +91,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/student/guidebook':    'Student Guidebook',
   '/tutor/guidebook':      'Tutor Guidebook',
   '/refer-and-earn':       'Refer & Earn',
+  '/browse-requests':      'Tutor Market',
 };
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Tutor Request Feed",
-  description: "Browse student tuition opportunities and submit proposals.",
+  title: "Open Tuition Requests | Tutorera",
+  description: "Browse open tuition requests from students and parents worldwide. Filter by subject, level, city, and teaching mode.",
   robots: {
-    index: false,
-    follow: false,
+    index: true,
+    follow: true,
   },
   alternates: {
-    canonical: "/tuition-requests",
+    canonical: "/browse-requests",
   },
 };
 
