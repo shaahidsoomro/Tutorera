@@ -5,6 +5,7 @@ import { logAudit } from "../utils/logAudit";
 import { sendTokenResponse, generateToken } from "../utils/generateToken";
 import { AuthRequest } from "../types";
 import crypto from "crypto";
+import { Resend } from "resend";
 import { NotificationService } from "../services/notification.service";
 import {
   studentWelcomeEmail,
@@ -13,6 +14,7 @@ import {
   adminNewUserSignupEmail,
   passwordResetOtpEmail,
 } from "../utils/emailTemplates";
+import { renderBrandedEmail } from "../utils/emailBrand";
 import StudentProfile from "../models/StudentProfile.model";
 import TutorProfile from "../models/TutorProfile.model";
 import ParentProfile from "../models/ParentProfile.model";
@@ -667,13 +669,24 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
   user.resetPasswordExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
   await user.save();
 
+  // Send directly via Resend — bypass the outbox queue for this time-critical
+  // OTP so a timing/consistency gap in the outbox cannot silently swallow it.
   try {
-    await NotificationService.publishEvent(user._id.toString(), "auth.password.reset_requested", { otp });
+    const { subject, html } = passwordResetOtpEmail(user.name, otp);
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const result = await resend.emails.send({
+      from: "TUTORERA® <noreply@tutorera.ac.pk>",
+      to: user.email,
+      subject,
+      html: renderBrandedEmail({ subject, html }),
+    });
+    if (result.error) throw new Error(result.error.message);
   } catch (err) {
-    // Roll back the OTP if email fails, so a stale unusable OTP doesn't linger
+    // Roll back the OTP so a stale, unsent code cannot be guessed
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
     await user.save();
+    console.error("[forgotPassword] Resend delivery failed:", err);
     res.status(500).json({ success: false, message: "Failed to send email. Please try again." });
     return;
   }

@@ -13,8 +13,14 @@ export async function enqueueEmail(input: OutboxEmail) {
 
 export async function deliverOutboxEmail(id: string): Promise<void> {
   const now = new Date();
-  const job = await EmailOutbox.findOneAndUpdate({ _id: id, status: "queued", nextAttemptAt: { $lte: now } }, { $set: { status: "processing" }, $inc: { attempts: 1 } }, { returnDocument: "after" });
-  if (!job) return;
+  // Use a 5-second grace window so a document created milliseconds ago is
+  // still picked up even if MongoDB clock is slightly ahead of the app clock.
+  const graceBefore = new Date(now.getTime() + 5000);
+  const job = await EmailOutbox.findOneAndUpdate({ _id: id, status: "queued", nextAttemptAt: { $lte: graceBefore } }, { $set: { status: "processing" }, $inc: { attempts: 1 } }, { returnDocument: "after" });
+  if (!job) {
+    console.warn(`[emailOutbox] deliverOutboxEmail: job ${id} not found or not ready — will be picked up by retry worker`);
+    return;
+  }
   try {
     const result = await new Resend(process.env.RESEND_API_KEY).emails.send({ from: "TUTORERA® <noreply@tutorera.ac.pk>", to: job.recipientEmail, subject: job.subject, html: renderBrandedEmail({ subject: job.subject, html: job.html, preheader: job.preheader, category: job.category || job.eventType }) });
     if (result.error) throw new Error(result.error.message);
