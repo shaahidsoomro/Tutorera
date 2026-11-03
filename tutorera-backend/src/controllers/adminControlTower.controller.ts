@@ -14,6 +14,10 @@ import FeeConfig from "../models/FeeConfig.model";
 import MarketConfig from "../models/MarketConfig.model";
 import PaymentLedger from "../models/PaymentLedger.model";
 import RefundRequest from "../models/RefundRequest.model";
+import AcademicDiscipline from "../models/AcademicDiscipline.model";
+import Subject from "../models/Subject.model";
+import TeachingEligibilityRule from "../models/TeachingEligibilityRule.model";
+import { resolveTeachingEligibility } from "../services/subjectEligibility.service";
 import { AtRiskRequestService } from "../services/atRiskRequest.service";
 import { ROLE_PERMISSIONS, ALL_PERMISSIONS, hasPermission, Permission } from "../config/rbac";
 import mongoose from "mongoose";
@@ -951,4 +955,109 @@ export const getTutor360 = async (req: AuthRequest, res: Response): Promise<void
       completedBookingsCount: bookings.filter((b) => b.status === "completed").length,
     },
   });
+};
+
+// ─── Maintenance: Seed Zoology eligibility rules ──────────────────────────────
+// POST /admin/maintenance/seed-zoology-rules
+// Super-admin only. Idempotent — existing rules are never duplicated.
+export const seedZoologyEligibilityRules = async (req: AuthRequest, res: Response): Promise<void> => {
+  const ZOOLOGY_RULES: { subjectName: string; eligibilityType: "direct" | "conditional"; evidenceRequired: boolean; notes: string }[] = [
+    { subjectName: "Biology",              eligibilityType: "direct",      evidenceRequired: false, notes: "Biology is the core subject of a Zoology degree — direct eligibility." },
+    { subjectName: "General Science",      eligibilityType: "direct",      evidenceRequired: false, notes: "General Science at school level is fully covered by a Zoology qualification." },
+    { subjectName: "Environmental Science",eligibilityType: "direct",      evidenceRequired: false, notes: "Ecology and environmental biology are core components of a Zoology degree." },
+    { subjectName: "Chemistry",            eligibilityType: "conditional", evidenceRequired: true,  notes: "Biochemistry studied within Zoology; conditional — transcript evidence required." },
+    { subjectName: "Botany",               eligibilityType: "conditional", evidenceRequired: true,  notes: "Plant biology overlaps with zoology; conditional — botany coursework evidence required." },
+  ];
+
+  const zoologyDiscipline = await AcademicDiscipline.findOne({ name: /^zoology$/i, status: "active" }).lean();
+  if (!zoologyDiscipline) {
+    res.status(404).json({ success: false, message: "No active AcademicDiscipline named 'Zoology' found. Create it first." });
+    return;
+  }
+
+  const report = { created: 0, skipped: 0, missing_subjects: [] as string[] };
+
+  for (const spec of ZOOLOGY_RULES) {
+    const subject = await Subject.findOne({ name: new RegExp(`^${spec.subjectName.replace(/[.*+?^${}()|[\]\]/g, "\$&")}$`, "i"), status: "active" }).lean();
+    if (!subject) { report.missing_subjects.push(spec.subjectName); continue; }
+
+    const exists = await TeachingEligibilityRule.exists({ discipline: zoologyDiscipline._id, subject: subject._id });
+    if (exists) { report.skipped++; continue; }
+
+    await TeachingEligibilityRule.create({
+      discipline: zoologyDiscipline._id,
+      subject: subject._id,
+      eligibilityType: spec.eligibilityType,
+      evidenceRequired: spec.evidenceRequired,
+      notes: spec.notes,
+      status: "active",
+    });
+    report.created++;
+  }
+
+  await logAudit({ action: "maintenance_seed_zoology_rules", actor: (req.user as any)?.name || "admin", entity: "TeachingEligibilityRule", targetId: zoologyDiscipline._id.toString() });
+  res.json({ success: true, message: "Zoology eligibility rules seeded.", report });
+};
+
+// ─── Maintenance: Recalculate matchesDiscipline for all pending subjects ──────
+// POST /admin/maintenance/recalculate-matches-discipline
+// Super-admin only. Updates only pending/needs_evidence/rejected entries.
+export const recalculateMatchesDiscipline = async (req: AuthRequest, res: Response): Promise<void> => {
+  const RECALCULATE_STATUSES = new Set(["pending", "needs_evidence", "rejected"]);
+  const report = { profilesScanned: 0, entriesScanned: 0, entriesUpdated: 0, profilesUpdated: 0 };
+
+  const cursor = TutorProfile.find({ "subjectEligibility.0": { $exists: true } }).cursor();
+
+  for await (const profile of cursor) {
+    report.profilesScanned++;
+    const qualifications = profile.education || [];
+    let dirty = false;
+
+    for (const entry of profile.subjectEligibility || []) {
+      if (!RECALCULATE_STATUSES.has(entry.status)) continue;
+      report.entriesScanned++;
+
+      const targetQualifications = entry.qualificationIndex != null && qualifications[entry.qualificationIndex]
+        ? [qualifications[entry.qualificationIndex]]
+        : qualifications;
+
+      const disciplines: string[] = [];
+      for (const q of targetQualifications) {
+        if (q.disciplineRef) {
+          const disc = await AcademicDiscipline.findById(q.disciplineRef).lean();
+          if (disc?.name) disciplines.push(disc.name);
+        } else if (q.discipline?.trim()) {
+          disciplines.push(q.discipline.trim());
+        }
+      }
+      if (disciplines.length === 0) continue;
+
+      const resolutions = await Promise.all(disciplines.map((d) => resolveTeachingEligibility(d, entry.subject)));
+      const best = resolutions.find((r) => r.eligibilityType === "direct") ?? resolutions.find((r) => r.eligibilityType === "conditional") ?? resolutions[0];
+
+      const newMatch = best.eligibilityType !== "unmapped";
+      const changed = entry.matchesDiscipline !== newMatch || entry.eligibilityType !== best.eligibilityType || entry.evidenceRequired !== best.evidenceRequired;
+      if (!changed) continue;
+
+      entry.matchesDiscipline = newMatch;
+      entry.eligibilityType = best.eligibilityType as typeof entry.eligibilityType;
+      entry.evidenceRequired = best.evidenceRequired;
+      if (best.subjectId) entry.subjectRef = best.subjectId;
+      if (best.ruleId) entry.eligibilityRuleRef = best.ruleId;
+      if (entry.status === "pending" && best.eligibilityType === "conditional" && best.evidenceRequired) {
+        entry.status = "needs_evidence";
+      }
+
+      report.entriesUpdated++;
+      dirty = true;
+    }
+
+    if (dirty) {
+      await profile.save({ validateModifiedOnly: true });
+      report.profilesUpdated++;
+    }
+  }
+
+  await logAudit({ action: "maintenance_recalculate_matches_discipline", actor: (req.user as any)?.name || "admin", entity: "TutorProfile", targetId: "batch" });
+  res.json({ success: true, message: "matchesDiscipline recalculated.", report });
 };

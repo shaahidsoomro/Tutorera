@@ -67,6 +67,8 @@ import {
   promoteUser,
   moderateUser,
   getStudent360,
+  seedZoologyEligibilityRules,
+  recalculateMatchesDiscipline,
   getTutor360,
 } from "../controllers/adminControlTower.controller";
 import taxConfigRoutes from "./admin/taxConfig.routes";
@@ -201,5 +203,9 @@ router.post("/approvals", requirePermission("system.monitor"), submitApproval);
 router.post("/approvals/:id/review", requirePermission("system.monitor"), reviewApproval);
 router.get("/student-ratings", requirePermission("student.read"), getAllStudentRatings);
 router.get("/student-ratings/:studentId", requirePermission("student.read"), getStudentRatings);
+
+// One-shot maintenance endpoints — super_admin only
+router.post("/maintenance/seed-zoology-rules", requirePermission("system.monitor"), seedZoologyEligibilityRules);
+router.post("/maintenance/recalculate-matches-discipline", requirePermission("system.monitor"), recalculateMatchesDiscipline);
 
 export default router;
