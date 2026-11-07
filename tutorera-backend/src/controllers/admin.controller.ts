@@ -2,6 +2,7 @@ import { Response } from "express";
 import { AuthRequest } from "../types";
 import TutorProfile from "../models/TutorProfile.model";
 import StudentProfile from "../models/StudentProfile.model";
+import ParentProfile from "../models/ParentProfile.model";
 import User from "../models/User.model";
 import { Types } from "mongoose";
 import Booking from "../models/Booking.model";
@@ -1689,5 +1690,152 @@ export const downloadTutorPayoutReport = async (req: AuthRequest, res: Response)
   } catch (error: any) {
     console.error("Failed to generate tutor payout report:", error);
     res.status(error?.statusCode || 500).json({ success: false, message: error?.statusCode ? error.message : "Failed to generate payout report." });
+  }
+};
+
+// @desc    Student onboarding pipeline — phase summary + filterable rows
+// @route   GET /api/admin/onboarding/students
+// @access  Private (admin, users.read)
+export const getOnboardingStudents = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { phase, search, countryCode, limit = "100", page = "1" } = req.query as Record<string, string>;
+    const pageSize = Math.min(parseInt(limit, 10) || 100, 500);
+    const pageNum  = Math.max(parseInt(page,  10) || 1,   1);
+
+    // Build user filter
+    const userFilter: Record<string, unknown> = { role: "student", accountStatus: { $ne: "deleted" } };
+    if (countryCode) userFilter.countryCode = countryCode.toUpperCase();
+    if (search) {
+      const re = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      userFilter.$or = [{ name: re }, { email: re }, { city: re }];
+    }
+
+    const users = await User.find(userFilter).select("_id name email countryCode city accountStatus createdAt updatedAt").lean();
+    const userIds = users.map(u => u._id);
+
+    // Fetch profiles and request counts in parallel
+    const [profiles, requestCounts] = await Promise.all([
+      StudentProfile.find({ user: { $in: userIds } }).select("user onboardingComplete subjectsNeeded updatedAt").lean(),
+      Request.aggregate([
+        { $match: { student: { $in: userIds } } },
+        { $group: { _id: "$student", count: { $sum: 1 }, lastAt: { $max: "$createdAt" } } },
+      ]),
+    ]);
+
+    const profileMap = new Map(profiles.map(p => [p.user.toString(), p]));
+    const reqMap     = new Map(requestCounts.map((r: any) => [r._id.toString(), r]));
+
+    const rows = users.map(u => {
+      const uid = u._id.toString();
+      const profile = profileMap.get(uid);
+      const reqs    = reqMap.get(uid);
+
+      let derivedPhase: string;
+      if (!profile) {
+        derivedPhase = "REGISTERED";
+      } else if (!profile.onboardingComplete) {
+        derivedPhase = "PROFILE_STARTED";
+      } else if (!reqs || reqs.count === 0) {
+        derivedPhase = "READY_TO_POST";
+      } else {
+        derivedPhase = "ACTIVE_REQUESTER";
+      }
+
+      return {
+        userId: uid,
+        name: u.name,
+        email: u.email,
+        countryCode: u.countryCode ?? null,
+        city: u.city ?? null,
+        phase: derivedPhase,
+        onboardingComplete: profile?.onboardingComplete ?? false,
+        requestCount: reqs?.count ?? 0,
+        lastRequestAt: reqs?.lastAt ?? null,
+        lastUpdatedAt: (profile?.updatedAt ?? u.updatedAt ?? u.createdAt)?.toISOString?.() ?? null,
+      };
+    }).filter(r => !phase || r.phase === phase);
+
+    // Phase summary
+    const summary: Record<string, number> = {};
+    for (const r of rows) summary[r.phase] = (summary[r.phase] ?? 0) + 1;
+
+    // Pagination on filtered rows
+    const total = rows.length;
+    const start = (pageNum - 1) * pageSize;
+    const paged = rows.slice(start, start + pageSize);
+
+    res.status(200).json({ success: true, total, page: pageNum, rows: paged, summary });
+  } catch (err: any) {
+    console.error("[admin/onboarding/students]", err);
+    res.status(500).json({ success: false, message: "Failed to load student onboarding data." });
+  }
+};
+
+// @desc    Parent onboarding pipeline — phase summary + filterable rows
+// @route   GET /api/admin/onboarding/parents
+// @access  Private (admin, users.read)
+export const getOnboardingParents = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { phase, search, countryCode, limit = "100", page = "1" } = req.query as Record<string, string>;
+    const pageSize = Math.min(parseInt(limit, 10) || 100, 500);
+    const pageNum  = Math.max(parseInt(page,  10) || 1,   1);
+
+    const userFilter: Record<string, unknown> = { role: "parent", accountStatus: { $ne: "deleted" } };
+    if (countryCode) userFilter.countryCode = countryCode.toUpperCase();
+    if (search) {
+      const re = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      userFilter.$or = [{ name: re }, { email: re }, { city: re }];
+    }
+
+    const users = await User.find(userFilter).select("_id name email countryCode city accountStatus createdAt updatedAt").lean();
+    const userIds = users.map(u => u._id);
+
+    const profiles = await ParentProfile.find({ user: { $in: userIds } })
+      .select("user fullName children approvalRequiredForBookings countryCode city updatedAt createdAt")
+      .lean();
+
+    const profileMap = new Map(profiles.map(p => [p.user.toString(), p]));
+
+    const rows = users.map(u => {
+      const uid     = u._id.toString();
+      const profile = profileMap.get(uid);
+      const linkedLearners = profile?.children?.length ?? 0;
+
+      let derivedPhase: string;
+      if (!profile) {
+        derivedPhase = "REGISTERED";
+      } else if (linkedLearners === 0) {
+        derivedPhase = "PROFILE_STARTED";
+      } else {
+        derivedPhase = "LEARNER_LINKED";
+      }
+
+      return {
+        userId: uid,
+        profileId: profile?._id?.toString() ?? null,
+        name: u.name,
+        email: u.email,
+        countryCode: profile?.countryCode ?? u.countryCode ?? null,
+        city: profile?.city ?? u.city ?? null,
+        phase: derivedPhase,
+        linkedLearners,
+        approvalRequiredForBookings: profile?.approvalRequiredForBookings ?? true,
+        accountStatus: (u as any).accountStatus ?? "active",
+        lastUpdatedAt: (profile?.updatedAt ?? u.updatedAt ?? u.createdAt)?.toISOString?.() ?? null,
+        createdAt: u.createdAt?.toISOString?.() ?? null,
+      };
+    }).filter(r => !phase || r.phase === phase);
+
+    const summary: Record<string, number> = {};
+    for (const r of rows) summary[r.phase] = (summary[r.phase] ?? 0) + 1;
+
+    const total = rows.length;
+    const start = (pageNum - 1) * pageSize;
+    const paged = rows.slice(start, start + pageSize);
+
+    res.status(200).json({ success: true, total, page: pageNum, rows: paged, summary });
+  } catch (err: any) {
+    console.error("[admin/onboarding/parents]", err);
+    res.status(500).json({ success: false, message: "Failed to load parent onboarding data." });
   }
 };

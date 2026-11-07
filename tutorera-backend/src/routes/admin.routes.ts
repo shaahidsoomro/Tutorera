@@ -25,6 +25,8 @@ import {
   sendBroadcast,
   getTutorDocumentUrl,
   downloadTutorPayoutReport,
+  getOnboardingStudents,
+  getOnboardingParents,
 } from "../controllers/admin.controller";
 import {
   getAllClaims,
@@ -208,6 +210,10 @@ router.post("/approvals", requirePermission("system.monitor"), submitApproval);
 router.post("/approvals/:id/review", requirePermission("system.monitor"), reviewApproval);
 router.get("/student-ratings", requirePermission("student.read"), getAllStudentRatings);
 router.get("/student-ratings/:studentId", requirePermission("student.read"), getStudentRatings);
+
+// Onboarding pipelines
+router.get("/onboarding/students", requirePermission("users.read"), getOnboardingStudents);
+router.get("/onboarding/parents",  requirePermission("users.read"), getOnboardingParents);
 
 // One-shot maintenance endpoints — super_admin only
 router.post("/maintenance/seed-zoology-rules", requirePermission("system.monitor"), seedZoologyEligibilityRules);
