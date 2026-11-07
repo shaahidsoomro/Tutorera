@@ -105,7 +105,8 @@ export default function NotificationsPage() {
               <div key={item.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', border: '1px solid #e5e7eb', borderRadius: '0.5rem', backgroundColor: 'white' }}>
                 <span style={{ fontSize: '0.875rem', color: C.primary }}>{item.label}</span>
                 <button
-                  title="Toggle preference"
+                  aria-label={`Toggle ${item.label}`}
+                  aria-pressed={prefs[item.key as keyof typeof prefs]}
                   onClick={() => togglePref(item.key as keyof typeof prefs)}
                   style={{ width: '44px', height: '24px', borderRadius: '999px', border: 'none', cursor: 'pointer', position: 'relative', backgroundColor: prefs[item.key as keyof typeof prefs] ? C.accent : '#d1d5db', transition: 'background 0.2s' }}>
                   <div style={{ width: '18px', height: '18px', borderRadius: '50%', backgroundColor: 'white', position: 'absolute', top: '3px', left: prefs[item.key as keyof typeof prefs] ? '23px' : '3px', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />

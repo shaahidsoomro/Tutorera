@@ -114,8 +114,8 @@ export default function AnalyticsPage() {
           <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: C.primary }}>Analytics</h1>
           <p style={{ color: C.gray500, fontSize: '0.875rem' }}>Platform-wide metrics and growth.</p>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}>
-          <div style={{ width: 36, height: 36, border: `3px solid ${C.accent}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+        <div role="status" aria-label="Loading analytics" style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}>
+          <div aria-hidden="true" style={{ width: 36, height: 36, border: `3px solid ${C.accent}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
           <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         </div>
       </div>

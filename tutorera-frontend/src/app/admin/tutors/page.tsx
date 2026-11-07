@@ -183,6 +183,7 @@ export default function TutorsDirectoryPage() {
         <Search size={16} style={{ color: TEXT_COLORS.muted }} />
         <input
           type="text"
+          aria-label="Search tutors by name, email, or city"
           placeholder="Search tutor by name, email, or city..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -252,17 +253,18 @@ export default function TutorsDirectoryPage() {
 
       {/* Tutor 360° Drawer Modal */}
       {selectedTutorId && (
-        <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.55)", zIndex: 100, display: "flex", justifyContent: "flex-end" }}>
+        <div role="dialog" aria-modal="true" aria-labelledby="tutor360-title" style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.55)", zIndex: 100, display: "flex", justifyContent: "flex-end" }}>
           <div style={{ width: "100%", maxWidth: "620px", backgroundColor: "white", height: "100%", overflowY: "auto", padding: "2rem", display: "flex", flexDirection: "column" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
-              <h2 style={{ fontSize: "1.25rem", fontWeight: 900, margin: 0, color: TEXT_COLORS.body }}>
+              <h2 id="tutor360-title" style={{ fontSize: "1.25rem", fontWeight: 900, margin: 0, color: TEXT_COLORS.body }}>
                 Tutor 360° Profile
               </h2>
               <button
                 onClick={() => setSelectedTutorId(null)}
-                style={{ border: "none", background: "none", cursor: "pointer", color: UI_COLORS.gray500 }}
+                aria-label="Close tutor profile"
+                style={{ border: "none", background: "none", cursor: "pointer", color: UI_COLORS.gray500, minWidth: 44, minHeight: 44, display: "flex", alignItems: "center", justifyContent: "center" }}
               >
-                <X size={20} />
+                <X size={20} aria-hidden="true" />
               </button>
             </div>
 
@@ -372,6 +374,9 @@ export default function TutorsDirectoryPage() {
       {/* Admin Override Upload Modal */}
       {uploadModalOpen && tutor360 && (
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="upload-modal-title"
           style={{
             position: "fixed",
             top: 0,
@@ -399,16 +404,17 @@ export default function TutorsDirectoryPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <h2 style={{ fontSize: "1.1rem", fontWeight: 800, color: TEXT_COLORS.body, margin: 0 }}>
+              <h2 id="upload-modal-title" style={{ fontSize: "1.1rem", fontWeight: 800, color: TEXT_COLORS.body, margin: 0 }}>
                 Upload on Behalf of {tutor360.user?.name || tutor360.fullName}
               </h2>
               <button
                 type="button"
                 onClick={() => setUploadModalOpen(false)}
                 disabled={uploadSubmitting}
-                style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: UI_COLORS.gray500 }}
+                aria-label="Close upload modal"
+                style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: UI_COLORS.gray500, minWidth: 44, minHeight: 44, display: "flex", alignItems: "center", justifyContent: "center" }}
               >
-                <X size={18} />
+                <X size={18} aria-hidden="true" />
               </button>
             </div>
 

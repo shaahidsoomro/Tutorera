@@ -97,6 +97,7 @@ function ApplicationsContent() {
             <button
               type="button"
               key={key}
+              aria-pressed={filters.status === key}
               onClick={() => {
                 setFilters(f => ({ ...f, status: f.status === key ? "all" : key }));
                 setPage(1);

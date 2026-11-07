@@ -79,9 +79,9 @@ export default function BookingsPage() {
       </div>
 
       {/* Filter */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+      <div role="tablist" aria-label="Filter bookings by status" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
         {["all", "upcoming", "ongoing", "completed", "cancelled"].map(tab => (
-          <button key={tab} onClick={() => setFilter(tab)}
+          <button key={tab} role="tab" aria-selected={filter === tab} onClick={() => setFilter(tab)}
             style={{ padding: '0.5rem 1rem', borderRadius: '999px', border: filter === tab ? 'none' : '1px solid #e5e7eb', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600', textTransform: 'capitalize', backgroundColor: filter === tab ? C.primary : 'white', color: filter === tab ? 'white' : C.gray500 }}>
             {tab}
           </button>
@@ -89,8 +89,8 @@ export default function BookingsPage() {
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '4rem' }}>
-          <div style={{ width: '36px', height: '36px', border: `3px solid ${C.accent}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto' }} />
+        <div role="status" aria-label="Loading bookings" style={{ textAlign: 'center', padding: '4rem' }}>
+          <div aria-hidden="true" style={{ width: '36px', height: '36px', border: `3px solid ${C.accent}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto' }} />
           <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         </div>
       ) : bookings.length === 0 ? (
@@ -142,7 +142,7 @@ export default function BookingsPage() {
                       <div>
                         <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.3rem' }}>Booking</p>
                         <select
-                          title="status"
+                          aria-label="Booking status"
                           value={booking.status}
                           onChange={e => handleStatusChange(booking._id, e.target.value)}
                           disabled={updatingStatus === booking._id}

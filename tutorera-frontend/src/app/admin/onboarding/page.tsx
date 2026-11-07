@@ -111,12 +111,12 @@ function AdminOnboardingContent() {
       </div>
 
       <section style={card}>
-        <div style={{ borderBottom: `1px solid ${UI_COLORS.border}`, display: "flex", flexWrap: "wrap", background: STATUS_COLORS.neutral.bg }}>
-          <button type="button" onClick={() => handleTabChange("students")} style={tabStyle(tab === "students")}>
-            <Users size={17} /> Student Onboarding
+        <div role="tablist" aria-label="Onboarding pipeline view" style={{ borderBottom: `1px solid ${UI_COLORS.border}`, display: "flex", flexWrap: "wrap", background: STATUS_COLORS.neutral.bg }}>
+          <button type="button" role="tab" aria-selected={tab === "students"} onClick={() => handleTabChange("students")} style={tabStyle(tab === "students")}>
+            <Users size={17} aria-hidden="true" /> Student Onboarding
           </button>
-          <button type="button" onClick={() => handleTabChange("parents")} style={tabStyle(tab === "parents")}>
-            <HeartHandshake size={17} /> Parent & Guardian Onboarding
+          <button type="button" role="tab" aria-selected={tab === "parents"} onClick={() => handleTabChange("parents")} style={tabStyle(tab === "parents")}>
+            <HeartHandshake size={17} aria-hidden="true" /> Parent & Guardian Onboarding
           </button>
         </div>
 
@@ -127,6 +127,7 @@ function AdminOnboardingContent() {
               <button
                 type="button"
                 key={key}
+                aria-pressed={phase === key}
                 onClick={() => setPhase(phase === key ? "" : key)}
                 style={{
                   textAlign: "left",

@@ -277,7 +277,7 @@ export default function AdminReferralsPage() {
       <ReferralConfigPanel />
 
       {/* Filter bar */}
-      <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem", flexWrap: "wrap", alignItems: "center" }}>
+      <div role="tablist" aria-label="Filter referrals by status" style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem", flexWrap: "wrap", alignItems: "center" }}>
         {([
           { key: "all",        label: "All" },
           { key: "pending",    label: "⏳ Pending" },
@@ -285,7 +285,7 @@ export default function AdminReferralsPage() {
           { key: "reversed",   label: "↩ Reversed" },
           { key: "fraud_hold", label: "🚩 Fraud Hold" },
         ] as const).map(tab => (
-          <button key={tab.key} onClick={() => { setFilter(tab.key); setPage(1); }}
+          <button key={tab.key} role="tab" aria-selected={filter === tab.key} onClick={() => { setFilter(tab.key); setPage(1); }}
             style={{ padding: "0.5rem 1.25rem", borderRadius: "999px", cursor: "pointer", fontSize: "0.875rem", fontWeight: "600", border: filter === tab.key ? "none" : `1px solid ${C.border}`, backgroundColor: filter === tab.key ? C.primary : "white", color: filter === tab.key ? "white" : C.gray500 }}>
             {tab.label}
           </button>
@@ -297,8 +297,8 @@ export default function AdminReferralsPage() {
       </div>
 
       {loading ? (
-        <div style={{ textAlign: "center", padding: "4rem" }}>
-          <div style={{ width: "36px", height: "36px", border: `3px solid ${C.accent}`, borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto" }} />
+        <div role="status" aria-label="Loading referrals" style={{ textAlign: "center", padding: "4rem" }}>
+          <div aria-hidden="true" style={{ width: "36px", height: "36px", border: `3px solid ${C.accent}`, borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto" }} />
           <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         </div>
       ) : referrals.length === 0 ? (

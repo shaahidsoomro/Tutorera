@@ -169,11 +169,11 @@ function PayoutRequestPanel() {
         💳 Request Payout
       </button>
       {open && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
+        <div role="dialog" aria-modal="true" aria-labelledby="payout-modal-title" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
           <div style={{ background: "#fff", borderRadius: 16, padding: "1.5rem", maxWidth: 560, width: "100%", maxHeight: "80vh", overflowY: "auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-              <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: "#021550" }}>💳 Request Payout</h3>
-              <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", fontSize: "1.25rem", cursor: "pointer", color: "#6b7280" }}>✕</button>
+              <h3 id="payout-modal-title" style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: "#021550" }}>💳 Request Payout</h3>
+              <button onClick={() => setOpen(false)} aria-label="Close payout modal" style={{ background: "none", border: "none", fontSize: "1.25rem", cursor: "pointer", color: "#6b7280", minWidth: 44, minHeight: 44, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
             </div>
             <p style={{ margin: "0 0 1rem", fontSize: "0.8rem", color: "#64748b" }}>
               Select completed sessions to request payment. Finance will process within 3–5 business days.
