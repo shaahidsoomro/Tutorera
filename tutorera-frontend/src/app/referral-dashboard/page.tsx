@@ -8,6 +8,7 @@ import { Check, Copy, Gift, TrendingUp, Users } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 const C = UI_COLORS;
+const NAVY = C.primary;
 
 type ReferralEntry = {
   _id: string;
@@ -101,7 +102,7 @@ export default function ReferralDashboardPage() {
     <DashboardLayout>
       <div style={{ maxWidth: 820, margin: "0 auto", padding: "1.5rem 1rem" }}>
         <div style={{ marginBottom: "1.75rem" }}>
-          <h1 style={{ fontSize: "1.4rem", fontWeight: 800, color: C.navy, margin: 0 }}>Refer &amp; Earn</h1>
+          <h1 style={{ fontSize: "1.4rem", fontWeight: 800, color: NAVY, margin: 0 }}>Refer &amp; Earn</h1>
           <p style={{ color: "#64748b", margin: "0.35rem 0 0", fontSize: "0.9rem" }}>
             Share your referral link. Earn credit when friends complete their first booking.
           </p>
@@ -130,7 +131,7 @@ export default function ReferralDashboardPage() {
             {/* Stats row */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "0.85rem", marginBottom: "1.25rem" }}>
               {[
-                { label: "Total Referred", value: data.stats.totalReferred, icon: <Users size={18} color={C.accent} /> },
+                { label: "Total Referred", value: data.stats.totalReferred, icon: <Users size={18} color={C.accentBright} /> },
                 { label: "Successful", value: data.stats.creditedCount, icon: <TrendingUp size={18} color="#16a34a" /> },
                 { label: "Pending", value: data.stats.pendingCount, icon: <Gift size={18} color="#1d4ed8" /> },
                 { label: "Total Earned", value: fmt(data.stats.totalEarned, data.program.currency), icon: <TrendingUp size={18} color="#7c3aed" /> },
@@ -140,14 +141,14 @@ export default function ReferralDashboardPage() {
                     {s.icon}
                     <span style={{ fontSize: "0.78rem", color: "#64748b", fontWeight: 600 }}>{s.label}</span>
                   </div>
-                  <div style={{ fontSize: "1.5rem", fontWeight: 800, color: C.navy }}>{s.value}</div>
+                  <div style={{ fontSize: "1.5rem", fontWeight: 800, color: NAVY }}>{s.value}</div>
                 </div>
               ))}
             </div>
 
             {/* Referral link card */}
             <div style={{ ...card, marginBottom: "1.25rem" }}>
-              <div style={{ fontWeight: 700, color: C.navy, marginBottom: "1rem" }}>Your Referral Link</div>
+              <div style={{ fontWeight: 700, color: NAVY, marginBottom: "1rem" }}>Your Referral Link</div>
               <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                 <input
                   readOnly
@@ -182,7 +183,7 @@ export default function ReferralDashboardPage() {
 
             {/* Apply a code */}
             <div style={{ ...card, marginBottom: "1.25rem" }}>
-              <div style={{ fontWeight: 700, color: C.navy, marginBottom: "0.5rem" }}>Have a referral code?</div>
+              <div style={{ fontWeight: 700, color: NAVY, marginBottom: "0.5rem" }}>Have a referral code?</div>
               <p style={{ color: "#64748b", fontSize: "0.85rem", margin: "0 0 0.9rem" }}>
                 Enter a code you received to apply a friend&apos;s referral discount.
               </p>
@@ -197,7 +198,7 @@ export default function ReferralDashboardPage() {
                 <button
                   onClick={handleApply}
                   disabled={applying || !applyCode.trim()}
-                  style={{ border: 0, background: applying ? "#94a3b8" : C.navy, color: "white", borderRadius: 8, padding: "0.6rem 1.2rem", fontWeight: 700, cursor: applying ? "not-allowed" : "pointer" }}
+                  style={{ border: 0, background: applying ? "#94a3b8" : NAVY, color: "white", borderRadius: 8, padding: "0.6rem 1.2rem", fontWeight: 700, cursor: applying ? "not-allowed" : "pointer" }}
                 >
                   {applying ? "Applying…" : "Apply Code"}
                 </button>
@@ -207,12 +208,12 @@ export default function ReferralDashboardPage() {
             {/* Referral history */}
             {data.referrals.length > 0 && (
               <div style={card}>
-                <div style={{ fontWeight: 700, color: C.navy, marginBottom: "1rem" }}>Referral History</div>
+                <div style={{ fontWeight: 700, color: NAVY, marginBottom: "1rem" }}>Referral History</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
                   {data.referrals.map(r => (
                     <div key={r._id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.65rem 0.9rem", background: "#f8fafc", borderRadius: 10, flexWrap: "wrap", gap: "0.5rem" }}>
                       <div>
-                        <div style={{ fontWeight: 600, color: C.navy, fontSize: "0.9rem" }}>{r.referred?.name ?? "User"}</div>
+                        <div style={{ fontWeight: 600, color: NAVY, fontSize: "0.9rem" }}>{r.referred?.name ?? "User"}</div>
                         <div style={{ color: "#94a3b8", fontSize: "0.78rem" }}>{fmtDate(r.createdAt)}</div>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
