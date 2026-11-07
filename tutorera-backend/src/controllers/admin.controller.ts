@@ -1771,6 +1771,74 @@ export const getOnboardingStudents = async (req: AuthRequest, res: Response): Pr
   }
 };
 
+// @desc    Tutor onboarding pipeline — phase summary + filterable rows
+// @route   GET /api/admin/onboarding/tutors
+// @access  Private (admin, tutor.read)
+export const getOnboardingTutors = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { phase, search, countryCode, limit = "100", page = "1" } = req.query as Record<string, string>;
+    const pageSize = Math.min(parseInt(limit, 10) || 100, 500);
+    const pageNum  = Math.max(parseInt(page,  10) || 1,   1);
+
+    const userFilter: Record<string, unknown> = { role: "tutor", accountStatus: { $ne: "deleted" } };
+    if (countryCode) userFilter.countryCode = countryCode.toUpperCase();
+    if (search) {
+      const re = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      userFilter.$or = [{ name: re }, { email: re }, { city: re }];
+    }
+
+    const users = await User.find(userFilter).select("_id name email countryCode city accountStatus createdAt updatedAt").lean();
+    const userIds = users.map(u => u._id);
+
+    const profiles = await TutorProfile.find({ user: { $in: userIds } })
+      .select("user onboardingComplete verificationStatus marketplaceEligible subjectsTeachable countryCode city updatedAt createdAt")
+      .lean();
+
+    const profileMap = new Map(profiles.map(p => [p.user.toString(), p]));
+
+    const rows = users.map(u => {
+      const uid     = u._id.toString();
+      const profile = profileMap.get(uid);
+
+      let derivedPhase: string;
+      if (!profile || !profile.onboardingComplete) {
+        derivedPhase = "APPLICATION_STARTED";
+      } else if (profile.marketplaceEligible) {
+        derivedPhase = "APPROVED_FOR_MARKETPLACE";
+      } else {
+        derivedPhase = "UNDER_REVIEW";
+      }
+
+      return {
+        userId: uid,
+        name: u.name,
+        email: u.email,
+        countryCode: profile?.countryCode ?? (u as any).countryCode ?? null,
+        city: profile?.city ?? (u as any).city ?? null,
+        phase: derivedPhase,
+        onboardingComplete: profile?.onboardingComplete ?? false,
+        verificationStatus: profile?.verificationStatus ?? "pending",
+        marketplaceEligible: profile?.marketplaceEligible ?? false,
+        accountStatus: (u as any).accountStatus ?? "active",
+        lastUpdatedAt: (profile?.updatedAt ?? u.updatedAt ?? u.createdAt)?.toISOString?.() ?? null,
+        createdAt: u.createdAt?.toISOString?.() ?? null,
+      };
+    }).filter(r => !phase || r.phase === phase);
+
+    const summary: Record<string, number> = {};
+    for (const r of rows) summary[r.phase] = (summary[r.phase] ?? 0) + 1;
+
+    const total = rows.length;
+    const start = (pageNum - 1) * pageSize;
+    const paged = rows.slice(start, start + pageSize);
+
+    res.status(200).json({ success: true, total, page: pageNum, rows: paged, summary });
+  } catch (err: any) {
+    console.error("[admin/onboarding/tutors]", err);
+    res.status(500).json({ success: false, message: "Failed to load tutor onboarding data." });
+  }
+};
+
 // @desc    Parent onboarding pipeline — phase summary + filterable rows
 // @route   GET /api/admin/onboarding/parents
 // @access  Private (admin, users.read)

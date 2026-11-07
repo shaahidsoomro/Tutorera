@@ -885,10 +885,11 @@ export const moderateUser = async (req: AuthRequest, res: Response): Promise<voi
   });
 
   const statusLabel = action === "ban" ? "banned" : action === "suspend" ? "suspended" : "reactivated";
+  const moderationStatus = action === "ban" ? "banned" : action === "suspend" ? "suspended" : "active";
   res.json({
     success: true,
     message: `${target.name} has been ${statusLabel}.`,
-    user: { id: target._id, name: target.name, email: target.email, isActive: target.isActive },
+    user: { _id: target._id, id: target._id, name: target.name, email: target.email, isActive: target.isActive, moderationStatus },
   });
 };
 

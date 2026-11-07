@@ -27,6 +27,7 @@ import {
   downloadTutorPayoutReport,
   getOnboardingStudents,
   getOnboardingParents,
+  getOnboardingTutors,
 } from "../controllers/admin.controller";
 import {
   getAllClaims,
@@ -162,6 +163,12 @@ router.patch("/roles/users/:userId", requirePermission("roles.manage"), updateAd
 // User Moderation & Promotion (super_admin)
 router.post("/users/:id/promote", requirePermission("roles.manage"), promoteUser);
 router.patch("/users/:id/moderate", requirePermission("users.manage"), moderateUser);
+// Enforcement alias used by Users page and Safety Cases page
+// Normalises "reinstate" → "reactivate" then delegates to moderateUser
+router.post("/users/:id/enforcement", requirePermission("users.manage"), (req, res) => {
+  if (req.body?.action === "reinstate") req.body.action = "reactivate";
+  return moderateUser(req as any, res);
+});
 
 // Customer 360°
 router.get("/customers/students/:id/360", requirePermission("student.read"), getStudent360);
@@ -212,8 +219,9 @@ router.get("/student-ratings", requirePermission("student.read"), getAllStudentR
 router.get("/student-ratings/:studentId", requirePermission("student.read"), getStudentRatings);
 
 // Onboarding pipelines
-router.get("/onboarding/students", requirePermission("users.read"), getOnboardingStudents);
-router.get("/onboarding/parents",  requirePermission("users.read"), getOnboardingParents);
+router.get("/onboarding/tutors",   requirePermission("tutor.read"),  getOnboardingTutors);
+router.get("/onboarding/students", requirePermission("users.read"),  getOnboardingStudents);
+router.get("/onboarding/parents",  requirePermission("users.read"),  getOnboardingParents);
 
 // One-shot maintenance endpoints — super_admin only
 router.post("/maintenance/seed-zoology-rules", requirePermission("system.monitor"), seedZoologyEligibilityRules);
