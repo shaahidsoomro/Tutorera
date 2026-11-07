@@ -120,6 +120,7 @@ export default function ParentDashboard({ userId }: ParentDashboardProps) {
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [approvals, setApprovals] = useState<PendingBookingApproval[]>([]);
   const [actingOnApproval, setActingOnApproval] = useState<string | null>(null);
+  const [confirmUnlinkId, setConfirmUnlinkId] = useState<string | null>(null);
   const [savingSettings, setSavingSettings] = useState(false);
   const [approvalRequired, setApprovalRequired] = useState(true);
   const [limitEnabled, setLimitEnabled] = useState(false);
@@ -182,7 +183,6 @@ export default function ParentDashboard({ userId }: ParentDashboardProps) {
   useEffect(() => { fetchProfile(); void fetchApprovals(); }, []);
 
   const handleUnlink = async (childId: string) => {
-    if (!confirm("Are you sure you want to unlink this child account?")) return;
     try {
       await api.delete(`/parent/children/${childId}`);
       showSuccess("Child account unlinked.");
@@ -345,9 +345,17 @@ export default function ParentDashboard({ userId }: ParentDashboardProps) {
                       Student ID: <code style={{ backgroundColor: "#f3f4f6", padding: "0.1rem 0.3rem", borderRadius: "0.25rem", fontSize: "0.7rem" }}>{child.studentUser}</code>
                     </p>
                   </div>
-                  <button onClick={() => handleUnlink(child._id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#dc2626", padding: "0.4rem", borderRadius: "0.375rem" }} title="Unlink child">
-                    <Trash2 size={16} />
-                  </button>
+                  {confirmUnlinkId === child._id ? (
+                    <div role="alert" style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap" }}>
+                      <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "#dc2626" }}>Unlink?</span>
+                      <button onClick={() => { setConfirmUnlinkId(null); handleUnlink(child._id); }} style={{ padding: "0.25rem 0.6rem", background: "#dc2626", color: "white", border: "none", borderRadius: 6, fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", minHeight: 32 }}>Yes</button>
+                      <button onClick={() => setConfirmUnlinkId(null)} style={{ padding: "0.25rem 0.6rem", background: "white", color: "#64748b", border: "1px solid #e5e7eb", borderRadius: 6, fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", minHeight: 32 }}>No</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setConfirmUnlinkId(child._id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#dc2626", padding: "0.4rem", borderRadius: "0.375rem" }} title="Unlink child" aria-label={`Unlink ${child.name}`}>
+                      <Trash2 size={16} />
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

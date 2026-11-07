@@ -34,6 +34,7 @@ export default function EmailTemplatesPage() {
     description: "",
   });
   const [saving, setSaving] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const DEFAULT_CATEGORIES = ["Authentication", "Booking", "Payment", "Notification", "Account", "System"];
 
@@ -120,8 +121,6 @@ export default function EmailTemplatesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this email template?")) return;
-
     try {
       await api.delete(`/admin/email-templates/${id}`);
       showSuccess("Email template deleted successfully");
@@ -492,23 +491,32 @@ export default function EmailTemplatesPage() {
               >
                 <Edit2 size={16} />
               </button>
-              <button
-                onClick={() => handleDelete(template._id)}
-                title="Delete template"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.25rem",
-                  padding: "0.5rem 0.75rem",
-                  background: STATUS_COLORS.danger.bg,
-                  border: `1px solid ${STATUS_COLORS.danger.border}`,
-                  borderRadius: "0.375rem",
-                  cursor: "pointer",
-                  color: STATUS_COLORS.danger.color,
-                }}
-              >
-                <Trash2 size={16} />
-              </button>
+              {confirmDeleteId === template._id ? (
+                <div role="alert" style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                  <span style={{ fontSize: "0.75rem", fontWeight: 600, color: STATUS_COLORS.danger.color }}>Delete?</span>
+                  <button onClick={() => { setConfirmDeleteId(null); handleDelete(template._id); }} style={{ padding: "0.3rem 0.6rem", background: STATUS_COLORS.danger.color, color: "white", border: "none", borderRadius: "0.375rem", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", minHeight: 32 }}>Yes</button>
+                  <button onClick={() => setConfirmDeleteId(null)} style={{ padding: "0.3rem 0.6rem", background: "white", color: "#64748b", border: `1px solid ${STATUS_COLORS.danger.border}`, borderRadius: "0.375rem", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", minHeight: 32 }}>No</button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmDeleteId(template._id)}
+                  title="Delete template"
+                  aria-label={`Delete template ${template.name}`}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.25rem",
+                    padding: "0.5rem 0.75rem",
+                    background: STATUS_COLORS.danger.bg,
+                    border: `1px solid ${STATUS_COLORS.danger.border}`,
+                    borderRadius: "0.375rem",
+                    cursor: "pointer",
+                    color: STATUS_COLORS.danger.color,
+                  }}
+                >
+                  <Trash2 size={16} />
+                </button>
+              )}
             </div>
           ))}
         </div>

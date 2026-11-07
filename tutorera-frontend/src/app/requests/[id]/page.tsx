@@ -162,6 +162,7 @@ export default function RequestDetailPage() {
   const [loading, setLoading] = useState(true);
   const [showComparison, setShowComparison] = useState(false);
   const [acting, setActing] = useState<string | null>(null);
+  const [confirmClose, setConfirmClose] = useState(false);
   const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [offerSort, setOfferSort] = useState<OfferSort>("best_match");
@@ -228,7 +229,6 @@ export default function RequestDetailPage() {
   };
 
   const handleClose = async () => {
-    if (!confirm("Close this request? Tutors will no longer be able to send offers.")) return;
     setActing("close");
     try {
       await api.patch(`/requests/${id}/close`);
@@ -320,10 +320,21 @@ export default function RequestDetailPage() {
               {acting === "extend" ? "Extending…" : "⏱ Extend Request"}
             </button>
           )}
-          {isOwner && ["open", "published", "receiving_offers", "negotiating"].includes(request.status) && (
-            <button onClick={handleClose} disabled={!!acting} style={{ padding: "7px 14px", background: "#fff", color: "#dc2626", border: "1.5px solid #fecaca", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: acting ? "not-allowed" : "pointer" }}>
-              {acting === "close" ? "Closing…" : "Close Request"}
+          {isOwner && ["open", "published", "receiving_offers", "negotiating"].includes(request.status) && !confirmClose && (
+            <button onClick={() => setConfirmClose(true)} disabled={!!acting} style={{ padding: "7px 14px", background: "#fff", color: "#dc2626", border: "1.5px solid #fecaca", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: acting ? "not-allowed" : "pointer" }}>
+              Close Request
             </button>
+          )}
+          {isOwner && confirmClose && (
+            <div role="alert" style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "#dc2626" }}>Close request? Tutors won't be able to send offers.</span>
+              <button onClick={() => { setConfirmClose(false); handleClose(); }} disabled={!!acting} style={{ padding: "5px 12px", background: "#dc2626", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", minHeight: 36 }}>
+                {acting === "close" ? "Closing…" : "Yes, close"}
+              </button>
+              <button onClick={() => setConfirmClose(false)} style={{ padding: "5px 12px", background: "#fff", color: "#64748b", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", minHeight: 36 }}>
+                Keep open
+              </button>
+            </div>
           )}
           {isOwner && request.canRepost && (
             <button onClick={handleRepost} disabled={!!acting} style={{ padding: "7px 14px", background: "#059669", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: acting ? "not-allowed" : "pointer" }}>

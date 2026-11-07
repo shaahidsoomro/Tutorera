@@ -633,6 +633,7 @@ function RequestCard({
   const [extending, setExtending] = useState(false);
   const [reposting, setReposting] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [confirmClose, setConfirmClose] = useState(false);
   const [selectedBids, setSelectedBids] = useState<string[]>([]);
   const [showCompare, setShowCompare] = useState(false);
   const [acceptingCompare, setAcceptingCompare] = useState<string | null>(null);
@@ -664,7 +665,6 @@ function RequestCard({
   }
 
   async function handleClose() {
-    if (!confirm("Are you sure you want to close this tuition request? Tutors will no longer be able to send offers.")) return;
     setClosing(true);
     try {
       await axiosInstance.patch(`/requests/${request._id}/close`);
@@ -877,10 +877,10 @@ function RequestCard({
           </button>
         )}
 
-        {!request.isExpired && ["open", "published", "receiving_offers"].includes(request.status) && (
+        {!request.isExpired && ["open", "published", "receiving_offers"].includes(request.status) && !confirmClose && (
           <button
             type="button"
-            onClick={handleClose}
+            onClick={() => setConfirmClose(true)}
             disabled={closing}
             style={{
               padding: "0.5rem 0.75rem",
@@ -893,8 +893,19 @@ function RequestCard({
               cursor: closing ? "not-allowed" : "pointer",
             }}
           >
-            {closing ? "Closing..." : "Close Request"}
+            Close Request
           </button>
+        )}
+        {confirmClose && (
+          <div role="alert" style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+            <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "#dc2626" }}>Close request? Tutors won't be able to send offers.</span>
+            <button onClick={() => { setConfirmClose(false); handleClose(); }} disabled={closing} style={{ padding: "0.35rem 0.7rem", borderRadius: 6, border: "none", background: "#dc2626", color: "white", fontWeight: 700, fontSize: "0.78rem", cursor: "pointer", minHeight: 36 }}>
+              {closing ? "Closing…" : "Yes, close"}
+            </button>
+            <button onClick={() => setConfirmClose(false)} style={{ padding: "0.35rem 0.7rem", borderRadius: 6, border: "1.5px solid #e5e7eb", background: "white", color: "#64748b", fontWeight: 700, fontSize: "0.78rem", cursor: "pointer", minHeight: 36 }}>
+              Keep open
+            </button>
+          </div>
         )}
 
         {["open", "published", "receiving_offers", "negotiating"].includes(request.status) && (

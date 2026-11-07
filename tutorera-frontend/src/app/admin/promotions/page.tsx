@@ -57,6 +57,7 @@ export default function PromotionsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [redemptions, setRedemptions] = useState<Record<string, Redemption[]>>({});
   const [loadingRedemptions, setLoadingRedemptions] = useState<string | null>(null);
@@ -146,7 +147,6 @@ export default function PromotionsPage() {
   };
 
   const handleDelete = async (p: PromoCode) => {
-    if (!confirm(`Delete promo code "${p.code}"? This can't be undone.`)) return;
     try {
       await api.delete(`/admin/promo-codes/${p._id}`);
       showSuccess("Promo code deleted");
@@ -392,9 +392,17 @@ export default function PromotionsPage() {
                     <button onClick={() => handleToggleActive(p)} style={{ padding: "0.5rem 0.9rem", background: p.isActive ? STATUS_COLORS.neutral.bg : STATUS_COLORS.success.bg, color: p.isActive ? STATUS_COLORS.neutral.color : STATUS_COLORS.success.color, border: "none", borderRadius: "0.4rem", cursor: "pointer", fontWeight: 700, fontSize: "0.78rem" }}>
                       {p.isActive ? "Deactivate" : "Activate"}
                     </button>
-                    <button onClick={() => handleDelete(p)} title="Delete" style={{ padding: "0.5rem", background: STATUS_COLORS.danger.bg, border: "none", borderRadius: "0.4rem", cursor: "pointer", color: STATUS_COLORS.danger.color }}>
-                      <Trash2 size={16} />
-                    </button>
+                    {confirmDeleteId === p._id ? (
+                      <div role="alert" style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                        <span style={{ fontSize: "0.75rem", fontWeight: 600, color: STATUS_COLORS.danger.color }}>Delete?</span>
+                        <button onClick={() => { setConfirmDeleteId(null); handleDelete(p); }} style={{ padding: "0.3rem 0.5rem", background: STATUS_COLORS.danger.color, color: "white", border: "none", borderRadius: "0.375rem", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", minHeight: 32 }}>Yes</button>
+                        <button onClick={() => setConfirmDeleteId(null)} style={{ padding: "0.3rem 0.5rem", background: "white", color: "#64748b", border: `1px solid ${C.border}`, borderRadius: "0.375rem", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", minHeight: 32 }}>No</button>
+                      </div>
+                    ) : (
+                      <button onClick={() => setConfirmDeleteId(p._id)} title="Delete" aria-label={`Delete promo code ${p.code}`} style={{ padding: "0.5rem", background: STATUS_COLORS.danger.bg, border: "none", borderRadius: "0.4rem", cursor: "pointer", color: STATUS_COLORS.danger.color }}>
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                   </div>
                 </div>
 

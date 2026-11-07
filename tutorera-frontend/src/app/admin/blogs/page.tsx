@@ -25,6 +25,7 @@ export default function AdminBlogsPage() {
   const [form, setForm] = useState({ title: '', slug: '', excerpt: '', content: '', tags: '' });
   const [saving, setSaving] = useState(false);
   const [publishOnSave, setPublishOnSave] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const fetchBlogs = async () => {
     try {
@@ -71,7 +72,6 @@ export default function AdminBlogsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this blog post?')) return;
     try {
       await api.delete(`/blogs/${id}`);
       fetchBlogs();
@@ -217,10 +217,18 @@ export default function AdminBlogsPage() {
                   style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.5rem 0.75rem', border: `1px solid ${C.accent}`, borderRadius: '0.4rem', background: 'white', cursor: 'pointer', color: C.accent, fontSize: '0.8rem', fontWeight: '600' }}>
                   <Edit size={14} /> Edit
                 </button>
-                <button onClick={() => handleDelete(blog._id)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.5rem 0.75rem', border: '1px solid #fecaca', borderRadius: '0.4rem', background: 'white', cursor: 'pointer', color: '#ef4444', fontSize: '0.8rem', fontWeight: '600' }}>
-                  <Trash2 size={14} /> Delete
-                </button>
+                {confirmDeleteId === blog._id ? (
+                  <div role="alert" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#ef4444' }}>Delete?</span>
+                    <button onClick={() => { setConfirmDeleteId(null); handleDelete(blog._id); }} style={{ padding: '0.3rem 0.6rem', background: '#ef4444', color: 'white', border: 'none', borderRadius: '0.375rem', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', minHeight: 32 }}>Yes</button>
+                    <button onClick={() => setConfirmDeleteId(null)} style={{ padding: '0.3rem 0.6rem', background: 'white', color: '#64748b', border: '1px solid #e5e7eb', borderRadius: '0.375rem', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', minHeight: 32 }}>No</button>
+                  </div>
+                ) : (
+                  <button onClick={() => setConfirmDeleteId(blog._id)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.5rem 0.75rem', border: '1px solid #fecaca', borderRadius: '0.4rem', background: 'white', cursor: 'pointer', color: '#ef4444', fontSize: '0.8rem', fontWeight: '600' }}>
+                    <Trash2 size={14} /> Delete
+                  </button>
+                )}
               </div>
             </div>
           ))}
