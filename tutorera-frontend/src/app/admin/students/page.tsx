@@ -110,6 +110,7 @@ export default function StudentsDirectoryPage() {
             fontSize: "0.82rem",
             fontWeight: 700,
             cursor: "pointer",
+            minHeight: 44,
           }}
         >
           <RefreshCw size={14} className={loading ? "spin" : ""} /> Refresh Students
@@ -121,6 +122,7 @@ export default function StudentsDirectoryPage() {
         <Search size={16} style={{ color: TEXT_COLORS.muted }} />
         <input
           type="text"
+          aria-label="Search students by name, email, or city"
           placeholder="Search student by name, email, or city..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}

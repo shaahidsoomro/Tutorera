@@ -1,6 +1,8 @@
 "use client";
-import { UI_COLORS, STATUS_COLORS } from "@/lib/brand";
+import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import api from "@/lib/axios";
 import { showError } from "@/lib/toast";
 
@@ -116,15 +118,19 @@ export default function AuditLogsPage() {
   const entities = ["all", ...(data?.filters.entities ?? [])].sort();
 
   return (
-    <div style={{ padding: '2rem' }}>
+    <div style={{ padding: '1.75rem 2rem' }}>
 
       {/* Header */}
-      <div style={{ marginBottom: '2rem' }}>
-        <p style={{ fontSize: '0.72rem', fontWeight: '700', color: C.accent, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.3rem' }}>
-          Compliance Trail
-        </p>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: C.primary, marginBottom: '0.25rem' }}>Audit Logs</h1>
-        <p style={{ color: C.gray500, fontSize: '0.875rem' }}>
+      <div style={{ marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
+          <Link href="/admin" style={{ color: TEXT_COLORS.muted, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.82rem', fontWeight: 700 }}>
+            <ArrowLeft size={14} /> Control Tower
+          </Link>
+          <span style={{ color: C.border }}>/</span>
+          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: STATUS_COLORS.purple.color }}>System</span>
+        </div>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: TEXT_COLORS.body, margin: 0 }}>Audit Logs</h1>
+        <p style={{ color: TEXT_COLORS.muted, fontSize: '0.85rem', margin: '0.2rem 0 0' }}>
           Immutable record of all admin and system actions with searchable event history.
         </p>
       </div>
@@ -137,7 +143,7 @@ export default function AuditLogsPage() {
           { label: "Entity Filter",     value: entityFilter === "all" ? "All" : entityFilter, icon: "🏷️", color: STATUS_COLORS.warning.color },
           { label: "Latest Batch",      value: loading ? "Loading" : logs.length > 0 ? "Loaded" : "Empty", icon: "⏱️", color: STATUS_COLORS.success.color },
         ].map(s => (
-          <div key={s.label} style={{ backgroundColor: C.surface, borderRadius: '0.875rem', padding: '1.1rem 1.25rem', border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+          <div key={s.label} style={{ backgroundColor: C.surface, borderRadius: '0.75rem', padding: '1.1rem 1.25rem', border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
             <div style={{ width: 36, height: 36, backgroundColor: C.gray50, borderRadius: '0.625rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', flexShrink: 0 }}>
               {s.icon}
             </div>
@@ -152,7 +158,7 @@ export default function AuditLogsPage() {
       {/* Filters + Export */}
       <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap', alignItems: 'center' }}>
         <select
-          title="Actions"
+          aria-label="Filter by action type"
           value={actionFilter}
           onChange={e => setActionFilter(e.target.value)}
           style={{ padding: '0.55rem 1rem', border: `1px solid ${C.border}`, borderRadius: '0.5rem', fontSize: '0.8rem', color: C.primary, backgroundColor: C.surface, outline: 'none', cursor: 'pointer' }}>
@@ -162,7 +168,7 @@ export default function AuditLogsPage() {
         </select>
 
         <select
-          title="Entities"
+          aria-label="Filter by entity type"
           value={entityFilter}
           onChange={e => setEntityFilter(e.target.value)}
           style={{ padding: '0.55rem 1rem', border: `1px solid ${C.border}`, borderRadius: '0.5rem', fontSize: '0.8rem', color: C.primary, backgroundColor: C.surface, outline: 'none', cursor: 'pointer' }}>
@@ -173,7 +179,7 @@ export default function AuditLogsPage() {
 
         <button
           onClick={() => { setActionFilter("all"); setEntityFilter("all"); setPage(1); }}
-          style={{ padding: '0.55rem 1rem', border: `1px solid ${C.border}`, borderRadius: '0.5rem', fontSize: '0.8rem', color: C.gray500, backgroundColor: C.surface, cursor: 'pointer', fontWeight: '600' }}>
+          style={{ padding: '0.55rem 1rem', border: `1px solid ${C.border}`, borderRadius: '0.5rem', fontSize: '0.8rem', color: C.gray500, backgroundColor: C.surface, cursor: 'pointer', fontWeight: '600', minHeight: 44 }}>
           Reset
         </button>
 
@@ -181,14 +187,15 @@ export default function AuditLogsPage() {
           <button
             onClick={() => exportCSV(logs)}
             disabled={logs.length === 0}
-            style={{ padding: '0.55rem 1.25rem', border: `1px solid ${C.border}`, borderRadius: '0.5rem', fontSize: '0.8rem', color: C.primary, backgroundColor: C.surface, cursor: logs.length === 0 ? 'not-allowed' : 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.4rem', opacity: logs.length === 0 ? 0.5 : 1 }}>
+            aria-label="Export audit logs as CSV"
+            style={{ padding: '0.55rem 1.25rem', border: `1px solid ${C.border}`, borderRadius: '0.5rem', fontSize: '0.8rem', color: C.primary, backgroundColor: C.surface, cursor: logs.length === 0 ? 'not-allowed' : 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.4rem', opacity: logs.length === 0 ? 0.5 : 1, minHeight: 44 }}>
             ↓ Export CSV
           </button>
         </div>
       </div>
 
       {/* Event Stream Table */}
-      <div style={{ backgroundColor: C.surface, borderRadius: '0.875rem', border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+      <div style={{ backgroundColor: C.surface, borderRadius: '0.75rem', border: `1px solid ${C.border}`, overflow: 'hidden' }}>
         <div style={{ padding: '1rem 1.5rem', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3 style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem' }}>Event Stream</h3>
           <span style={{ fontSize: '0.75rem', color: C.gray500 }}>
@@ -204,8 +211,8 @@ export default function AuditLogsPage() {
         </div>
 
         {loading ? (
-          <div style={{ padding: '3rem', textAlign: 'center' }}>
-            <div style={{ width: '32px', height: '32px', border: `3px solid ${C.accent}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto' }} />
+          <div role="status" aria-label="Loading audit logs" style={{ padding: '3rem', textAlign: 'center' }}>
+            <div aria-hidden="true" style={{ width: '32px', height: '32px', border: `3px solid ${C.accent}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto' }} />
             <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
           </div>
         ) : logs.length === 0 ? (

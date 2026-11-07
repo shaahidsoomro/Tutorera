@@ -42,7 +42,7 @@ type ReferralData = {
 const card = {
   background: "white",
   border: "1px solid #dce5f4",
-  borderRadius: 16,
+  borderRadius: "0.75rem",
   padding: "1.5rem",
 };
 

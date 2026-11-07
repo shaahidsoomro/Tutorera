@@ -19,6 +19,8 @@ import {
 import OfferComparisonModal from "@/components/marketplace/OfferComparisonModal";
 import WhatsAppChatButton from "@/components/WhatsAppChatButton";
 import RapidPayCheckoutModal from "@/components/payments/RapidPayCheckoutModal";
+import DashboardLayout from "@/components/Dashboard/DashboardLayout";
+import { UI_COLORS, TEXT_COLORS } from "@/lib/brand";
 
 type History = { 
   _id: string; 
@@ -304,28 +306,30 @@ function OffersContent() {
   });
 
   return (
-    <main style={{ padding: "2.5rem 1.5rem 5rem", maxWidth: 1080, margin: "auto" }}>
+    <DashboardLayout>
+    <div style={{ padding: "2rem 1.5rem 5rem", maxWidth: 1080, margin: "0 auto" }}>
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
         <div>
-          <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "#0329b2", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+          <span style={{ fontSize: "0.8rem", fontWeight: 800, color: UI_COLORS.accent, textTransform: "uppercase", letterSpacing: "0.08em" }}>
             Marketplace Offers
           </span>
-          <h1 style={{ fontSize: "2rem", fontWeight: 800, color: "#021550", margin: "0.25rem 0 0.5rem" }}>
+          <h1 style={{ fontSize: "1.75rem", fontWeight: 800, color: TEXT_COLORS.body, margin: "0.25rem 0 0.5rem" }}>
             {user?.role === "tutor" ? "My Sent Offers & Negotiations" : "Tutor Offers & Negotiations"}
           </h1>
-          <p style={{ color: "#64748b", margin: 0, fontSize: "0.95rem" }}>
+          <p style={{ color: TEXT_COLORS.muted, margin: 0, fontSize: "0.95rem" }}>
             Compare rates, Match Scores, and immutable negotiation timelines before locking in your tutor.
           </p>
         </div>
 
         {offers.length > 1 && (
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#475569" }}>Sort by:</label>
+            <label style={{ fontSize: "0.85rem", fontWeight: 600, color: TEXT_COLORS.muted }}>Sort by:</label>
             <select
+              aria-label="Sort offers"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              style={{ padding: "0.5rem 0.85rem", borderRadius: "0.5rem", border: "1.5px solid #cbd5e1", fontSize: "0.85rem", color: "#021550", background: "white" }}
+              style={{ padding: "0.5rem 0.85rem", borderRadius: "0.5rem", border: `1.5px solid ${UI_COLORS.border}`, fontSize: "0.85rem", color: TEXT_COLORS.body, background: UI_COLORS.surface }}
             >
               <option value="best_match">Best Match (Recommended)</option>
               <option value="lowest_rate">Lowest Proposed Rate</option>
@@ -355,7 +359,7 @@ function OffersContent() {
       </div>
 
       {loading ? (
-        <div style={{ padding: "4rem 0", textAlign: "center", color: "#64748b" }}>
+        <div role="status" aria-label="Loading offers" style={{ padding: "4rem 0", textAlign: "center", color: TEXT_COLORS.muted }}>
           Loading marketplace offers...
         </div>
       ) : sortedOffers.length === 0 ? (
@@ -519,10 +523,11 @@ function OffersContent() {
                       <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem", flexWrap: "wrap" }}>
                         <input
                           type="text"
+                          aria-label="Enter promotional code"
                           value={promoInput}
                           onChange={e => { setPromoInput(e.target.value.toUpperCase()); setPromoState(null); setPromoError(""); }}
                           placeholder="Enter code"
-                          style={{ flex: 1, minWidth: 120, padding: "0.4rem 0.75rem", border: "1.5px solid #cbd5e1", borderRadius: 6, fontSize: "0.85rem", textTransform: "uppercase" }}
+                          style={{ flex: 1, minWidth: 120, padding: "0.4rem 0.75rem", border: `1.5px solid ${UI_COLORS.border}`, borderRadius: 6, fontSize: "0.85rem", textTransform: "uppercase" }}
                         />
                         <button
                           type="button"
@@ -821,13 +826,14 @@ function OffersContent() {
           onClose={() => setCheckoutSession(null)}
         />
       )}
-    </main>
+    </div>
+    </DashboardLayout>
   );
 }
 
 export default function OffersPage() {
   return (
-    <Suspense fallback={<main style={{ padding: "3rem 1.5rem", maxWidth: 1080, margin: "auto", textAlign: "center" }}><p>Loading offers...</p></main>}>
+    <Suspense fallback={<DashboardLayout><div role="status" aria-label="Loading offers" style={{ padding: "3rem 1.5rem", textAlign: "center", color: TEXT_COLORS.muted }}><p>Loading offers...</p></div></DashboardLayout>}>
       <OffersContent />
     </Suspense>
   );

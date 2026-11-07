@@ -3,7 +3,7 @@ import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle, Clock, AlertCircle, XCircle } from "lucide-react";
+import { CheckCircle, Clock, AlertCircle, XCircle, ArrowLeft } from "lucide-react";
 import api from "@/lib/axios";
 import { showSuccess, showError } from "@/lib/toast";
 import { useAuth } from "@/context/AuthContext";
@@ -86,10 +86,18 @@ function PaymentsContent() {
   const confirmedBookings = bookings.filter(b => b.paymentStatus === "confirmed");
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '100%', overflowX: 'hidden' }}>
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: C.primary }}>Payment Management</h1>
-        <p style={{ color: C.gray500, fontSize: '0.875rem' }}>
+    <div style={{ padding: '1.75rem 2rem', maxWidth: '100%', overflowX: 'hidden' }}>
+      {/* Breadcrumb */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
+        <Link href="/admin" style={{ color: TEXT_COLORS.muted, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.82rem', fontWeight: 700 }}>
+          <ArrowLeft size={14} /> Control Tower
+        </Link>
+        <span style={{ color: UI_COLORS.border }}>/</span>
+        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: STATUS_COLORS.purple.color }}>Finance</span>
+      </div>
+      <div style={{ marginBottom: '1.5rem' }}>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: TEXT_COLORS.body, margin: 0 }}>Payment Management</h1>
+        <p style={{ color: TEXT_COLORS.muted, fontSize: '0.85rem', margin: '0.2rem 0 0' }}>
           Review recorded student payments. Switch checkout is available only for enabled market-and-currency combinations; payout settlement is managed separately.
         </p>
       </div>
@@ -101,7 +109,7 @@ function PaymentsContent() {
           { label: "Pending Payments", value: formatTotals(bookings.filter(b => b.paymentStatus === "pending"), b => b.amount), icon: <Clock size={20} color={STATUS_COLORS.warning.color} />, bg: STATUS_COLORS.warning.bg },
           { label: "Platform Revenue", value: formatTotals(confirmedBookings, b => b.platformFee || 0), icon: <AlertCircle size={20} color={C.accent} />, bg: UI_COLORS.accentLight },
         ].map(card => (
-          <div key={card.label} style={{ backgroundColor: UI_COLORS.surface, borderRadius: '0.875rem', padding: '1.25rem', border: `1px solid ${UI_COLORS.border}`, display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <div key={card.label} style={{ backgroundColor: UI_COLORS.surface, borderRadius: '0.75rem', padding: '1.25rem', border: `1px solid ${UI_COLORS.border}`, display: 'flex', gap: '1rem', alignItems: 'center' }}>
             <div style={{ width: '40px', height: '40px', backgroundColor: card.bg, borderRadius: '0.625rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               {card.icon}
             </div>
@@ -176,7 +184,7 @@ function PaymentsContent() {
             const tutorPayout = booking.tutorPayout || 0;
             const curr = booking.currency || "USD";
             return (
-              <div key={booking._id} style={{ backgroundColor: UI_COLORS.surface, borderRadius: '0.875rem', padding: '1.5rem', border: `1px solid ${UI_COLORS.border}` }}>
+              <div key={booking._id} style={{ backgroundColor: UI_COLORS.surface, borderRadius: '0.75rem', padding: '1.5rem', border: `1px solid ${UI_COLORS.border}` }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem', alignItems: 'start' }}>
 
                   {/* Person Info */}

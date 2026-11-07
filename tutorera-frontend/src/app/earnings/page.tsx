@@ -6,7 +6,7 @@ import PayoutTimeline from "@/components/Finance/PayoutTimeline";
 import { useAuth } from "@/context/AuthContext";
 import { useAppGuard } from "@/hooks/useAppGuard";
 import api from "@/lib/axios";
-import { UI_COLORS } from "@/lib/brand";
+import { UI_COLORS, TEXT_COLORS } from "@/lib/brand";
 import { Calculator } from "lucide-react";
 import { useEffect,useState } from "react";
 import {
@@ -141,6 +141,7 @@ function PayoutRequestPanel() {
   const [loading, setLoading] = useState(false);
   const [requesting, setRequesting] = useState<string | null>(null);
   const [requested, setRequested] = useState<Set<string>>(new Set());
+  const [payoutError, setPayoutError] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -158,14 +159,14 @@ function PayoutRequestPanel() {
       await api.post(`/earnings/payouts/${bookingId}/request`);
       setRequested(prev => new Set(prev).add(bookingId));
     } catch (e: any) {
-      alert(e?.response?.data?.message || "Request failed. Please try again.");
+      setPayoutError(e?.response?.data?.message || "Request failed. Please try again.");
     } finally { setRequesting(null); }
   };
 
   return (
     <div>
       <button type="button" onClick={handleOpen}
-        style={{ padding: "0.4rem 1rem", background: "#0329b2", color: "#fff", border: "none", borderRadius: 8, fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>
+        style={{ padding: "0.4rem 1rem", background: "#0329b2", color: "#fff", border: "none", borderRadius: 8, fontSize: "0.85rem", fontWeight: 700, cursor: "pointer", minHeight: 44 }}>
         💳 Request Payout
       </button>
       {open && (
@@ -178,6 +179,9 @@ function PayoutRequestPanel() {
             <p style={{ margin: "0 0 1rem", fontSize: "0.8rem", color: "#64748b" }}>
               Select completed sessions to request payment. Finance will process within 3–5 business days.
             </p>
+            {payoutError && (
+              <p role="alert" style={{ margin: "0 0 0.75rem", padding: "0.5rem 0.875rem", borderRadius: "0.5rem", fontSize: "0.825rem", fontWeight: 600, background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3" }}>{payoutError}</p>
+            )}
             {loading ? (
               <p style={{ color: "#64748b", fontSize: "0.85rem" }}>Loading eligible sessions…</p>
             ) : bookings.length === 0 ? (
@@ -274,7 +278,7 @@ export default function EarningsPage() {
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
-            <h1 style={{ fontSize: '1.75rem', fontWeight: '800', color: C.primary, marginBottom: '0.4rem' }}>
+            <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: TEXT_COLORS.body, marginBottom: '0.4rem' }}>
               {isTutor ? "Earnings & Progress" : "Learning Progress"}
             </h1>
             <p style={{ color: C.gray500, fontSize: '0.875rem' }}>
@@ -297,8 +301,8 @@ export default function EarningsPage() {
         {isTutor && <PayoutTimeline />}
 
         {loading ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}>
-            <div style={{ width: 36, height: 36, border: `3px solid ${C.accent}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          <div role="status" aria-label="Loading earnings" style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}>
+            <div aria-hidden="true" style={{ width: 36, height: 36, border: `3px solid ${C.accent}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
             <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
           </div>
         ) : !hasActivity ? (
@@ -310,7 +314,7 @@ export default function EarningsPage() {
             {/* Stats Cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
               {statCards.map(card => (
-                <div key={card.label} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.25rem', border: '1px solid #e5e7eb', borderTop: `3px solid ${card.color}` }}>
+                <div key={card.label} style={{ backgroundColor: 'white', borderRadius: '0.75rem', padding: '1.25rem', border: '1px solid #e5e7eb', borderTop: `3px solid ${card.color}` }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.6rem' }}>
                     <span style={{ fontSize: '1.25rem' }}>{card.icon}</span>
                     <p style={{ fontSize: '0.72rem', fontWeight: '700', color: card.color, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -325,7 +329,7 @@ export default function EarningsPage() {
             {/* Payment On Hold Card — tutor only */}
             {isTutor && (tutorData?.stats.onHoldCount ?? 0) > 0 && (
               <div style={{
-                backgroundColor: '#fffbeb', border: '1px solid #fde68a', borderRadius: '0.875rem',
+                backgroundColor: '#fffbeb', border: '1px solid #fde68a', borderRadius: '0.75rem',
                 padding: '1.25rem 1.5rem', marginBottom: '1.5rem',
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem',
               }}>
@@ -355,7 +359,7 @@ export default function EarningsPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }} className="earnings-chart-row">
 
               {/* Monthly chart */}
-              <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.5rem', border: '1px solid #e5e7eb' }}>
+              <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', padding: '1.5rem', border: '1px solid #e5e7eb' }}>
                 <h3 style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem', marginBottom: '0.2rem' }}>
                   {isTutor && !hasMultiplePayoutCurrencies ? "Monthly Earnings" : "Monthly Sessions"}
                 </h3>
@@ -389,7 +393,7 @@ export default function EarningsPage() {
               </div>
 
               {/* Subjects breakdown */}
-              <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.5rem', border: '1px solid #e5e7eb' }}>
+              <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', padding: '1.5rem', border: '1px solid #e5e7eb' }}>
                 <h3 style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem', marginBottom: '0.2rem' }}>
                   {isTutor ? "Subjects Taught" : "Subjects Learned"}
                 </h3>
@@ -416,7 +420,7 @@ export default function EarningsPage() {
 
             {/* Tutor-specific: Recent Sessions */}
             {isTutor && (
-              <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', border: '1px solid #e5e7eb', overflow: 'hidden', marginBottom: '1.25rem' }}>
+              <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', border: '1px solid #e5e7eb', overflow: 'hidden', marginBottom: '1.25rem' }}>
                 <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #e5e7eb' }}>
                   <h3 style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem', margin: 0 }}>Recent Sessions</h3>
                 </div>
@@ -455,7 +459,7 @@ export default function EarningsPage() {
               <>
                 {/* Tutors worked with */}
                 {(studentData?.tutorsWorkedWith ?? []).length > 0 && (
-                  <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.5rem', border: '1px solid #e5e7eb', marginBottom: '1.25rem' }}>
+                  <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', padding: '1.5rem', border: '1px solid #e5e7eb', marginBottom: '1.25rem' }}>
                     <h3 style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem', marginBottom: '1.25rem' }}>Tutors Worked With</h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                       {(studentData?.tutorsWorkedWith ?? []).map((t, i) => (
@@ -477,7 +481,7 @@ export default function EarningsPage() {
                 )}
 
                 {/* Recent Sessions */}
-                <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+                <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
                   <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #e5e7eb' }}>
                     <h3 style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem', margin: 0 }}>Recent Sessions</h3>
                   </div>

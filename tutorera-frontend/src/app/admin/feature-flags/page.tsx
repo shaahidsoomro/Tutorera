@@ -112,16 +112,19 @@ export default function FeatureFlagsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-lg">Loading feature flags...</div>
+      <div role="status" aria-label="Loading feature flags" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh", color: TEXT_COLORS.muted }}>
+        <span aria-hidden="true" style={{ fontSize: "1rem" }}>Loading feature flags…</span>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: "2rem" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
-        <h1 style={{ fontSize: "1.875rem", fontWeight: 700 }}>Feature Flags</h1>
+    <div style={{ padding: "1.75rem 2rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem", flexWrap: "wrap", gap: "1rem" }}>
+        <div>
+          <h1 style={{ fontSize: "1.5rem", fontWeight: 800, color: TEXT_COLORS.body, margin: 0 }}>Feature Flags</h1>
+          <p style={{ color: TEXT_COLORS.muted, fontSize: "0.85rem", margin: "0.2rem 0 0" }}>Control platform features by scope and country.</p>
+        </div>
         {!showForm && (
           <button
             onClick={() => setShowForm(true)}
@@ -136,9 +139,10 @@ export default function FeatureFlagsPage() {
               borderRadius: "0.5rem",
               cursor: "pointer",
               fontWeight: 600,
+              minHeight: 44,
             }}
           >
-            <Plus size={18} /> New Feature Flag
+            <Plus size={18} aria-hidden="true" /> New Feature Flag
           </button>
         )}
       </div>
@@ -321,6 +325,7 @@ export default function FeatureFlagsPage() {
               </div>
               <button
                 onClick={() => toggleFlag(flag)}
+                aria-label={`${flag.enabled ? "Disable" : "Enable"} feature flag ${flag.key}`}
                 style={{
                   padding: "0.5rem 1rem",
                   background: flag.enabled ? STATUS_COLORS.success.bg : STATUS_COLORS.danger.bg,
@@ -330,12 +335,14 @@ export default function FeatureFlagsPage() {
                   cursor: "pointer",
                   fontWeight: 600,
                   fontSize: "0.875rem",
+                  minHeight: 44,
                 }}
               >
                 {flag.enabled ? "Enabled" : "Disabled"}
               </button>
               <button
                 onClick={() => handleEdit(flag)}
+                aria-label={`Edit feature flag ${flag.key}`}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -345,9 +352,10 @@ export default function FeatureFlagsPage() {
                   border: `1px solid ${UI_COLORS.border}`,
                   borderRadius: "0.375rem",
                   cursor: "pointer",
+                  minHeight: 44,
                 }}
               >
-                <Edit2 size={16} />
+                <Edit2 size={16} aria-hidden="true" />
               </button>
             </div>
           ))}

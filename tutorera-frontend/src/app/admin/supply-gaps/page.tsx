@@ -73,6 +73,7 @@ export default function SupplyGapsPage() {
             fontSize: "0.82rem",
             fontWeight: 700,
             cursor: "pointer",
+            minHeight: 44,
           }}
         >
           <RefreshCw size={14} className={loading ? "spin" : ""} /> Refresh Analytics

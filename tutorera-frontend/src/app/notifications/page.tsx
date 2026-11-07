@@ -63,14 +63,14 @@ export default function NotificationsPage() {
           </div>
           {unreadCount > 0 && (
             <button onClick={markAllAsRead}
-              style={{ padding: '0.6rem 1.25rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', background: 'white', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', color: C.primary }}>
+              style={{ padding: '0.6rem 1.25rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', background: 'white', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', color: C.primary, minHeight: 44 }}>
               Mark all as read
             </button>
           )}
         </div>
 
         {/* Delivery Preferences */}
-        <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '2rem', border: '1px solid #e5e7eb', marginBottom: '1.5rem' }}>
+        <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', padding: '2rem', border: '1px solid #e5e7eb', marginBottom: '1.5rem' }}>
           <h2 style={{ fontSize: '1rem', fontWeight: '700', color: C.primary, marginBottom: '1.25rem' }}>Delivery Preferences</h2>
 
           {/* Enable Push */}
@@ -85,7 +85,7 @@ export default function NotificationsPage() {
             <button onClick={() => {
               if ("Notification" in window) Notification.requestPermission();
             }}
-              style={{ padding: '0.5rem 1rem', backgroundColor: C.accent, color: 'white', border: 'none', borderRadius: '0.4rem', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '700' }}>
+              style={{ padding: '0.5rem 1rem', backgroundColor: C.accent, color: 'white', border: 'none', borderRadius: '0.4rem', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '700', minHeight: 44 }}>
               Enable
             </button>
           </div>
@@ -117,7 +117,7 @@ export default function NotificationsPage() {
         </div>
 
         {/* Recent Activity */}
-        <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+        <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
           <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f3f4f6' }}>
             <h2 style={{ fontSize: '1rem', fontWeight: '700', color: C.primary }}>Recent Activity</h2>
           </div>
@@ -130,7 +130,11 @@ export default function NotificationsPage() {
           ) : (
             notifications.map(notif => (
               <div key={notif._id}
+                role="button"
+                tabIndex={0}
+                aria-label={`${notif.isRead ? "" : "Unread: "}${notif.title}`}
                 onClick={() => markAsRead(notif._id)}
+                onKeyDown={e => (e.key === "Enter" || e.key === " ") && markAsRead(notif._id)}
                 style={{ padding: '1rem 1.5rem', borderBottom: '1px solid #F5F7FF', cursor: 'pointer', backgroundColor: notif.isRead ? 'white' : '#f0f7ff', display: 'flex', gap: '0.875rem', alignItems: 'flex-start' }}
                 onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F5F7FF')}
                 onMouseLeave={e => (e.currentTarget.style.backgroundColor = notif.isRead ? 'white' : '#f0f7ff')}>

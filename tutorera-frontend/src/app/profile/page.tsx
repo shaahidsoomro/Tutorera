@@ -35,6 +35,7 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
+  const [geoInfo, setGeoInfo] = useState<string | null>(null);
 
   // Personal info form
   const [personalForm, setPersonalForm] = useState({
@@ -289,10 +290,13 @@ export default function ProfilePage() {
 
         {/* Tabs — show tutor tab only for tutors */}
         {user.role === "tutor" && (
-          <div style={{ display: 'flex', backgroundColor: 'white', borderRadius: '0.75rem', padding: '0.3rem', marginBottom: '1.5rem', border: '1px solid #e5e7eb', width: 'fit-content' }}>
+          <div role="tablist" aria-label="Profile sections" style={{ display: 'flex', backgroundColor: 'white', borderRadius: '0.75rem', padding: '0.3rem', marginBottom: '1.5rem', border: '1px solid #e5e7eb', width: 'fit-content' }}>
             {(["personal", "tutor"] as const).map(tab => (
-              <button key={tab} onClick={() => setActiveTab(tab)}
-                style={{ padding: '0.6rem 1.5rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', textTransform: 'capitalize', backgroundColor: activeTab === tab ? C.accent : 'transparent', color: activeTab === tab ? 'white' : C.gray500, transition: 'all 0.2s' }}>
+              <button key={tab}
+                role="tab"
+                aria-selected={activeTab === tab}
+                onClick={() => setActiveTab(tab)}
+                style={{ padding: '0.6rem 1.5rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', textTransform: 'capitalize', backgroundColor: activeTab === tab ? C.accent : 'transparent', color: activeTab === tab ? 'white' : C.gray500, transition: 'all 0.2s', minHeight: 44 }}>
                 {tab === "tutor" ? "Tutor Profile" : "Personal Info"}
               </button>
             ))}
@@ -313,7 +317,7 @@ export default function ProfilePage() {
 
         {/* ── PERSONAL INFO TAB ── */}
         {activeTab === "personal" && (
-          <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '2rem', border: '1px solid #e5e7eb' }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', padding: '2rem', border: '1px solid #e5e7eb' }}>
             <h2 style={{ fontSize: '1.1rem', fontWeight: '700', color: C.primary, marginBottom: '1.75rem' }}>Personal Information</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
@@ -408,18 +412,21 @@ export default function ProfilePage() {
                       if (res.data.results && res.data.results.length > 0) {
                         const loc = res.data.results[0];
                         setPersonalForm({ ...personalForm, lat: loc.lat, lng: loc.lng, city: loc.placeName || personalForm.city });
-                        alert(`Location found: ${loc.placeName}`);
+                        setGeoInfo(`Location found: ${loc.placeName}`);
                       } else {
-                        alert("Could not find location for this postal code.");
+                        setGeoInfo("Could not find location for this postal code.");
                       }
-                    } catch (e) {
-                      alert("Error fetching location data.");
+                    } catch {
+                      setGeoInfo("Error fetching location data.");
                     }
-                  }} style={{ padding: '0 1rem', backgroundColor: C.accentLight, color: C.accent, border: 'none', borderRadius: '0.5rem', fontWeight: '600', cursor: 'pointer' }}>
+                  }} style={{ padding: '0 1rem', backgroundColor: C.accentLight, color: C.accent, border: 'none', borderRadius: '0.5rem', fontWeight: '600', cursor: 'pointer', minHeight: 44 }}>
                     Find Location
                   </button>
                 </div>
-                {personalForm.lat && personalForm.lng && (
+                {geoInfo && (
+                  <p role="status" style={{ fontSize: '0.75rem', color: geoInfo.startsWith("Location found") ? '#16a34a' : '#be123c', marginTop: '0.4rem' }}>{geoInfo}</p>
+                )}
+                {!geoInfo && personalForm.lat && personalForm.lng && (
                   <p style={{ fontSize: '0.75rem', color: '#16a34a', marginTop: '0.4rem' }}>✅ Geospatial coordinates captured.</p>
                 )}
               </div>
@@ -434,7 +441,7 @@ export default function ProfilePage() {
               </div>
 
               <button onClick={handlePersonalSave} disabled={saving}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', backgroundColor: saving ? '#93c5fd' : C.accent, color: 'white', padding: '0.85rem', borderRadius: '0.5rem', border: 'none', fontWeight: '700', fontSize: '0.95rem', cursor: saving ? 'not-allowed' : 'pointer' }}>
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', backgroundColor: saving ? '#93c5fd' : C.accent, color: 'white', padding: '0.85rem', borderRadius: '0.5rem', border: 'none', fontWeight: '700', fontSize: '0.95rem', cursor: saving ? 'not-allowed' : 'pointer', minHeight: 44 }}>
                 <Save size={17} /> {saving ? "Saving..." : "Save Changes"}
               </button>
             </div>
@@ -447,7 +454,7 @@ export default function ProfilePage() {
 
             {/* Verification status banner */}
             {tutorProfile && !tutorProfile.isVerified && (
-              <div style={{ backgroundColor: '#fffbeb', border: '1px solid #fde68a', borderRadius: '0.875rem', padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ backgroundColor: '#fffbeb', border: '1px solid #fde68a', borderRadius: '0.75rem', padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <span style={{ fontSize: '1.5rem' }}>⏳</span>
                 <div>
                   <p style={{ fontWeight: '700', color: '#92400e', fontSize: '0.9rem' }}>Verification Pending</p>
@@ -459,7 +466,7 @@ export default function ProfilePage() {
               </div>
             )}
 
-            <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '2rem', border: '1px solid #e5e7eb' }}>
+            <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', padding: '2rem', border: '1px solid #e5e7eb' }}>
               <h2 style={{ fontSize: '1.1rem', fontWeight: '700', color: C.primary, marginBottom: '1.75rem' }}>Tutor Profile</h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
@@ -600,7 +607,7 @@ export default function ProfilePage() {
                 </div>
 
                 <button onClick={handleTutorSave} disabled={saving}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', backgroundColor: saving ? '#93c5fd' : C.accent, color: 'white', padding: '0.85rem', borderRadius: '0.5rem', border: 'none', fontWeight: '700', fontSize: '0.95rem', cursor: saving ? 'not-allowed' : 'pointer' }}>
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', backgroundColor: saving ? '#93c5fd' : C.accent, color: 'white', padding: '0.85rem', borderRadius: '0.5rem', border: 'none', fontWeight: '700', fontSize: '0.95rem', cursor: saving ? 'not-allowed' : 'pointer', minHeight: 44 }}>
                   <Save size={17} /> {saving ? "Saving..." : "Save Tutor Profile"}
                 </button>
               </div>

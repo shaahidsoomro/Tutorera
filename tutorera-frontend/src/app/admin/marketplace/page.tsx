@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import api from "@/lib/axios";
-import { UI_COLORS, STATUS_COLORS } from "@/lib/brand";
+import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
+import { ArrowLeft } from "lucide-react";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 type MoneyByCurrency = { currency: string; marketplaceGMV: number; platformRevenue: number; averageAgreedRate: number };
@@ -81,7 +83,10 @@ export default function Page() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [requestActionLoading, setRequestActionLoading] = useState<string | null>(null);
+  const [moderationTarget, setModerationTarget] = useState<{ id: string; action: "approve" | "hold" | "restore"; request: RequestRow } | null>(null);
+  const [moderationReason, setModerationReason] = useState("");
   const modalRef = useFocusTrap(Boolean(selected), () => setSelected(null));
+  const modModalRef = useFocusTrap(Boolean(moderationTarget), () => setModerationTarget(null));
 
   useEffect(() => {
     let cancelled = false;
@@ -123,27 +128,47 @@ export default function Page() {
   }
 
   async function moderateRequest(request: RequestRow, action: "approve" | "hold" | "restore") {
-    const reason = window.prompt(`Reason to ${action} this request:`)?.trim();
-    if (!reason) return;
-    setRequestActionLoading(`${request._id}-${action}`);
+    setModerationReason("");
+    setModerationTarget({ id: request._id, action, request });
+  }
+
+  async function submitModeration() {
+    if (!moderationTarget || !moderationReason.trim()) return;
+    const { id, action } = moderationTarget;
+    setRequestActionLoading(`${id}-${action}`);
+    setModerationTarget(null);
     try {
-      const result = await api.post(`/admin/marketplace/requests/${request._id}/moderation`, { action, reason });
+      const result = await api.post(`/admin/marketplace/requests/${id}/moderation`, { action, reason: moderationReason.trim() });
       const updated = result.data.request;
       setRequests((current) => current.map((item) => item._id === updated._id ? { ...item, status: updated.status, moderationStatus: updated.moderationStatus, moderationReason: updated.moderationReason } : item));
     } catch (error: any) {
       setLoadError(error?.response?.data?.message || "Could not update this request.");
-    } finally { setRequestActionLoading(null); }
+    } finally { setRequestActionLoading(null); setModerationReason(""); }
   }
 
   return (
-    <main style={{ padding: "2rem", maxWidth: 1180, margin: "0 auto", color: UI_COLORS.primary }}>
-      <h1 style={{ fontSize: "1.8rem" }}>Marketplace Analytics</h1>
-      <p style={{ color: UI_COLORS.gray600, margin: ".5rem 0 2rem" }}>Operational request, offer, negotiation, conversion, pricing and trust signals.</p>
+    <main style={{ padding: "1.75rem 2rem", maxWidth: 1180, margin: "0 auto" }}>
+      {/* Breadcrumb */}
+      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.4rem" }}>
+        <Link href="/admin" style={{ color: TEXT_COLORS.muted, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "0.82rem", fontWeight: 700 }}>
+          <ArrowLeft size={14} /> Control Tower
+        </Link>
+        <span style={{ color: UI_COLORS.border }}>/</span>
+        <span style={{ fontSize: "0.82rem", fontWeight: 700, color: STATUS_COLORS.purple.color }}>Marketplace</span>
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem", flexWrap: "wrap", gap: "1rem" }}>
+        <div>
+          <h1 style={{ fontSize: "1.5rem", fontWeight: 800, color: TEXT_COLORS.body, margin: 0 }}>Marketplace Analytics</h1>
+          <p style={{ color: TEXT_COLORS.muted, fontSize: "0.85rem", margin: "0.2rem 0 0" }}>Operational request, offer, negotiation, conversion, pricing and trust signals.</p>
+        </div>
+      </div>
 
-      {loadError && <p role="alert" style={{ color: STATUS_COLORS.warning.color, background: STATUS_COLORS.warning.bg, border: `1px solid ${STATUS_COLORS.warning.border}`, borderRadius: 10, padding: 12 }}>{loadError}</p>}
+      {loadError && <p role="alert" style={{ color: STATUS_COLORS.warning.color, background: STATUS_COLORS.warning.bg, border: `1px solid ${STATUS_COLORS.warning.border}`, borderRadius: "0.75rem", padding: 12, marginBottom: "1rem" }}>{loadError}</p>}
 
       {loading && !metrics ? (
-        <p>Loading...</p>
+        <div role="status" aria-label="Loading marketplace data" style={{ textAlign: "center", padding: "4rem", color: TEXT_COLORS.muted }}>
+          <span aria-hidden="true">Loading…</span>
+        </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(210px,1fr))", gap: 16 }}>
           {Object.entries(metrics ?? {}).filter(([, value]) => typeof value !== "object").map(([key, value]) => <article key={key} style={panel}><p style={muted}>{labels[key] || key}</p><strong style={{ fontSize: 24 }}>{formatMetric(key, value as number | null)}</strong></article>)}
@@ -230,6 +255,39 @@ export default function Page() {
         </div>
       </section>
 
+      {/* Moderation reason modal */}
+      {moderationTarget && (
+        <div ref={modModalRef} role="dialog" aria-modal="true" aria-labelledby="mod-modal-title" style={overlay}>
+          <div style={modal}>
+            <h2 id="mod-modal-title" style={{ fontSize: "1.1rem", fontWeight: 800, color: TEXT_COLORS.body, margin: "0 0 0.5rem" }}>
+              {moderationTarget.action === "approve" ? "Approve" : moderationTarget.action === "hold" ? "Place on Hold" : "Restore"} Request
+            </h2>
+            <p style={{ color: TEXT_COLORS.muted, fontSize: "0.82rem", margin: "0 0 1rem" }}>
+              Subject: <strong>{moderationTarget.request.subject || "Tuition request"}</strong>
+            </p>
+            <label htmlFor="mod-reason" style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: TEXT_COLORS.secondary, marginBottom: "0.3rem" }}>
+              Reason (required)
+            </label>
+            <textarea
+              id="mod-reason"
+              value={moderationReason}
+              onChange={e => setModerationReason(e.target.value)}
+              rows={3}
+              placeholder="Enter moderation reason…"
+              style={{ width: "100%", padding: "0.5rem", borderRadius: "0.5rem", border: `1px solid ${UI_COLORS.border}`, fontSize: "0.85rem", resize: "vertical", boxSizing: "border-box", marginBottom: "1rem" }}
+            />
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
+              <button onClick={() => setModerationTarget(null)} style={{ padding: "0.5rem 1rem", borderRadius: "0.5rem", border: `1px solid ${UI_COLORS.border}`, background: "white", color: TEXT_COLORS.muted, fontWeight: 700, cursor: "pointer", minHeight: 44, fontSize: "0.85rem" }}>
+                Cancel
+              </button>
+              <button onClick={submitModeration} disabled={!moderationReason.trim()} style={{ padding: "0.5rem 1.25rem", borderRadius: "0.5rem", border: "none", background: UI_COLORS.accent, color: "white", fontWeight: 700, cursor: "pointer", minHeight: 44, fontSize: "0.85rem", opacity: moderationReason.trim() ? 1 : 0.5 }}>
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {selected && (
         <div ref={modalRef} role="dialog" aria-modal="true" aria-label="Offer detail" style={overlay}>
           <div style={modal}>
@@ -253,9 +311,9 @@ export default function Page() {
   );
 }
 
-const panel = { background: "white", padding: 18, border: `1px solid ${UI_COLORS.border}`, borderRadius: 12, boxShadow: "0 14px 34px rgba(2,21,80,.06)" } as const;
+const panel = { background: "white", padding: 18, border: `1px solid ${UI_COLORS.border}`, borderRadius: "0.75rem", boxShadow: "0 14px 34px rgba(2,21,80,.06)" } as const;
 const muted = { fontSize: 13, color: UI_COLORS.gray600, margin: "4px 0" } as const;
-const sectionTitle = { fontSize: 20, margin: "0 0 12px" } as const;
-const button = { marginTop: 10, border: `1px solid ${UI_COLORS.accentLight}`, borderRadius: 10, background: "white", color: UI_COLORS.primary, padding: "8px 12px", fontWeight: 700, cursor: "pointer" } as const;
+const sectionTitle = { fontSize: 20, margin: "0 0 12px", fontWeight: 700, color: TEXT_COLORS.body } as const;
+const button = { marginTop: 10, border: `1px solid ${UI_COLORS.accentLight}`, borderRadius: "0.5rem", background: "white", color: UI_COLORS.primary, padding: "8px 12px", fontWeight: 700, cursor: "pointer", minHeight: 44 } as const;
 const overlay = { position: "fixed", inset: 0, background: "rgba(15,23,42,.55)", display: "grid", placeItems: "center", padding: 20, zIndex: 1000 } as const;
 const modal = { background: "white", borderRadius: 16, padding: 24, maxWidth: 640, width: "100%", maxHeight: "85vh", overflow: "auto", boxShadow: "0 24px 80px rgba(2,21,80,.22)" } as const;

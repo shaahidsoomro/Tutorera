@@ -1,9 +1,10 @@
-"use client";
-import { UI_COLORS, STATUS_COLORS } from "@/lib/brand";
+﻿"use client";
+import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import api from "@/lib/axios";
 import { showError } from "@/lib/toast";
+import { ArrowLeft } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
@@ -109,10 +110,10 @@ export default function AnalyticsPage() {
 
   if (loading) {
     return (
-      <div style={{ padding: '2rem' }}>
+      <div style={{ padding: '1.75rem 2rem' }}>
         <div style={{ marginBottom: '2rem' }}>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: C.primary }}>Analytics</h1>
-          <p style={{ color: C.gray500, fontSize: '0.875rem' }}>Platform-wide metrics and growth.</p>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: TEXT_COLORS.body, margin: 0 }}>Analytics</h1>
+          <p style={{ color: TEXT_COLORS.muted, fontSize: '0.85rem', margin: '0.2rem 0 0' }}>Platform-wide metrics and growth.</p>
         </div>
         <div role="status" aria-label="Loading analytics" style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}>
           <div aria-hidden="true" style={{ width: 36, height: 36, border: `3px solid ${C.accent}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
@@ -123,17 +124,19 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div style={{ padding: '2rem' }}>
+    <div style={{ padding: '1.75rem 2rem' }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: C.primary }}>Analytics</h1>
-          <p style={{ color: C.gray500, fontSize: '0.875rem' }}>Platform-wide metrics and growth.</p>
+      <div style={{ marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
+          <Link href="/admin" style={{ color: TEXT_COLORS.muted, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.82rem', fontWeight: 700 }}>
+            <ArrowLeft size={14} /> Control Tower
+          </Link>
+          <span style={{ color: C.border }}>/</span>
+          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: C.accent }}>Analytics</span>
         </div>
-        <Link href="/admin" style={{ padding: '0.6rem 1.25rem', backgroundColor: C.gray50, color: C.primary, border: `1px solid ${C.border}`, borderRadius: '0.5rem', textDecoration: 'none', fontWeight: '600', fontSize: '0.8rem' }}>
-          ← Dashboard
-        </Link>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: TEXT_COLORS.body, margin: 0 }}>Analytics</h1>
+        <p style={{ color: TEXT_COLORS.muted, fontSize: '0.85rem', margin: '0.2rem 0 0' }}>Platform-wide metrics and growth.</p>
       </div>
 
       {/* Overview Cards */}
@@ -146,7 +149,7 @@ export default function AnalyticsPage() {
           { label: 'Platform Fee MTD',     value: `Rs. ${(ov?.platformFeeThisMonth ?? 0).toLocaleString()}`, sub: '20% + 3% GST',  color: C.accent, bg: C.accentLight, border: STATUS_COLORS.info.border },
           { label: 'Pending Payouts',      value: `Rs. ${(ov?.pendingPayouts ?? 0).toLocaleString()}`,    sub: 'owed to tutors',      color: C.error, bg: STATUS_COLORS.danger.bg, border: STATUS_COLORS.danger.border },
         ].map(card => (
-          <div key={card.label} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.25rem', border: `1px solid ${C.border}`, borderTop: `3px solid ${card.color}` }}>
+          <div key={card.label} style={{ backgroundColor: 'white', borderRadius: '0.75rem', padding: '1.25rem', border: `1px solid ${C.border}`, borderTop: `3px solid ${card.color}` }}>
             <p style={{ fontSize: '0.72rem', fontWeight: '700', color: card.color, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>{card.label}</p>
             <p style={{ fontSize: '1.35rem', fontWeight: '800', color: C.primary, marginBottom: '0.2rem' }}>{card.value ?? 0}</p>
             <p style={{ fontSize: '0.72rem', color: C.gray500 }}>{card.sub}</p>
@@ -157,8 +160,8 @@ export default function AnalyticsPage() {
       {/* Charts Row */}
       <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }} className="analytics-chart-row">
 
-        {/* Signup Trend — recharts AreaChart */}
-        <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.5rem', border: `1px solid ${C.border}` }}>
+        {/* Signup Trend â€” recharts AreaChart */}
+        <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', padding: '1.5rem', border: `1px solid ${C.border}` }}>
           <h3 style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem', marginBottom: '0.2rem' }}>
             User Signup Trend
           </h3>
@@ -205,8 +208,8 @@ export default function AnalyticsPage() {
 
       </div>
 
-      {/* ── Booking Status Breakdown ── */}
-      <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.5rem', border: `1px solid ${C.border}`, marginBottom: '1.5rem' }}>
+      {/* â”€â”€ Booking Status Breakdown â”€â”€ */}
+      <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', padding: '1.5rem', border: `1px solid ${C.border}`, marginBottom: '1.5rem' }}>
         <h3 style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem', marginBottom: '0.25rem' }}>
           Booking Status Breakdown
         </h3>
@@ -231,13 +234,13 @@ export default function AnalyticsPage() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }} className="analytics-bottom-row">
 
         {/* Top Tutors */}
-        <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.5rem', border: `1px solid ${C.border}` }}>
+        <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', padding: '1.5rem', border: `1px solid ${C.border}` }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
             <div>
               <h3 style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem', marginBottom: '0.1rem' }}>Top Tutors</h3>
               <p style={{ color: C.gray500, fontSize: '0.78rem' }}>By number of bookings</p>
             </div>
-            <Link href="/admin/bookings" style={{ fontSize: '0.75rem', color: C.accent, fontWeight: '600', textDecoration: 'none' }}>View all →</Link>
+            <Link href="/admin/bookings" style={{ fontSize: '0.75rem', color: C.accent, fontWeight: '600', textDecoration: 'none' }}>View all â†’</Link>
           </div>
           {(data?.topTutors ?? []).length === 0 ? (
             <p style={{ color: C.gray500, fontSize: '0.875rem', textAlign: 'center', padding: '2rem 0' }}>No bookings yet.</p>
@@ -266,13 +269,13 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Recent Payments */}
-        <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.5rem', border: `1px solid ${C.border}` }}>
+        <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', padding: '1.5rem', border: `1px solid ${C.border}` }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
             <div>
               <h3 style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem', marginBottom: '0.1rem' }}>Recent Payments</h3>
               <p style={{ color: C.gray500, fontSize: '0.78rem' }}>Latest confirmed bookings</p>
             </div>
-            <Link href="/admin/payments" style={{ fontSize: '0.75rem', color: C.accent, fontWeight: '600', textDecoration: 'none' }}>View all →</Link>
+            <Link href="/admin/payments" style={{ fontSize: '0.75rem', color: C.accent, fontWeight: '600', textDecoration: 'none' }}>View all â†’</Link>
           </div>
           {(data?.recentPayments ?? []).length === 0 ? (
             <p style={{ color: C.gray500, fontSize: '0.875rem', textAlign: 'center', padding: '2rem 0' }}>No confirmed payments yet.</p>
@@ -282,7 +285,7 @@ export default function AnalyticsPage() {
                 <div key={payment._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 0', borderBottom: idx < (data?.recentPayments.length ?? 0) - 1 ? `1px solid ${C.border}` : 'none', gap: '0.5rem' }}>
                   <div style={{ minWidth: 0 }}>
                     <p style={{ fontSize: '0.8rem', fontWeight: '600', color: C.primary, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {payment.student?.name} → {payment.tutor?.name}
+                      {payment.student?.name} â†’ {payment.tutor?.name}
                     </p>
                     <p style={{ fontSize: '0.7rem', color: C.gray500, margin: 0 }}>
                       {new Date(payment.createdAt).toLocaleDateString("en-PK", { day: "numeric", month: "short" })}
@@ -307,3 +310,4 @@ export default function AnalyticsPage() {
     </div>
   );
 }
+

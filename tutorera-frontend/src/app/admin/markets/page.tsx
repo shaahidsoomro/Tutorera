@@ -108,7 +108,7 @@ export default function MarketsPage() {
             <span style={{ color: UI_COLORS.border }}>/</span>
             <span style={{ color: TEXT_COLORS.body, fontSize: "0.85rem", fontWeight: 600 }}>Markets</span>
           </div>
-          <h1 style={{ fontSize: "1.6rem", fontWeight: 700, color: TEXT_COLORS.body, margin: 0, display: "flex", alignItems: "center", gap: "0.6rem" }}>
+          <h1 style={{ fontSize: "1.5rem", fontWeight: 800, color: TEXT_COLORS.body, margin: 0, display: "flex", alignItems: "center", gap: "0.6rem" }}>
             <Globe size={26} color={UI_COLORS.accent} /> Global Market Governance & Geofencing
           </h1>
           <p style={{ color: TEXT_COLORS.muted, margin: "0.25rem 0 0", fontSize: "0.88rem" }}>
@@ -126,14 +126,15 @@ export default function MarketsPage() {
             padding: "0.55rem 0.95rem",
             background: UI_COLORS.surface,
             border: `1px solid ${UI_COLORS.border}`,
-            borderRadius: "7px",
+            borderRadius: "0.4rem",
             color: TEXT_COLORS.secondary,
             fontSize: "0.83rem",
             cursor: "pointer",
-            fontWeight: 500,
+            fontWeight: 700,
+            minHeight: 44,
           }}
         >
-          <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Refresh
+          <RefreshCw size={14} aria-hidden="true" /> Refresh
         </button>
       </div>
 

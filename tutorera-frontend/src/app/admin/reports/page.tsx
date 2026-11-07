@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Download, FileText, FileSpreadsheet, Search } from "lucide-react";
+import { Download, FileText, FileSpreadsheet, Search, ArrowLeft } from "lucide-react";
 import api from "@/lib/axios";
 import { showSuccess, showError } from "@/lib/toast";
 import PayoutReportDownload from "@/components/Finance/PayoutReportDownload";
@@ -39,14 +39,18 @@ export default function ReportsHubPage() {
   };
 
   return (
-    <div style={{ padding: "2rem", maxWidth: 1000, margin: "0 auto" }}>
+    <div style={{ padding: "1.75rem 2rem", maxWidth: 1000, margin: "0 auto" }}>
       {/* Header */}
-      <div style={{ marginBottom: "2rem" }}>
-        <h1 style={{ fontSize: "1.75rem", fontWeight: 800, color: TEXT_COLORS.primary, margin: 0, display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          <Download size={24} color={UI_COLORS.accent} />
-          Reports & Exports Hub
-        </h1>
-        <p style={{ color: TEXT_COLORS.muted, marginTop: "0.25rem", fontSize: "0.95rem" }}>
+      <div style={{ marginBottom: "1.5rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.4rem" }}>
+          <Link href="/admin" style={{ color: TEXT_COLORS.muted, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "0.82rem", fontWeight: 700 }}>
+            <ArrowLeft size={14} /> Control Tower
+          </Link>
+          <span style={{ color: UI_COLORS.border }}>/</span>
+          <span style={{ fontSize: "0.82rem", fontWeight: 700, color: STATUS_COLORS.purple.color }}>Reports</span>
+        </div>
+        <h1 style={{ fontSize: "1.5rem", fontWeight: 800, color: TEXT_COLORS.body, margin: 0 }}>Reports &amp; Exports Hub</h1>
+        <p style={{ color: TEXT_COLORS.muted, marginTop: "0.2rem", fontSize: "0.85rem" }}>
           Centralized dashboard for generating financial summaries and tutor statements.
         </p>
       </div>
@@ -66,19 +70,21 @@ export default function ReportsHubPage() {
               <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
                 <button
                   type="button"
+                  aria-label="Download weekly summary report as PDF"
                   onClick={() => handleDownloadReport("weekly", "pdf")}
                   disabled={downloading === "weekly-pdf"}
-                  style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.6rem 1rem", background: STATUS_COLORS.info.bg, color: STATUS_COLORS.info.color, border: `1px solid ${STATUS_COLORS.info.border}`, borderRadius: "0.5rem", fontWeight: 600, fontSize: "0.85rem", cursor: "pointer", opacity: downloading === "weekly-pdf" ? 0.7 : 1 }}
+                  style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.6rem 1rem", background: STATUS_COLORS.info.bg, color: STATUS_COLORS.info.color, border: `1px solid ${STATUS_COLORS.info.border}`, borderRadius: "0.5rem", fontWeight: 600, fontSize: "0.85rem", cursor: "pointer", opacity: downloading === "weekly-pdf" ? 0.7 : 1, minHeight: 44 }}
                 >
-                  <FileText size={16} /> {downloading === "weekly-pdf" ? "Generating..." : "Download PDF"}
+                  <FileText size={16} aria-hidden="true" /> {downloading === "weekly-pdf" ? "Generating..." : "Download PDF"}
                 </button>
                 <button
                   type="button"
+                  aria-label="Download weekly summary report as Excel"
                   onClick={() => handleDownloadReport("weekly", "excel")}
                   disabled={downloading === "weekly-excel"}
-                  style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.6rem 1rem", background: STATUS_COLORS.success.bg, color: STATUS_COLORS.success.color, border: `1px solid ${STATUS_COLORS.success.border}`, borderRadius: "0.5rem", fontWeight: 600, fontSize: "0.85rem", cursor: "pointer", opacity: downloading === "weekly-excel" ? 0.7 : 1 }}
+                  style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.6rem 1rem", background: STATUS_COLORS.success.bg, color: STATUS_COLORS.success.color, border: `1px solid ${STATUS_COLORS.success.border}`, borderRadius: "0.5rem", fontWeight: 600, fontSize: "0.85rem", cursor: "pointer", opacity: downloading === "weekly-excel" ? 0.7 : 1, minHeight: 44 }}
                 >
-                  <FileSpreadsheet size={16} /> {downloading === "weekly-excel" ? "Generating..." : "Download Excel"}
+                  <FileSpreadsheet size={16} aria-hidden="true" /> {downloading === "weekly-excel" ? "Generating..." : "Download Excel"}
                 </button>
               </div>
             </div>
@@ -88,19 +94,21 @@ export default function ReportsHubPage() {
               <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
                 <button
                   type="button"
+                  aria-label="Download monthly summary report as PDF"
                   onClick={() => handleDownloadReport("monthly", "pdf")}
                   disabled={downloading === "monthly-pdf"}
-                  style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.6rem 1rem", background: STATUS_COLORS.info.bg, color: STATUS_COLORS.info.color, border: `1px solid ${STATUS_COLORS.info.border}`, borderRadius: "0.5rem", fontWeight: 600, fontSize: "0.85rem", cursor: "pointer", opacity: downloading === "monthly-pdf" ? 0.7 : 1 }}
+                  style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.6rem 1rem", background: STATUS_COLORS.info.bg, color: STATUS_COLORS.info.color, border: `1px solid ${STATUS_COLORS.info.border}`, borderRadius: "0.5rem", fontWeight: 600, fontSize: "0.85rem", cursor: "pointer", opacity: downloading === "monthly-pdf" ? 0.7 : 1, minHeight: 44 }}
                 >
-                  <FileText size={16} /> {downloading === "monthly-pdf" ? "Generating..." : "Download PDF"}
+                  <FileText size={16} aria-hidden="true" /> {downloading === "monthly-pdf" ? "Generating..." : "Download PDF"}
                 </button>
                 <button
                   type="button"
+                  aria-label="Download monthly summary report as Excel"
                   onClick={() => handleDownloadReport("monthly", "excel")}
                   disabled={downloading === "monthly-excel"}
-                  style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.6rem 1rem", background: STATUS_COLORS.success.bg, color: STATUS_COLORS.success.color, border: `1px solid ${STATUS_COLORS.success.border}`, borderRadius: "0.5rem", fontWeight: 600, fontSize: "0.85rem", cursor: "pointer", opacity: downloading === "monthly-excel" ? 0.7 : 1 }}
+                  style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.6rem 1rem", background: STATUS_COLORS.success.bg, color: STATUS_COLORS.success.color, border: `1px solid ${STATUS_COLORS.success.border}`, borderRadius: "0.5rem", fontWeight: 600, fontSize: "0.85rem", cursor: "pointer", opacity: downloading === "monthly-excel" ? 0.7 : 1, minHeight: 44 }}
                 >
-                  <FileSpreadsheet size={16} /> {downloading === "monthly-excel" ? "Generating..." : "Download Excel"}
+                  <FileSpreadsheet size={16} aria-hidden="true" /> {downloading === "monthly-excel" ? "Generating..." : "Download Excel"}
                 </button>
               </div>
             </div>

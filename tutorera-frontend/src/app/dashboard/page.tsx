@@ -55,6 +55,8 @@ function LoadingScreen() {
   return (
     <DashboardLayout>
     <div
+      role="status"
+      aria-label="Loading dashboard"
       style={{
         minHeight: "100vh",
         display: "flex",
@@ -65,16 +67,18 @@ function LoadingScreen() {
         gap: 16,
       }}
     >
-      <div
-        style={{
-          width: 40,
-          height: 40,
-          border: `3px solid ${C.border}`,
-          borderTopColor: C.accent,
-          borderRadius: "50%",
-          animation: "spin 0.8s linear infinite",
-        }}
-      />
+      <span aria-hidden="true">
+        <div
+          style={{
+            width: 40,
+            height: 40,
+            border: `3px solid ${C.border}`,
+            borderTopColor: C.accent,
+            borderRadius: "50%",
+            animation: "spin 0.8s linear infinite",
+          }}
+        />
+      </span>
       <p style={{ color: TEXT_COLORS.muted, fontSize: 14, margin: 0 }}>
         Loading your dashboard…
       </p>

@@ -2,51 +2,149 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { BookOpen, GraduationCap, Layers3, ShieldCheck, AlertCircle, ArrowRight } from "lucide-react";
+import { BookOpen, GraduationCap, Layers3, ShieldCheck, AlertCircle, ArrowRight, ArrowLeft, RefreshCw } from "lucide-react";
 import api from "@/lib/axios";
 import { showError } from "@/lib/toast";
+import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 
 type Overview = { categories: number; disciplines: number; subjects: number; directRules: number; conditionalRules: number; pendingReviews: number };
 const cards = [
-  { key: "categories", label: "Subject categories", icon: Layers3, href: "/admin/academic-framework/categories", copy: "Organise the catalogue without changing historic records." },
-  { key: "disciplines", label: "Academic disciplines", icon: GraduationCap, href: "/admin/academic-framework/disciplines", copy: "Record verified education disciplines used in eligibility decisions." },
-  { key: "subjects", label: "Active subjects", icon: BookOpen, href: "/admin/academic-framework/subjects", copy: "Subjects tutors and students can discover in the marketplace." },
-  { key: "pendingReviews", label: "Eligibility reviews", icon: ShieldCheck, href: "/admin/academic-framework/tutor-approvals", copy: "Subject requests awaiting review or supporting evidence." },
+  { key: "categories",    label: "Subject categories",   icon: Layers3,      href: "/admin/academic-framework/categories",     copy: "Organise the catalogue without changing historic records." },
+  { key: "disciplines",   label: "Academic disciplines", icon: GraduationCap, href: "/admin/academic-framework/disciplines",    copy: "Record verified education disciplines used in eligibility decisions." },
+  { key: "subjects",      label: "Active subjects",      icon: BookOpen,      href: "/admin/academic-framework/subjects",       copy: "Subjects tutors and students can discover in the marketplace." },
+  { key: "pendingReviews",label: "Eligibility reviews",  icon: ShieldCheck,   href: "/admin/academic-framework/tutor-approvals",copy: "Subject requests awaiting review or supporting evidence." },
 ] as const;
 
 export default function AcademicFrameworkPage() {
   const [overview, setOverview] = useState<Overview | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading]   = useState(true);
+
   const load = useCallback(async () => {
-    try { const { data } = await api.get("/admin/academic-framework/overview"); setOverview(data.overview); }
-    catch (error) { showError(error, "Could not load the academic framework"); }
-    finally { setLoading(false); }
+    setLoading(true);
+    try {
+      const { data } = await api.get("/admin/academic-framework/overview");
+      setOverview(data.overview);
+    } catch (error) {
+      showError(error, "Could not load the academic framework");
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
   useEffect(() => { void load(); }, [load]);
 
-  return <main className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
-    <div className="rounded-2xl border border-blue-100 bg-gradient-to-r from-[#021550] to-[#0329B2] p-6 text-white shadow-sm sm:p-8">
-      <p className="text-sm font-bold uppercase tracking-[0.15em] text-cyan-200">Academic governance</p>
-      <h1 className="mt-2 text-3xl font-extrabold tracking-tight">Academic framework</h1>
-      <p className="mt-2 max-w-3xl text-blue-100">A single source of truth for categories, subjects, education disciplines, and the rules that decide what a tutor may teach.</p>
-    </div>
+  return (
+    <div style={{ padding: "1.75rem 2rem" }}>
 
-    {loading ? <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Loading academic framework">{[1, 2, 3, 4].map((item) => <div key={item} className="h-40 animate-pulse rounded-xl bg-slate-100" />)}</div> : <>
-      <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Academic framework summary">
-        {cards.map(({ key, label, icon: Icon, href, copy }) => <Link key={key} href={href} className="group rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-blue-200">
-          <Icon className="h-6 w-6 text-[#016EF8]" aria-hidden />
-          <p className="mt-4 text-3xl font-extrabold text-slate-900">{overview?.[key] ?? 0}</p>
-          <h2 className="mt-1 font-bold text-slate-800">{label}</h2><p className="mt-2 text-sm leading-5 text-slate-600">{copy}</p>
-          <span className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-[#0329B2]">Manage <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden /></span>
-        </Link>)}
-      </section>
-      <section className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-5 text-slate-800" aria-labelledby="eligibility-note">
-        <div className="flex gap-3"><AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" aria-hidden /><div><h2 id="eligibility-note" className="font-bold">Teaching is never approved by a selected subject alone.</h2>
-          <p className="mt-1 text-sm leading-6">Direct rules allow teaching within a verified discipline. Conditional rules require supporting evidence and an administrator’s decision. The older category and discipline-map screens remain available while their stored records are reconciled.</p>
-        </div></div>
-      </section>
-      <Link href="/admin/academic-framework/school-offerings" className="mt-6 mr-4 inline-flex rounded-lg border border-blue-200 bg-white px-4 py-3 font-bold text-blue-800">Manage school offerings</Link>
-      <Link href="/admin/academic-framework/import-export" className="mt-6 inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-white px-4 py-3 text-sm font-bold text-[#0329B2] shadow-sm hover:bg-blue-50 focus:outline-none focus:ring-4 focus:ring-blue-200">Manage code-based CSV imports and exports <ArrowRight className="h-4 w-4" aria-hidden /></Link>
-    </>}
-  </main>;
+      {/* Page header */}
+      <div style={{ marginBottom: "1.5rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.4rem" }}>
+          <Link href="/admin" style={{ color: TEXT_COLORS.muted, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "0.82rem", fontWeight: 700 }}>
+            <ArrowLeft size={14} aria-hidden="true" /> Control Tower
+          </Link>
+          <span style={{ color: UI_COLORS.border }}>/</span>
+          <span style={{ fontSize: "0.82rem", fontWeight: 700, color: STATUS_COLORS.purple.color }}>Academic Governance</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem" }}>
+          <div>
+            <h1 style={{ fontSize: "1.5rem", fontWeight: 800, color: TEXT_COLORS.body, margin: 0 }}>
+              Academic Framework
+            </h1>
+            <p style={{ color: TEXT_COLORS.muted, fontSize: "0.85rem", margin: "0.2rem 0 0" }}>
+              A single source of truth for categories, subjects, education disciplines, and eligibility rules.
+            </p>
+          </div>
+          <button
+            onClick={() => void load()}
+            disabled={loading}
+            style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", padding: "0.55rem 0.9rem", minHeight: 44, backgroundColor: UI_COLORS.surface, border: `1px solid ${UI_COLORS.border}`, borderRadius: "0.4rem", fontSize: "0.82rem", fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", color: TEXT_COLORS.secondary }}
+            aria-label="Refresh academic framework data"
+          >
+            <RefreshCw size={14} aria-hidden="true" /> Refresh
+          </button>
+        </div>
+      </div>
+
+      {/* Stats cards */}
+      {loading ? (
+        <div
+          role="status"
+          aria-label="Loading academic framework"
+          style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}
+        >
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} aria-hidden="true" style={{ height: 160, borderRadius: "0.75rem", backgroundColor: UI_COLORS.card, animation: "pulse 1.5s ease-in-out infinite" }} />
+          ))}
+          <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}`}</style>
+        </div>
+      ) : (
+        <>
+          <section
+            aria-label="Academic framework summary"
+            style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}
+          >
+            {cards.map(({ key, label, icon: Icon, href, copy }) => (
+              <Link
+                key={key}
+                href={href}
+                style={{
+                  display: "block", textDecoration: "none",
+                  backgroundColor: UI_COLORS.surface, borderRadius: "0.75rem",
+                  border: `1px solid ${UI_COLORS.border}`, padding: "1.25rem",
+                  transition: "border-color 0.15s, box-shadow 0.15s",
+                  minHeight: 44,
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = UI_COLORS.accent; (e.currentTarget as HTMLElement).style.boxShadow = "0 2px 8px rgba(3,41,178,0.08)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = UI_COLORS.border; (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
+              >
+                <Icon size={22} color={UI_COLORS.accent} aria-hidden="true" />
+                <p style={{ fontSize: "2rem", fontWeight: 800, color: TEXT_COLORS.body, margin: "0.75rem 0 0.1rem" }}>
+                  {overview?.[key] ?? 0}
+                </p>
+                <h2 style={{ fontSize: "0.875rem", fontWeight: 700, color: TEXT_COLORS.secondary, margin: "0 0 0.4rem" }}>{label}</h2>
+                <p style={{ fontSize: "0.8rem", color: TEXT_COLORS.muted, margin: "0 0 0.75rem", lineHeight: 1.5 }}>{copy}</p>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "0.82rem", fontWeight: 700, color: UI_COLORS.accent }}>
+                  Manage <ArrowRight size={14} aria-hidden="true" />
+                </span>
+              </Link>
+            ))}
+          </section>
+
+          {/* Notice */}
+          <section
+            aria-labelledby="eligibility-note"
+            style={{ backgroundColor: "#fffbeb", borderRadius: "0.75rem", border: "1px solid #fde68a", padding: "1.1rem 1.25rem", marginBottom: "1.5rem" }}
+          >
+            <div style={{ display: "flex", gap: "0.75rem" }}>
+              <AlertCircle size={18} color="#b45309" aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }} />
+              <div>
+                <h2 id="eligibility-note" style={{ fontSize: "0.9rem", fontWeight: 700, color: TEXT_COLORS.body, margin: "0 0 0.3rem" }}>
+                  Teaching is never approved by a selected subject alone.
+                </h2>
+                <p style={{ fontSize: "0.82rem", color: TEXT_COLORS.secondary, margin: 0, lineHeight: 1.6 }}>
+                  Direct rules allow teaching within a verified discipline. Conditional rules require supporting evidence and an administrator's decision. The older category and discipline-map screens remain available while their stored records are reconciled.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/* Quick-access links */}
+          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+            <Link
+              href="/admin/academic-framework/school-offerings"
+              style={{ display: "inline-flex", alignItems: "center", minHeight: 44, padding: "0.55rem 1.1rem", borderRadius: "0.5rem", border: `1px solid ${UI_COLORS.border}`, backgroundColor: UI_COLORS.surface, color: UI_COLORS.accent, fontWeight: 700, fontSize: "0.875rem", textDecoration: "none" }}
+            >
+              Manage school offerings
+            </Link>
+            <Link
+              href="/admin/academic-framework/import-export"
+              style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", minHeight: 44, padding: "0.55rem 1.1rem", borderRadius: "0.5rem", border: `1px solid ${UI_COLORS.border}`, backgroundColor: UI_COLORS.surface, color: UI_COLORS.accent, fontWeight: 700, fontSize: "0.875rem", textDecoration: "none" }}
+            >
+              Manage code-based CSV imports and exports <ArrowRight size={14} aria-hidden="true" />
+            </Link>
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
