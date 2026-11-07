@@ -106,8 +106,12 @@ export default function Page() {
       if (requestsResult.status === "fulfilled") setRequests(Array.isArray(requestsResult.value.data?.requests) ? requestsResult.value.data.requests : []);
       if (offersResult.status === "fulfilled") setOffers(Array.isArray(offersResult.value.data?.offers) ? offersResult.value.data.offers : []);
 
-      if ([metricsResult, requestsResult, offersResult].some((result) => result.status === "rejected")) {
-        setLoadError("Some marketplace admin data could not be loaded. Please refresh or sign in again.");
+      const failed = [metricsResult, requestsResult, offersResult].filter((r) => r.status === "rejected") as PromiseRejectedResult[];
+      if (failed.length) {
+        const status = (failed[0].reason as any)?.response?.status;
+        if (status === 401) setLoadError("Your session has expired. Please sign out and sign in again.");
+        else if (status === 403) setLoadError("You do not have permission to view marketplace analytics. Contact your administrator.");
+        else setLoadError(`${failed.length} of 3 marketplace data sources failed to load. Partial data may be shown. Refresh to retry.`);
       }
       setLoading(false);
     }
