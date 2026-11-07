@@ -258,7 +258,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           if (visibleItems.length === 0) return null;
           return (
             <nav key={sec.title} aria-label={sec.title}>
-              <p aria-hidden="true" style={{ fontSize: "0.68rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", color: "#64748b", margin: "0 0 0.35rem 0.6rem" }}>
+              <p aria-hidden="true" style={{ fontSize: "0.75rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", color: "#64748b", margin: "0 0 0.35rem 0.6rem" }}>
                 {sec.title}
               </p>
               <ul role="list" style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: "0.15rem" }}>
@@ -278,7 +278,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         padding: "0.5rem 0.75rem",
                         borderRadius: "0.5rem",
                         textDecoration: "none",
-                        fontSize: "0.82rem",
+                        fontSize: "0.84rem",
                         fontWeight: isActive ? 700 : 600,
                         color: isActive ? "#ffffff" : "#cbd5e1",
                         border: isActive ? "1px solid rgba(59,130,246,0.4)" : "1px solid transparent",

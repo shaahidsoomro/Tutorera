@@ -44,6 +44,7 @@ export default function BookingsPage() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"all" | BookingStatus>("all");
   const [busy, setBusy] = useState<string | null>(null);
+  const [cancelConfirmId, setCancelConfirmId] = useState<string | null>(null);
   const [refundId, setRefundId] = useState<string | null>(null);
   const [refundReason, setRefundReason] = useState("");
   const [message, setMessage] = useState<{ id: string; text: string; ok: boolean } | null>(null);
@@ -68,8 +69,8 @@ export default function BookingsPage() {
   }
 
   async function cancelBooking(id: string) {
-    if (!confirm("Cancel this booking?")) return;
     setBusy(id);
+    setCancelConfirmId(null);
     try {
       const res = await api.patch(`/bookings/${id}/status`, { status: "cancelled" });
       setBookings(prev => prev.map(b => b._id === id ? { ...b, status: "cancelled" } : b));
@@ -172,14 +173,25 @@ export default function BookingsPage() {
                             )}
                           </>
                         )}
-                        {(b.status === "upcoming" || b.status === "ongoing") && (
+                        {(b.status === "upcoming" || b.status === "ongoing") && cancelConfirmId !== b._id && (
                           <button
-                            onClick={() => cancelBooking(b._id)}
+                            onClick={() => setCancelConfirmId(b._id)}
                             disabled={isBusy}
                             style={{ display: "flex", alignItems: "center", gap: "0.4rem", padding: "0.45rem 0.9rem", borderRadius: 8, border: "1.5px solid #be123c", background: "white", color: "#be123c", fontWeight: 700, fontSize: "0.8rem", cursor: "pointer", minHeight: 44 }}
                           >
-                            <XCircle size={14} /> {isBusy ? "…" : "Cancel"}
+                            <XCircle size={14} aria-hidden="true" /> Cancel
                           </button>
+                        )}
+                        {cancelConfirmId === b._id && (
+                          <div role="alert" style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                            <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "#be123c" }}>Cancel this booking?</span>
+                            <button onClick={() => cancelBooking(b._id)} disabled={isBusy} style={{ padding: "0.4rem 0.75rem", borderRadius: 6, border: "none", background: "#be123c", color: "white", fontWeight: 700, fontSize: "0.8rem", cursor: "pointer", minHeight: 36 }}>
+                              {isBusy ? "…" : "Yes, cancel"}
+                            </button>
+                            <button onClick={() => setCancelConfirmId(null)} style={{ padding: "0.4rem 0.75rem", borderRadius: 6, border: "1.5px solid #e5e7eb", background: "white", color: "#64748b", fontWeight: 700, fontSize: "0.8rem", cursor: "pointer", minHeight: 36 }}>
+                              Keep
+                            </button>
+                          </div>
                         )}
                       </div>
                     </div>

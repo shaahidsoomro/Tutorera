@@ -416,7 +416,7 @@ export default function AdminControlTowerPage() {
       <section style={{ marginBottom: "2rem" }}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: "1rem" }}>
           {pulseCards.map((c) => (
-            <Link key={c.title} href={c.link} style={{ textDecoration: "none" }}>
+            <Link key={c.title} href={c.link} aria-label={`${c.title}: ${loading ? "loading" : c.value.toLocaleString()} — ${c.label}`} style={{ textDecoration: "none" }}>
               <div
                 style={{
                   backgroundColor: UI_COLORS.surface,

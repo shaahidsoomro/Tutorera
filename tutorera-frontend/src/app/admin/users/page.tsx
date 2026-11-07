@@ -134,19 +134,25 @@ export default function UsersPage() {
 
       <div style={{ backgroundColor: C.surface, borderRadius: '0.875rem', border: `1px solid ${C.border}`, overflow: 'visible' }}>
 
-        {/* Desktop Table Header */}
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 0.8fr 0.8fr 1.2fr 1fr', padding: '0.75rem 1.5rem', backgroundColor: C.gray50, borderBottom: `1px solid ${C.border}` }} className="admin-table-header">
-          {["Name", "Email", "Role", "City", "Status", "Actions"].map(h => (
-            <p key={h} style={{ fontSize: '0.75rem', fontWeight: '700', color: TEXT_COLORS.muted, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>{h}</p>
-          ))}
-        </div>
-
+        <table style={{ width: '100%', borderCollapse: 'collapse' }} className="admin-desktop-table">
+          <caption style={{ display: 'none' }}>User accounts</caption>
+          <thead style={{ backgroundColor: C.gray50, borderBottom: `1px solid ${C.border}` }} className="admin-table-header">
+            <tr>
+              {["Name", "Email", "Role", "City", "Status", "Actions"].map(h => (
+                <th key={h} scope="col" style={{ fontSize: '0.75rem', fontWeight: '700', color: TEXT_COLORS.muted, textTransform: 'uppercase', letterSpacing: '0.05em', padding: '0.75rem 1rem', textAlign: 'left' }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
         {loading ? (
+          <tr><td colSpan={6}>
           <div role="status" aria-label="Loading users" style={{ padding: '3rem', textAlign: 'center' }}>
             <div aria-hidden="true" style={{ width: '32px', height: '32px', border: `3px solid ${C.accent}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto' }} />
             <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
           </div>
+          </td></tr>
         ) : users.length === 0 ? (
+          <tr><td colSpan={6}>
           <div style={{ padding: '3rem', textAlign: 'center', color: C.gray500 }}>
             <p style={{ fontSize: '1.25rem', marginBottom: '0.25rem' }}>👥</p>
             <p style={{ margin: 0, fontWeight: '600', color: C.primary }}>No users found</p>
@@ -156,81 +162,98 @@ export default function UsersPage() {
                 : "No registered accounts exist yet."}
             </p>
           </div>
+          </td></tr>
         ) : (
           users.map((user, idx) => (
-            <div key={user._id} style={{ borderBottom: idx < users.length - 1 ? `1px solid ${C.border}` : 'none' }}>
+            <tr key={user._id} style={{ borderBottom: idx < users.length - 1 ? `1px solid ${C.border}` : 'none' }} className="admin-table-row">
 
-              {/* Desktop Row */}
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 0.8fr 0.8fr 1.2fr 1fr', padding: '1rem 1.5rem', alignItems: 'center' }} className="admin-table-row">
-
-                {/* Name */}
+              {/* Name */}
+              <td style={{ padding: '1rem', verticalAlign: 'middle' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                  <div style={{ width: '32px', height: '32px', backgroundColor: C.accent, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.surface, fontSize: '0.8rem', fontWeight: '700', flexShrink: 0 }}>
+                  <div aria-hidden="true" style={{ width: '32px', height: '32px', backgroundColor: C.accent, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.surface, fontSize: '0.8rem', fontWeight: '700', flexShrink: 0 }}>
                     {user.name.charAt(0)}
                   </div>
                   <span style={{ fontSize: '0.875rem', fontWeight: '600', color: C.primary }}>{user.name}</span>
                 </div>
+              </td>
 
-                {/* Email */}
-                <span style={{ fontSize: '0.8rem', color: C.gray500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</span>
+              {/* Email */}
+              <td style={{ padding: '1rem', verticalAlign: 'middle' }}>
+                <span style={{ fontSize: '0.8rem', color: C.gray500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', maxWidth: '200px' }}>{user.email}</span>
+              </td>
 
-                {/* Role */}
-                <span style={{ fontSize: '0.75rem', fontWeight: '600', padding: '0.2rem 0.6rem', borderRadius: '999px', backgroundColor: roleColors[user.role]?.bg, color: roleColors[user.role]?.color, textTransform: 'capitalize', width: 'fit-content' }}>
+              {/* Role */}
+              <td style={{ padding: '1rem', verticalAlign: 'middle' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: '600', padding: '0.2rem 0.6rem', borderRadius: '999px', backgroundColor: roleColors[user.role]?.bg, color: roleColors[user.role]?.color, textTransform: 'capitalize', display: 'inline-block' }}>
                   {user.role}
                 </span>
+              </td>
 
-                {/* City */}
+              {/* City */}
+              <td style={{ padding: '1rem', verticalAlign: 'middle' }}>
                 <span style={{ fontSize: '0.8rem', color: C.gray500 }}>{user.city || "—"}</span>
+              </td>
 
-                {/* Status */}
+              {/* Status */}
+              <td style={{ padding: '1rem', verticalAlign: 'middle' }}>
                 <span style={{ fontSize: '0.75rem', fontWeight: '600', color: (user.moderationStatus || (user.isActive ? "active" : "suspended")) === "active" ? C.success : STATUS_COLORS.danger.color }}>
                   {user.moderationStatus || (user.isActive ? "active" : "suspended")}
                 </span>
+              </td>
 
-                {/* Action */}
+              {/* Actions */}
+              <td style={{ padding: '1rem', verticalAlign: 'middle' }}>
                 <button onClick={() => handleToggleStatus(user)} disabled={actionLoading === user._id || user.moderationStatus === "banned" || user.moderationStatus === "deleted"}
+                  aria-label={`${user.moderationStatus === "suspended" ? "Reinstate" : "Suspend"} ${user.name}`}
                   style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.4rem 0.75rem', border: 'none', borderRadius: '0.4rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600', backgroundColor: STATUS_COLORS.warning.bg, color: STATUS_COLORS.warning.color, width: 'fit-content' }}>
-                  <ShieldAlert size={13} /> {user.moderationStatus === "suspended" ? "Reinstate" : "Suspend"}
+                  <ShieldAlert size={13} aria-hidden="true" /> {user.moderationStatus === "suspended" ? "Reinstate" : "Suspend"}
                 </button>
-              </div>
+              </td>
+            </tr>
 
-              {/* Mobile Card */}
-              <div style={{ padding: '1rem 1.25rem' }} className="admin-mobile-card">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                    <div style={{ width: '38px', height: '38px', backgroundColor: C.accent, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.surface, fontSize: '1rem', fontWeight: '700', flexShrink: 0 }}>
-                      {user.name.charAt(0)}
-                    </div>
-                    <div>
-                      <p style={{ fontWeight: '700', color: C.primary, fontSize: '0.9rem', margin: 0 }}>{user.name}</p>
-                      <p style={{ color: C.gray500, fontSize: '0.75rem', margin: 0 }}>{user.email}</p>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.3rem' }}>
-                    <span style={{ fontSize: '0.7rem', fontWeight: '600', padding: '0.2rem 0.5rem', borderRadius: '999px', backgroundColor: roleColors[user.role]?.bg, color: roleColors[user.role]?.color, textTransform: 'capitalize' }}>
-                      {user.role}
-                    </span>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.75rem', color: C.gray500 }}>{user.city || "No city"}</span>
-                    <span style={{ fontSize: '0.75rem', fontWeight: '600', color: (user.moderationStatus || (user.isActive ? "active" : "suspended")) === "active" ? C.success : STATUS_COLORS.danger.color }}>
-                      • {user.moderationStatus || (user.isActive ? "active" : "suspended")}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button onClick={() => handleToggleStatus(user)} disabled={actionLoading === user._id || user.moderationStatus === "banned" || user.moderationStatus === "deleted"}
-                      style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.4rem 0.75rem', border: 'none', borderRadius: '0.4rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600', backgroundColor: STATUS_COLORS.warning.bg, color: STATUS_COLORS.warning.color }}>
-                      {user.moderationStatus === "suspended" ? "Reinstate" : "Suspend"}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-            </div>
           ))
         )}
+        </tbody>
+        </table>
+
+        {/* Mobile cards (shown below 768px via CSS) */}
+        <div className="admin-mobile-cards">
+        {!loading && users.map(user => (
+          <div key={`mob-${user._id}`} style={{ padding: '1rem 1.25rem', borderBottom: `1px solid ${C.border}` }} className="admin-mobile-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <div aria-hidden="true" style={{ width: '38px', height: '38px', backgroundColor: C.accent, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.surface, fontSize: '1rem', fontWeight: '700', flexShrink: 0 }}>
+                  {user.name.charAt(0)}
+                </div>
+                <div>
+                  <p style={{ fontWeight: '700', color: C.primary, fontSize: '0.9rem', margin: 0 }}>{user.name}</p>
+                  <p style={{ color: C.gray500, fontSize: '0.75rem', margin: 0 }}>{user.email}</p>
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.3rem' }}>
+                <span style={{ fontSize: '0.7rem', fontWeight: '600', padding: '0.2rem 0.5rem', borderRadius: '999px', backgroundColor: roleColors[user.role]?.bg, color: roleColors[user.role]?.color, textTransform: 'capitalize' }}>
+                  {user.role}
+                </span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.75rem', color: C.gray500 }}>{user.city || "No city"}</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: '600', color: (user.moderationStatus || (user.isActive ? "active" : "suspended")) === "active" ? C.success : STATUS_COLORS.danger.color }}>
+                  • {user.moderationStatus || (user.isActive ? "active" : "suspended")}
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button onClick={() => handleToggleStatus(user)} disabled={actionLoading === user._id || user.moderationStatus === "banned" || user.moderationStatus === "deleted"}
+                  aria-label={`${user.moderationStatus === "suspended" ? "Reinstate" : "Suspend"} ${user.name}`}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.4rem 0.75rem', border: 'none', borderRadius: '0.4rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600', backgroundColor: STATUS_COLORS.warning.bg, color: STATUS_COLORS.warning.color }}>
+                  {user.moderationStatus === "suspended" ? "Reinstate" : "Suspend"}
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+        </div>
       </div>
 
       {!loading && pagination.pages > 1 && (
@@ -269,10 +292,10 @@ export default function UsersPage() {
         </div>
       )}
       <style>{`
-        @media (min-width: 769px) { .admin-mobile-card { display: none !important; } }
+        @media (min-width: 769px) { .admin-mobile-cards { display: none !important; } }
         @media (max-width: 768px) {
-          .admin-table-header { display: none !important; }
-          .admin-table-row { display: none !important; }
+          .admin-desktop-table { display: none !important; }
+          .admin-mobile-cards { display: block !important; }
           .admin-mobile-card { display: block !important; }
         }
       `}</style>
