@@ -18,6 +18,24 @@ const cards = [
 export default function AcademicFrameworkPage() {
   const [overview, setOverview] = useState<Overview | null>(null);
   const [loading, setLoading]   = useState(true);
+  const [seeding, setSeeding]   = useState(false);
+  const [seedResult, setSeedResult] = useState<{ created: number; updated: number } | null>(null);
+  const [seedError, setSeedError]   = useState<string | null>(null);
+
+  const runSeed = async () => {
+    setSeeding(true);
+    setSeedResult(null);
+    setSeedError(null);
+    try {
+      const { data } = await api.post("/admin/academic/categories/seed");
+      setSeedResult(data.results);
+      void load();
+    } catch {
+      setSeedError("Seed failed. Check your permissions or try again.");
+    } finally {
+      setSeeding(false);
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -127,6 +145,29 @@ export default function AcademicFrameworkPage() {
               </div>
             </div>
           </section>
+
+          {/* Seed recommended categories */}
+          <div style={{ backgroundColor: UI_COLORS.card, borderRadius: "0.75rem", border: `1px solid ${UI_COLORS.border}`, padding: "1.1rem 1.25rem", marginBottom: "1.5rem", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem" }}>
+            <div>
+              <p style={{ fontSize: "0.9rem", fontWeight: 700, color: TEXT_COLORS.body, margin: "0 0 0.2rem" }}>Seed recommended categories</p>
+              <p style={{ fontSize: "0.8rem", color: TEXT_COLORS.muted, margin: 0 }}>Upserts the 15 standard academic categories (Mathematics, Sciences, Languages, etc.). Safe to run multiple times — existing categories are updated, nothing is deleted.</p>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+              {seedResult && (
+                <span role="status" style={{ fontSize: "0.82rem", fontWeight: 700, color: STATUS_COLORS.success.color }}>
+                  ✓ {seedResult.created} created, {seedResult.updated} updated
+                </span>
+              )}
+              {seedError && <span role="alert" style={{ fontSize: "0.82rem", color: STATUS_COLORS.danger.color }}>{seedError}</span>}
+              <button
+                onClick={() => void runSeed()}
+                disabled={seeding}
+                style={{ padding: "0.55rem 1.1rem", minHeight: 44, borderRadius: "0.5rem", border: "none", backgroundColor: UI_COLORS.accent, color: "white", fontWeight: 700, fontSize: "0.875rem", cursor: seeding ? "not-allowed" : "pointer", opacity: seeding ? 0.7 : 1 }}
+              >
+                {seeding ? "Seeding…" : "Run Seed"}
+              </button>
+            </div>
+          </div>
 
           {/* Quick-access links */}
           <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
