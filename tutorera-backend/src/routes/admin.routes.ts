@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { listPaymentHolds, listUnresolvedPaymentEvents, listUnresolvedCheckoutIntents, getPaymentEventEvidence } from "../controllers/adminPaymentHolds.controller";
 import { planAdminSupervisor, listAdminAgents, readAdminAgent } from "../controllers/adminAgentSupervisor.controller";
 import { listPendingAgeReviews, closeAgeReview, claimAgeReview, reassignAgeReview, proposeVerifiedDob, approveVerifiedDob } from "../controllers/ageReview.controller";
 import {
@@ -107,6 +108,10 @@ router.get("/supply-gaps", requirePermission("analytics.read"), getSupplyGapsInt
 // Finance & Reconciliation
 router.get("/finance/reconciliation", requirePermission("finance.reconcile"), getFinanceReconciliation);
 router.get("/finance/exceptions", requirePermission("finance.reconcile"), getFinanceExceptions);
+router.get("/finance/payment-holds", requirePermission("finance.reconcile"), listPaymentHolds);
+router.get("/finance/payment-events", requirePermission("finance.reconcile"), listUnresolvedPaymentEvents);
+router.get("/finance/payment-events/:id/evidence", requirePermission("finance.reconcile"), getPaymentEventEvidence);
+router.get("/finance/checkout-intents", requirePermission("finance.reconcile"), listUnresolvedCheckoutIntents);
 router.get("/finance/fee-config", requirePermission("finance.fee_configure"), getFeeConfig);
 router.put("/finance/fee-config", requirePermission("finance.fee_configure"), updateFeeConfig);
 

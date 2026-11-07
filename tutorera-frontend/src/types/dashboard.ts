@@ -1,6 +1,7 @@
 // types/dashboard.ts
 
 export interface DashRequest {
+  schoolOfferingId?: string; schoolBoard?: string; schoolQualification?: string; schoolClass?: string; schoolSubject?: string;
   _id: string;
   student: { _id: string; name: string; avatar: string; city?: string; countryCode?: string; countryName?: string };
   subject: string;

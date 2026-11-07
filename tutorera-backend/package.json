@@ -17,6 +17,7 @@
     "migrate:pk": "ts-node src/scripts/migrateLegacyPakistan.ts",
     "smoke:api": "node scripts/smoke-api.mjs https://api.tutorera.ac.pk",
     "seed:zoology-rules": "ts-node src/scripts/seedZoologyEligibilityRules.ts",
+    "academic:seed-school-offerings": "node dist/scripts/seedSchoolOfferings.js",
     "migrate:matches-discipline": "ts-node src/scripts/recalculateMatchesDiscipline.ts"
   },
   "keywords": [],

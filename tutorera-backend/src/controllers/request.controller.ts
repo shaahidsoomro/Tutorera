@@ -1,10 +1,15 @@
 import mongoose, { Types } from "mongoose";
+import { randomUUID } from "crypto";
+import { reserveOffer, releaseFailedOfferReservation } from "../services/offerReservation.service";
 import { Response } from "express";
 import { Request as ExpressRequest } from "express";
 import { AuthRequest } from "../types";
 import Request from "../models/Request.model";
 import RequestStatusHistory from "../models/RequestStatusHistory.model";
 import Bid from "../models/Bid.model";
+import SchoolOffering from "../models/SchoolOffering.model";
+import { checkSubjectEligibility } from "../services/subjectEligibility.service";
+import { schoolOfferingIsActive } from "../services/schoolOfferingAvailability.service";
 import Booking from "../models/Booking.model";
 import User from "../models/User.model";
 import { sendNotification } from "../utils/socket";
@@ -79,9 +84,15 @@ export const createRequest = async (req: AuthRequest, res: Response): Promise<vo
       if (req.body.selectedEndTime) scheduledEndAt = zonedDateTimeToUtc(req.body.selectedDate, req.body.selectedEndTime, scheduleTimezone);
     } catch { res.status(422).json({ success: false, message: "Please provide a valid IANA timezone and local lesson time." }); return; }
   }
+  const createData = { ...req.body };
+  if (createData.schoolOfferingId) {
+    const offering = await SchoolOffering.findOne({ _id: createData.schoolOfferingId, status: "active" }).lean();
+    if (!offering) { res.status(422).json({ success: false, code: "SCHOOL_OFFERING_UNAVAILABLE", message: "This school subject is unavailable. Select an active offering." }); return; }
+    Object.assign(createData, { subject: offering.subject, level: offering.approvalLevel, curriculum: offering.boardName, classGrade: offering.classLevel || "", schoolBoard: offering.boardName, schoolQualification: offering.qualificationName, schoolClass: offering.classLevel || "", schoolSubject: offering.subjectDisplay });
+  }
   const request = await Request.create({
     student: req.user?._id,
-    ...req.body,
+    ...createData,
     countryCode: market.countryCode,
     countryName: market.countryName,
     currency: market.currency,
@@ -241,6 +252,14 @@ export const getAllRequests = async (req: AuthRequest, res: Response): Promise<v
   }
   if (currency) filter.currency = (currency as string).toUpperCase();
 
+  if (req.user?.role === "tutor") {
+    const TutorProfile = (await import("../models/TutorProfile.model")).default;
+    const profile = await TutorProfile.findOne({ user: req.user._id }).select("subjectEligibility schoolOfferingIds").lean();
+    const offerings = profile ? await SchoolOffering.find({ _id: { $in: profile.schoolOfferingIds || [] }, status: "active" }).select("subject approvalLevel").lean() : [];
+    const allowed = offerings.filter(item => profile && checkSubjectEligibility(profile, item.subject, item.approvalLevel).eligible).map(item => item._id);
+    filter.$and = [...((filter.$and as Record<string, unknown>[]) || []), { $or: [{ schoolOfferingId: { $exists: false } }, { schoolOfferingId: null }, { schoolOfferingId: "" }, { schoolOfferingId: { $in: allowed } }] }];
+  }
+
   const pageNum = Math.max(1, parseInt(page as string) || 1);
   const limitNum = Math.min(50, Math.max(1, parseInt(limit as string) || 12));
   const skip = (pageNum - 1) * limitNum;
@@ -325,25 +344,27 @@ const CANCELLABLE_REQUEST_STATES = ["draft", "open", "published", "receiving_off
 // A student may withdraw an unpaid request or checkout, but cannot silently
 // cancel an already paid lesson by changing a Request row.
 async function cancelUnpaidRequest(req: AuthRequest, res: Response, source: string): Promise<void> {
-  const request = await Request.findOne({ _id: req.params.id, student: req.user?._id, status: { $in: CANCELLABLE_REQUEST_STATES } });
-  if (!request) {
-    res.status(409).json({ success: false, code: "REQUEST_NOT_CANCELLABLE", message: "This request does not exist or can no longer be cancelled. Review any confirmed booking separately." });
+  const request = await Request.findOne({ _id: req.params.id, student: req.user?._id });
+  if (!request) { res.status(404).json({ success: false, message: "Request not found." }); return; }
+  if (!(CANCELLABLE_REQUEST_STATES as readonly string[]).includes(request.status)) {
+    res.status(409).json({ success: false, code: "REQUEST_NOT_CANCELLABLE", message: "This request can no longer be cancelled. Review any confirmed booking separately." });
     return;
   }
-  // Atomic compare-and-set: signed webhook transactions cannot both settle
-  // an offer and allow its request to be cancelled concurrently.
-  const cancelled = await Request.updateOne(
-    { _id: request._id, status: { $in: CANCELLABLE_REQUEST_STATES } },
-    { $set: { status: "cancelled" } }
-  );
-  if (cancelled.modifiedCount !== 1) {
-    res.status(409).json({ success: false, code: "REQUEST_CHANGED", message: "This request was updated; refresh to see its current status." });
-    return;
-  }
-  await Bid.updateMany({ request: request._id, status: { $in: ["payment_pending", "pending", "submitted", "viewed", "countered"] } },
-    { $set: { status: "withdrawn" }, $unset: { paymentPendingExpiresAt: "" } });
-  await Booking.updateMany({ request: request._id, paymentStatus: "pending", status: "upcoming" },
-    { $set: { status: "cancelled", cancelReason: "Student cancelled before payment" } });
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      const current = await Request.findOne({ _id: request._id, student: req.user?._id, status: { $in: CANCELLABLE_REQUEST_STATES } }).session(session);
+      if (!current) throw Object.assign(new Error("This request changed. Refresh and try again."), { statusCode: 409, code: "REQUEST_CHANGED" });
+      const activePayment = await Bid.exists({ request: current._id, status: "payment_pending", $or: [{ paymentOutcomeUnknown: true }, { checkoutStartedAt: { $exists: true } }] }).session(session);
+      if (activePayment) throw Object.assign(new Error("A payment is being processed or needs review. Contact support before cancelling."), { statusCode: 409, code: "PAYMENT_RECONCILIATION_REQUIRED" });
+      const changed = await Request.updateOne({ _id: current._id, status: current.status }, { $set: { status: "cancelled" } }, { session });
+      if (!changed.matchedCount) throw Object.assign(new Error("This request changed. Refresh and try again."), { statusCode: 409, code: "REQUEST_CHANGED" });
+      await Bid.updateMany({ request: current._id, status: { $in: ["payment_pending", "pending", "submitted", "viewed", "countered"] } }, { $set: { status: "withdrawn" }, $unset: { paymentPendingExpiresAt: "", paymentReservationId: "", paymentOutcomeUnknown: "" } }, { session });
+      await Booking.updateMany({ request: current._id, paymentStatus: "pending", status: "upcoming" }, { $set: { status: "cancelled", cancelReason: "Student cancelled before payment" } }, { session });
+    });
+  } catch (error: any) {
+    res.status(error?.statusCode || 500).json({ success: false, code: error?.code, message: error?.statusCode ? error.message : "Unable to cancel this request. Please try again." }); return;
+  } finally { await session.endSession(); }
   await classifyRequestLoss({ requestId: request._id, explicitReason: "student_cancelled",
     detail: typeof req.body?.reason === "string" ? req.body.reason.slice(0, 500) : undefined,
     signals: { source } });
@@ -372,11 +393,15 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
     return;
   }
 
-  const requested = await Request.findById(req.params.id).select("student subject level teachingMode city countryCode countryName currency status budget pricingUnit allowCounterOffers isDirect targetTutor preferredTutorCountries isWorldwideEligible expiresAt");
+  const requested = await Request.findById(req.params.id).select("student subject level schoolOfferingId teachingMode city countryCode countryName currency status budget pricingUnit allowCounterOffers isDirect targetTutor preferredTutorCountries isWorldwideEligible expiresAt");
   if (!requested) {
     res.status(404).json({ success: false, message: "Request not found." });
     return;
   }
+  if (!(await schoolOfferingIsActive(requested.schoolOfferingId))) { res.status(409).json({ success: false, code: "SCHOOL_OFFERING_UNAVAILABLE", message: "This school offering is no longer available." }); return; }
+  if (requested.schoolOfferingId && !(tutorProfile.schoolOfferingIds || []).includes(requested.schoolOfferingId)) { res.status(403).json({ success: false, code: "SCHOOL_OFFERING_NOT_SELECTED", message: "Select this board, qualification and subject in your teaching preferences." }); return; }
+  const subjectApproval = checkSubjectEligibility(tutorProfile, requested.subject, requested.level);
+  if (!subjectApproval.eligible) { res.status(403).json({ success: false, code: "SUBJECT_NOT_APPROVED", message: subjectApproval.message }); return; }
   try { await assertMarketFeature(requested.countryCode, "offers"); } catch (error: any) {
     res.status(error.statusCode || 422).json({ success: false, code: error.code, message: error.message }); return;
   }
@@ -810,6 +835,13 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
     return;
   }
 
+  if (!(await schoolOfferingIsActive(request.schoolOfferingId))) { res.status(409).json({ success: false, code: "SCHOOL_OFFERING_UNAVAILABLE", message: "This school offering is no longer available." }); return; }
+  const TutorProfileForAcceptance = (await import("../models/TutorProfile.model")).default;
+  const acceptedTutorProfile = await TutorProfileForAcceptance.findOne({ user: bid.tutor }).select("subjectEligibility schoolOfferingIds").lean();
+  const approvedSubject = acceptedTutorProfile ? checkSubjectEligibility(acceptedTutorProfile, request.subject, request.level) : { eligible: false, message: "Tutor profile not found." };
+  if (!approvedSubject.eligible) { res.status(403).json({ success: false, code: "SUBJECT_NOT_APPROVED", message: approvedSubject.message }); return; }
+  if (request.schoolOfferingId && !(acceptedTutorProfile?.schoolOfferingIds || []).includes(request.schoolOfferingId)) { res.status(403).json({ success: false, code: "SCHOOL_OFFERING_NOT_SELECTED", message: "The tutor no longer teaches this board and qualification." }); return; }
+
   // Tutor approval reserves the request only. Until the student pays,
   // the booking remains pending and no teaching slot is committed.
   // Keep a pending Booking row so the existing student dashboard can
@@ -830,9 +862,10 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
         );
         if (!locked) throw Object.assign(new Error("Direct booking is no longer available."), { statusCode: 409 });
         const holdExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        const paymentReservationId = randomUUID();
         const lockedBid = await Bid.findOneAndUpdate(
           { _id: bid._id, request: requestId, tutor: req.user?._id, status: { $in: ["pending", "submitted", "viewed", "countered"] } },
-          { $set: { status: "payment_pending", paymentPendingExpiresAt: holdExpiresAt, feeQuote } },
+          { $set: { status: "payment_pending", paymentPendingExpiresAt: holdExpiresAt, paymentReservationId, feeQuote } },
           { new: true, session }
         );
         if (!lockedBid) throw Object.assign(new Error("Tutor offer was already accepted or is no longer available."), { statusCode: 409 });
@@ -881,6 +914,9 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
   try { feeQuote = await resolveMarketplaceFees(bid.amount, request.countryCode || "PK"); }
   catch (error: any) { res.status(error?.statusCode || 422).json({ success: false, message: error?.message || "Unable to calculate booking fees." }); return; }
 
+  const checkoutStudent = await User.findById(request.student).select("name email phone");
+  if (!checkoutStudent?.phone?.trim()) { res.status(422).json({ success: false, code: "PHONE_REQUIRED", message: "Add a contact phone number to your profile before starting payment." }); return; }
+
   try {
     await assertParentBookingPolicy({ student: request.student, request: request._id, bid: bid._id,
       amount: feeQuote.studentTotal, currency: bid.currency || request.currency || "PKR", queueApprovals: true });
@@ -889,32 +925,21 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
     return;
   }
 
-  // Atomic guard — only one accept attempt can win this transition
-  const reservedRequest = await Request.findOneAndUpdate(
-    { _id: requestId, status: { $in: ["open", "published", "receiving_offers", "negotiating"] } },
-    { status: "awaiting_payment" },
-    { new: true }
-  );
-
-  if (!reservedRequest) {
-    res.status(409).json({ success: false, message: "This request was just accepted or is no longer available." });
-    return;
-  }
-
-  const paymentPendingExpiresAt = new Date(Date.now() + PAYMENT_HOLD_MINUTES * 60 * 1000);
-  bid.status = "payment_pending";
-  bid.feeQuote = feeQuote;
-  bid.paymentPendingExpiresAt = paymentPendingExpiresAt;
-  await bid.save();
+  let reservationId: string;
+  try {
+    const reserved = await reserveOffer(request._id as Types.ObjectId, bid, false, undefined, feeQuote, true);
+    if (!reserved) throw new Error("Payment reservation was not created.");
+    reservationId = reserved;
+  } catch (error: any) { res.status(error.statusCode || 500).json({ success: false, code: error.code, message: error.message || "Unable to reserve offer." }); return; }
 
   try {
-    const student = await User.findById(request.student).select("name email phone");
+    const student = checkoutStudent;
     const checkout = await paymentProvider.createCheckout({
       amount: feeQuote.studentTotal,
       currency: bid.currency || request.currency || "",
       marketCountryCode: request.countryCode,
       feeSnapshot: feeQuote,
-      customerMobileNo: student?.phone || "03000000000",
+      customerMobileNo: student.phone!,
       customerEmail: student?.email || "",
       basketId: `BID-${bid._id.toString()}`,
       bidId: bid._id.toString(),
@@ -926,20 +951,22 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
       checkoutUrl: `${process.env.CLIENT_URL}/dashboard?payment=processing&bid=${bid._id}`,
     });
 
+    const [held, selected] = await Promise.all([
+      Bid.exists({ _id: bid._id, status: "payment_pending", paymentReservationId: reservationId }),
+      Request.exists({ _id: request._id, status: "awaiting_payment", acceptedOffer: bid._id }),
+    ]);
+    if (!held || !selected) { res.status(409).json({ success: false, code: "PAYMENT_RESERVATION_CHANGED", message: "This payment reservation changed. Contact support before retrying." }); return; }
+
     res.status(200).json({
       success: true,
       message: "Redirecting to payment. Your offer will be confirmed once payment completes.",
       checkoutUrl: checkout.checkoutUrl,
     });
   } catch (err: any) {
-    await Request.updateOne({ _id: requestId, status: "awaiting_payment" }, { status: "open" });
-    await Bid.updateOne(
-      { _id: bid._id, status: "payment_pending" },
-      { status: "submitted", $unset: { paymentPendingExpiresAt: "" } }
-    );
-
-    console.error("Failed to create payment checkout for offer acceptance:", err);
-    res.status(502).json({ success: false, message: "Unable to start payment. Please try again." });
+    const knownPreDispatch = ["PHONE_REQUIRED", "PAYMENT_CURRENCY_REQUIRED", "RAPIDPAY_MARKET_OR_CURRENCY_UNSUPPORTED", "PAYMENT_GATEWAY_NOT_CONFIGURED", "INVALID_PAYMENT_AMOUNT"].includes(err?.code);
+    if (knownPreDispatch) await releaseFailedOfferReservation(request._id as Types.ObjectId, bid._id as Types.ObjectId, reservationId);
+    else await Bid.updateOne({ _id: bid._id, status: "payment_pending", paymentReservationId: reservationId }, { $set: { paymentOutcomeUnknown: true } });
+    res.status(knownPreDispatch ? (err.statusCode || 422) : 503).json({ success: false, code: knownPreDispatch ? err.code : "PAYMENT_OUTCOME_UNKNOWN", message: knownPreDispatch ? err.message : "Payment status needs review before another attempt. Contact support." });
   }
 };
 

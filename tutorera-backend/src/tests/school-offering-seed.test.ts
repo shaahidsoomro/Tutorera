@@ -10,24 +10,35 @@ async function seedExistingSubjects() {
 
 describe("school offering migration", () => {
   it("has distinct board, qualification, class and subject records with reviewed Pearson sources", () => {
-    expect(SCHOOL_OFFERINGS).toHaveLength(234);
-    expect(new Set(SCHOOL_OFFERINGS.map((row) => row.id)).size).toBe(234);
+    expect(SCHOOL_OFFERINGS).toHaveLength(1026);
+    expect(new Set(SCHOOL_OFFERINGS.map((row) => row.id)).size).toBe(1026);
     expect(SCHOOL_OFFERINGS.filter((row) => row.boardCode === "pearson").every((row) => row.verificationSource?.startsWith("https://qualifications.pearson.com/"))).toBe(true);
     expect(SCHOOL_OFFERINGS.filter((row) => row.boardCode === "pearson" && row.qualificationCode.startsWith("ial") && row.subject === "Computer Science")).toHaveLength(2);
+    const karachiSecondary = SCHOOL_OFFERINGS.filter(row => row.boardCode === "bsek-karachi");
+    const karachiIntermediate = SCHOOL_OFFERINGS.filter(row => row.boardCode === "biek-karachi");
+    expect(karachiSecondary).toHaveLength(17); expect(karachiSecondary.every(row => row.qualificationCode === "ssc")).toBe(true);
+    expect(karachiIntermediate).toHaveLength(16); expect(karachiIntermediate.every(row => row.qualificationCode === "hssc")).toBe(true);
+    for (const name of ["Lahore", "Bahawalpur", "Dera Ghazi Khan", "Peshawar", "Hyderabad", "Quetta"]) {
+      const rows = SCHOOL_OFFERINGS.filter(row => row.boardName === `BISE ${name}`);
+      expect(rows).toHaveLength(33); expect(rows.every(row => !!row.verificationSource)).toBe(true);
+    }
   });
 
   it("dry runs without writing and repeated apply preserves administrator changes", async () => {
     await seedExistingSubjects();
     const plan = await seedSchoolOfferings();
-    expect(plan).toMatchObject({ total: 234, newOfferings: 234, applied: false, errors: [] });
+    expect(plan).toMatchObject({ total: 1026, newOfferings: 1026, applied: false, errors: [] });
     expect(plan.newSubjects.sort()).toEqual(["Ethics", "Further Mathematics"]);
     expect(await SchoolOffering.countDocuments()).toBe(0);
     expect((await seedSchoolOfferings(true)).applied).toBe(true);
     const selected = SCHOOL_OFFERINGS[0].id;
     await SchoolOffering.updateOne({ _id: selected }, { $set: { status: "inactive", reviewReason: "Admin review" } });
+    const beforeRepeat = await SchoolOffering.findById(selected).lean();
     expect((await seedSchoolOfferings(true)).newOfferings).toBe(0);
-    expect(await SchoolOffering.countDocuments()).toBe(234);
-    expect((await SchoolOffering.findById(selected))?.status).toBe("inactive");
+    expect(await SchoolOffering.countDocuments()).toBe(1026);
+    const afterRepeat = await SchoolOffering.findById(selected).lean();
+    expect(afterRepeat?.status).toBe("inactive");
+    expect(afterRepeat?.updatedAt?.getTime()).toBe(beforeRepeat?.updatedAt?.getTime());
     expect(await Subject.countDocuments({ name: "Ethics" })).toBe(1);
   });
 

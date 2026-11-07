@@ -23,10 +23,14 @@ export interface IBid extends Document {
   expiryReminderSentAt?: Date;
   status: "pending" | "submitted" | "viewed" | "countered" | "payment_pending" | "accepted" | "rejected" | "withdrawn" | "expired" | "not_selected";
   paymentPendingExpiresAt?: Date;
+  paymentReservationId?: string;
+  paymentOutcomeUnknown?: boolean;
+  checkoutStartedAt?: Date;
   feeQuote?: MarketplaceFeeQuote;
   isDirect: boolean;
   shortlistedAt?: Date;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 const bidSchema = new Schema<IBid>(
@@ -59,6 +63,9 @@ const bidSchema = new Schema<IBid>(
       default: "submitted",
     },
     paymentPendingExpiresAt: { type: Date },
+    paymentReservationId: { type: String },
+    paymentOutcomeUnknown: { type: Boolean, default: false },
+    checkoutStartedAt: { type: Date },
     feeQuote: { type: Schema.Types.Mixed },
     isDirect: { type: Boolean, default: false },
     shortlistedAt: { type: Date },
@@ -69,5 +76,7 @@ const bidSchema = new Schema<IBid>(
 bidSchema.index({ request: 1, tutor: 1 }, { unique: true });
 bidSchema.index({ expiresAt: 1, status: 1 });
 bidSchema.index({ tutor: 1, createdAt: -1 });
+bidSchema.index({ status: 1, paymentOutcomeUnknown: 1, paymentPendingExpiresAt: 1 });
+bidSchema.index({ status: 1, checkoutStartedAt: 1, paymentPendingExpiresAt: 1 });
 
 export default mongoose.model<IBid>("Bid", bidSchema);

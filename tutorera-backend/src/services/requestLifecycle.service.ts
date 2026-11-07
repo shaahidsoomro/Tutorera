@@ -306,9 +306,11 @@ export async function releaseExpiredPaymentHold(requestId: Types.ObjectId): Prom
   let released = false;
   try {
     await session.withTransaction(async () => {
+      const selected = await Request.findOne({ _id: requestId, status: "awaiting_payment" }).select("acceptedOffer").session(session).lean();
+      if (!selected) return;
       const stale = await Bid.findOneAndUpdate(
-        { request: requestId, status: "payment_pending", paymentPendingExpiresAt: { $lte: new Date() } },
-        { $set: { status: "submitted" }, $unset: { paymentPendingExpiresAt: "" } },
+        { request: requestId, ...(selected.acceptedOffer ? { _id: selected.acceptedOffer } : {}), status: "payment_pending", paymentOutcomeUnknown: { $ne: true }, checkoutStartedAt: { $exists: false }, paymentPendingExpiresAt: { $lte: new Date() } },
+        { $set: { status: "submitted" }, $unset: { paymentPendingExpiresAt: "", paymentReservationId: "", paymentOutcomeUnknown: "" } },
         { new: true, session }
       );
       if (!stale) return;

@@ -1,6 +1,9 @@
 "use client";
 
 import api from "@/lib/axios";
+import PaymentHoldQueue from "./PaymentHoldQueue";
+import PaymentEventQueue from "./PaymentEventQueue";
+import CheckoutIntentQueue from "./CheckoutIntentQueue";
 import { ArrowLeft,RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useCallback,useEffect,useState } from "react";
@@ -119,6 +122,10 @@ export default function ReconciliationPage() {
           <RefreshCw size={14} className={loading ? "spin" : ""} /> Refresh Ledger
         </button>
       </div>
+
+      <PaymentHoldQueue />
+      <PaymentEventQueue />
+      <CheckoutIntentQueue />
 
       {summary?.ledger && (
         <div style={{ backgroundColor: "white", borderRadius: "0.75rem", padding: "1rem", border: "1px solid #dbe5ff", marginBottom: "1.25rem" }}>

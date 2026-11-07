@@ -353,7 +353,7 @@ function OpenRequestCard({
         <div className={s.cardHeader}>
           <div style={{ flex: 1 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
-              <h3 className={s.cardTitle} style={{ margin: 0 }}>{request.subject}</h3>
+              <h3 className={s.cardTitle} style={{ margin: 0 }}>{request.schoolSubject || request.subject}</h3>
               {matchScore ? (
                 <MatchScoreBadge
                   score={matchScore}
@@ -365,6 +365,7 @@ function OpenRequestCard({
               ) : null}
             </div>
             <div className={s.cardMeta}>
+              {request.schoolBoard && <span>{[request.schoolBoard, request.schoolQualification, request.schoolClass].filter(Boolean).join(" / ")}</span>}
               <span>{request.level}</span>
               <span>·</span>
               <span>{request.city}</span>
@@ -512,7 +513,7 @@ function DirectRequestCard({
       <div className={s.cardHeader}>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-            <h3 className={s.cardTitle} style={{ margin: 0 }}>{request.subject}</h3>
+            <h3 className={s.cardTitle} style={{ margin: 0 }}>{request.schoolSubject || request.subject}</h3>
             <span style={{ backgroundColor: '#EEF5FF', color: '#0329B2', fontSize: '0.65rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: '999px', border: '1px solid #bfdbfe' }}>
               📩 Direct Request
             </span>

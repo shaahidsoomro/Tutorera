@@ -19,6 +19,7 @@ import { useAuth } from "@/context/AuthContext";
 import { showError, showSuccess } from "@/lib/toast";
 import CountryCitySelector from "@/components/marketplace/CountryCitySelector";
 import WhatsAppChatButton from "@/components/WhatsAppChatButton";
+import SchoolOfferingSelector from "@/components/marketplace/SchoolOfferingSelector";
 import RateRangeHint from "@/components/marketplace/RateRangeHint";
 import { Country } from "@/lib/location";
 import { useGeoData, convertToPKR } from "@/lib/geoService";
@@ -580,10 +581,12 @@ export default function RequestWizard({
                 <option value="regular_tuition">Regular tuition</option><option value="concept_improvement">Concept improvement</option><option value="exam_preparation">Exam preparation</option><option value="past_papers">Past papers</option><option value="homework_support">Homework support</option><option value="revision">Revision</option><option value="test_preparation">Test preparation</option><option value="language_practice">Language practice</option><option value="skill_development">Skill development</option><option value="other">Other</option>
               </select>
             </div>
+            <SchoolOfferingSelector onSelect={(offering) => setForm(current => ({ ...current, schoolOfferingId: offering?._id || "", ...(offering ? { subject: offering.subject, level: offering.approvalLevel, curriculum: offering.boardName + " / " + offering.qualificationName, classGrade: offering.classLevel || "" } : { subject: "", level: "", curriculum: "", classGrade: "" }) }))} />
             <div>
               <label htmlFor="request-subject" style={labelStyle}>Select Subject *</label>
               <select
                 id="request-subject"
+                disabled={!!form.schoolOfferingId}
                 value={form.subject}
                 onChange={(e) => update("subject", e.target.value)}
                 style={inputStyle}
@@ -599,6 +602,7 @@ export default function RequestWizard({
               <label htmlFor="request-level" style={labelStyle}>Academic Level / Class *</label>
               <select
                 id="request-level"
+                disabled={!!form.schoolOfferingId}
                 value={form.level}
                 onChange={(e) => update("level", e.target.value)}
                 style={inputStyle}
@@ -615,6 +619,7 @@ export default function RequestWizard({
                 <label htmlFor="curriculum-input" style={labelStyle}>Curriculum / Board (optional)</label>
                 <input
                   id="curriculum-input"
+                  disabled={!!form.schoolOfferingId}
                   type="text"
                   list="curriculum-suggestions"
                   value={form.curriculum}

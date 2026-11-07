@@ -92,8 +92,8 @@ export const rapidPayProvider = {
     assertRapidPayCheckoutCapability(params.marketCountryCode, params.currency);
 
     const mobile = normalizePkMobile(params.customerMobile)
-      || normalizePkMobile(String(params.metadata?.studentMobileNo || ""))
-      || "03000000000";
+      || normalizePkMobile(String(params.metadata?.studentMobileNo || ""));
+    if (!mobile) throw httpError("Enter a valid Pakistani mobile number before starting payment.", 422, "PHONE_REQUIRED");
 
     const email = params.customerEmail
       || String(params.metadata?.studentEmail || "")

@@ -1,5 +1,7 @@
 // src/controllers/payment.controller.ts
 import { Response, Request } from "express";
+import crypto from "crypto";
+import PaymentWebhookEvent from "../models/PaymentWebhookEvent.model";
 import { AuthRequest } from "../types";
 import Booking from "../models/Booking.model";
 import ParentProfile from "../models/ParentProfile.model";
@@ -77,7 +79,17 @@ export const createBookingCheckout = async (req: AuthRequest, res: Response): Pr
 
   const payer = isParent ? await User.findById(req.user?._id).select("name email phone") : student;
 
+  if (!payer?.phone?.trim()) { res.status(422).json({ success: false, code: "PHONE_REQUIRED", message: "Add a contact phone number to your profile before starting payment." }); return; }
+
   const basketId = booking._id.toString();
+  let directAttempt: { paymentReservationId?: string; checkoutStartedAt?: Date } | null = null;
+  if (directRequest?.isDirect) {
+    directAttempt = await Bid.findOneAndUpdate(
+      { _id: booking.bid, status: "payment_pending", paymentReservationId: { $exists: true, $ne: "" }, paymentOutcomeUnknown: { $ne: true }, checkoutStartedAt: { $exists: false }, paymentPendingExpiresAt: { $gt: new Date() } },
+      { $set: { checkoutStartedAt: new Date() } }, { returnDocument: "after" },
+    ).select("paymentReservationId checkoutStartedAt").lean();
+    if (!directAttempt) { res.status(409).json({ success: false, code: "PAYMENT_ATTEMPT_BLOCKED", message: "A checkout has already started or needs review. Contact support before retrying." }); return; }
+  }
 
   try {
     const checkout = await paymentProvider.createCheckout({
@@ -87,7 +99,7 @@ export const createBookingCheckout = async (req: AuthRequest, res: Response): Pr
       feeSnapshot: { subtotal: booking.subtotal, studentFee: booking.studentFee, tutorFee: booking.tutorFee,
         tax: booking.tax, studentTotal: booking.studentTotal, tutorNet: booking.tutorNet,
         currency: booking.currency || "PKR", feeConfig: booking.feeConfig },
-      customerMobileNo: payer?.phone || "03000000000",
+      customerMobileNo: payer.phone!,
       customerEmail: payer?.email || student.email,
       basketId,
       bookingId: booking._id.toString(),
@@ -100,11 +112,19 @@ export const createBookingCheckout = async (req: AuthRequest, res: Response): Pr
       checkoutUrl: `${FRONTEND_URL}/dashboard?payment=processing&booking=${basketId}`,
     });
 
+    if (directAttempt) {
+      const [held, selected] = await Promise.all([
+        Bid.exists({ _id: booking.bid, status: "payment_pending", paymentReservationId: directAttempt.paymentReservationId, checkoutStartedAt: directAttempt.checkoutStartedAt }),
+        RequestModel.exists({ _id: booking.request, status: "awaiting_payment", acceptedOffer: booking.bid }),
+      ]);
+      if (!held || !selected) { res.status(409).json({ success: false, code: "PAYMENT_RESERVATION_CHANGED", message: "The payment reservation changed. Contact support before retrying." }); return; }
+    }
     res.status(200).json({ success: true, checkoutUrl: checkout.checkoutUrl });
   } catch (err: any) {
-    logger.error({ requestId: req.id, err }, "Failed to create payment checkout session");
-    const statusCode = err?.statusCode || 502;
-    res.status(statusCode).json({ success: false, message: "Unable to start payment. Please try again." });
+    const knownPreDispatch = ["PHONE_REQUIRED", "PAYMENT_CURRENCY_REQUIRED", "RAPIDPAY_MARKET_OR_CURRENCY_UNSUPPORTED", "PAYMENT_GATEWAY_NOT_CONFIGURED", "INVALID_PAYMENT_AMOUNT"].includes(err?.code);
+    if (directAttempt) await Bid.updateOne({ _id: booking.bid, status: "payment_pending", paymentReservationId: directAttempt.paymentReservationId, checkoutStartedAt: directAttempt.checkoutStartedAt }, knownPreDispatch ? { $unset: { checkoutStartedAt: "" } } : { $set: { paymentOutcomeUnknown: true } });
+    logger.error({ requestId: req.id, code: err?.code }, "Failed to create payment checkout session");
+    res.status(knownPreDispatch ? (err.statusCode || 422) : (directAttempt ? 503 : (err?.statusCode || 502))).json({ success: false, code: knownPreDispatch ? err.code : (directAttempt ? "PAYMENT_OUTCOME_UNKNOWN" : undefined), message: knownPreDispatch ? err.message : "Payment status needs review before another attempt. Contact support." });
   }
 };
 
@@ -139,21 +159,45 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
     currency?: string;
   });
 
+  if (typeof event.merchantTransactionId !== "string" || !event.merchantTransactionId || event.merchantTransactionId.length > 200 || typeof event.eventType !== "string" || !event.eventType || event.eventType.length > 100 || (event.eventId !== undefined && (typeof event.eventId !== "string" || event.eventId.length > 160))) {
+    res.status(400).json({ success: false, code: "INVALID_PAYMENT_EVENT", message: "Invalid payment event." }); return;
+  }
+  // Do not infer a missing transaction currency when reconciling a payment.
+  event.currency = typeof req.body?.currency === "string" ? req.body.currency : "";
+  const payloadHash = crypto.createHash("sha256").update(rawBody).digest("hex");
+  const durableId = `rapidpay:${event.eventId || payloadHash}`;
+  try {
+    const stored = await PaymentWebhookEvent.findOneAndUpdate({ _id: durableId }, { $setOnInsert: { provider: "rapidpay", providerEventId: event.eventId || undefined, payloadHash, reference: event.merchantTransactionId, eventType: event.eventType, status: typeof event.status === "string" ? event.status.slice(0, 100) : undefined, amount: event.amount, currency: event.currency ? event.currency.slice(0, 16) : undefined, state: "pending", verifiedAt: new Date() } }, { upsert: true, returnDocument: "after" }).lean();
+    if (!stored || stored.payloadHash !== payloadHash) { res.status(409).json({ success: false, code: "PAYMENT_EVENT_CONFLICT", message: "Event identifier was reused with different content." }); return; }
+    if (stored.state === "processed") { res.status(200).json({ success: true, code: "ALREADY_CONFIRMED" }); return; }
+  } catch (error) {
+    logger.error({ requestId: (req as any).id }, "Could not persist verified payment event");
+    res.status(503).json({ success: false, message: "Unable to record payment event. Retry later." }); return;
+  }
+  res.once("finish", () => {
+    const state = res.locals.paymentReconciliationRequired ? "exception" : res.statusCode >= 500 ? "exception" : res.statusCode >= 400 ? "unmatched" : "processed";
+    const reviewReason = state === "processed" ? undefined : (res.locals.paymentEventReason || (state === "exception" ? "PROCESSING_ERROR" : "UNMATCHED_EVENT"));
+    void PaymentWebhookEvent.updateOne({ _id: durableId, state: { $ne: "processed" } }, { $set: { state, ...(reviewReason ? { reviewReason } : {}) }, ...(!reviewReason ? { $unset: { reviewReason: "" } } : {}) }).catch(() => undefined);
+  });
+
   try {
     // Match every settlement to an initiated checkout: an authenticated webhook
     // can still contain the wrong amount, currency or basket ID.
     if (event.eventType === "transaction.completed") {
-      const quote = await PaymentLedger.findOne({ providerTransactionId: event.merchantTransactionId, eventType: "checkout.created" }).sort("-createdAt");
+      if (typeof event.status === "string" && ["failed", "failure", "cancelled", "canceled"].includes(event.status.trim().toLowerCase())) { res.locals.paymentEventReason = "CONTRADICTORY_STATUS"; res.status(409).json({ success: false, code: "PAYMENT_EVENT_CONFLICT" }); return; }
+      const quote = await PaymentLedger.findOne({ provider: "rapidpay", providerTransactionId: event.merchantTransactionId, eventType: "checkout.created" }).sort("-createdAt");
       const paidAmount = Number(event.amount);
       if (!quote || !Number.isFinite(paidAmount) || paidAmount <= 0 || Math.abs(quote.grossAmount - paidAmount) > 0.01 || quote.currency.toUpperCase() !== String(event.currency || "").toUpperCase()) {
+        res.locals.paymentEventReason = !quote ? "CHECKOUT_LEDGER_MISSING" : "PAYMENT_DETAILS_MISMATCH";
         logger.error({ basketId: event.merchantTransactionId, amount: event.amount, currency: event.currency }, "Payment webhook failed checkout reconciliation");
         res.status(409).json({ success: false, code: "PAYMENT_RECONCILIATION_FAILED" });
         return;
       }
       // Multiple provider events for one basket must never repeat receipts or
       // re-apply an already-settled booking state.
-      const previouslySettled = await PaymentLedger.findOne({ providerTransactionId: event.merchantTransactionId, eventType: "payment.succeeded" }).select("settlementStatus").lean();
+      const previouslySettled = await PaymentLedger.findOne({ provider: "rapidpay", providerTransactionId: event.merchantTransactionId, eventType: "payment.succeeded" }).select("settlementStatus").lean();
       if (previouslySettled) {
+        if (previouslySettled.settlementStatus === "exception") { res.locals.paymentReconciliationRequired = true; res.locals.paymentEventReason = "SETTLEMENT_EXCEPTION"; }
         res.status(200).json({ success: true, code: previouslySettled.settlementStatus === "exception" ? "PAYMENT_RECONCILIATION_REQUIRED" : "ALREADY_CONFIRMED" });
         return;
       }
@@ -181,7 +225,7 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
           });
           await PaymentLedger.updateOne({ _id: exception._id }, { $set: { settlementStatus: "exception" } });
           logger.error({ bidId, providerEventId: event.eventId }, "Payment settled without a completed booking — manual reconciliation required");
-          res.status(200).json({ success: true, code: "PAYMENT_RECONCILIATION_REQUIRED" });
+          res.locals.paymentReconciliationRequired = true; res.locals.paymentEventReason = "SETTLEMENT_EXCEPTION"; res.status(200).json({ success: true, code: "PAYMENT_RECONCILIATION_REQUIRED" });
           return;
         }
 
@@ -229,7 +273,7 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
           });
           await PaymentLedger.updateOne({ _id: exception._id }, { $set: { settlementStatus: "exception" } });
           logger.error({ basketId: event.merchantTransactionId }, "Gateway settled against unknown booking");
-          res.status(200).json({ success: true, code: "PAYMENT_RECONCILIATION_REQUIRED" });
+          res.locals.paymentReconciliationRequired = true; res.status(200).json({ success: true, code: "PAYMENT_RECONCILIATION_REQUIRED" });
           return;
         }
 
@@ -250,7 +294,7 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
           });
           await PaymentLedger.updateOne({ _id: exception._id }, { $set: { settlementStatus: "exception" } });
           logger.error({ err, bookingId: booking._id }, "Gateway settled against unavailable booking");
-          res.status(200).json({ success: true, code: "PAYMENT_RECONCILIATION_REQUIRED" });
+          res.locals.paymentReconciliationRequired = true; res.status(200).json({ success: true, code: "PAYMENT_RECONCILIATION_REQUIRED" });
           return;
         }
         await recordPaymentLedger({
@@ -286,6 +330,15 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
         }
       }
     } else if (event.eventType === "transaction.failed") {
+      const quote = await PaymentLedger.findOne({ provider: "rapidpay", providerTransactionId: event.merchantTransactionId, eventType: "checkout.created" }).sort("-createdAt");
+      const failedAmount = Number(event.amount);
+      if (!quote || !Number.isFinite(failedAmount) || failedAmount <= 0 || Math.abs(quote.grossAmount - failedAmount) > 0.01 || quote.currency.toUpperCase() !== String(event.currency || "").toUpperCase()) {
+        res.locals.paymentEventReason = !quote ? "CHECKOUT_LEDGER_MISSING" : "PAYMENT_DETAILS_MISMATCH";
+        res.status(409).json({ success: false, code: "PAYMENT_RECONCILIATION_FAILED" }); return;
+      }
+      const targetId = event.merchantTransactionId.startsWith("BID-") ? event.merchantTransactionId.slice(4) : event.merchantTransactionId;
+      const targetExists = isValidObjectId(targetId) && (event.merchantTransactionId.startsWith("BID-") ? await Bid.exists({ _id: targetId }) : await Booking.exists({ _id: targetId }));
+      if (!targetExists) { res.locals.paymentReconciliationRequired = true; res.status(200).json({ success: true, code: "PAYMENT_RECONCILIATION_REQUIRED" }); return; }
       logger.info({ requestId: (req as any).id, basketId: event.merchantTransactionId }, "Payment gateway reported a failed transaction");
 
       if (event.merchantTransactionId.startsWith("BID-")) {
@@ -374,6 +427,7 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
       }
     }
 
+    if (!["transaction.completed", "transaction.failed"].includes(event.eventType)) { res.locals.paymentReconciliationRequired = true; res.locals.paymentEventReason = "UNSUPPORTED_EVENT_TYPE"; }
     res.status(200).json({ success: true });
   } catch (err) {
     logger.error({ requestId: (req as any).id, err }, "Error processing payment gateway webhook");

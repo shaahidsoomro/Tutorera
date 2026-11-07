@@ -1,6 +1,8 @@
 import { Types } from "mongoose";
 import { calculateMarketplaceFees } from "../config/constants";
 import PaymentLedger from "../models/PaymentLedger.model";
+import PaymentCheckoutIntent from "../models/PaymentCheckoutIntent.model";
+import { assertRapidPayCheckoutCapability, assertRapidPayRuntimeConfiguration, normalizePkMobile } from "./rapidPayProvider.service";
 import Booking from "../models/Booking.model";
 import Bid from "../models/Bid.model";
 import type { MarketplaceFeeQuote } from "./pricing.service";
@@ -69,27 +71,38 @@ export const paymentProvider = {
         tutorId: params.tutorId,
       },
     };
-    const result = await rapidPayProvider.createCheckout(checkoutParams);
+    // Validate known local requirements before persisting or dispatching.
+    assertRapidPayCheckoutCapability(params.marketCountryCode, currency);
+    assertRapidPayRuntimeConfiguration();
+    if (!normalizePkMobile(params.customerMobileNo)) throw { statusCode: 422, code: "PHONE_REQUIRED", message: "Enter a valid Pakistani mobile number before starting payment." };
+    if (!Number.isFinite(params.amount) || params.amount <= 0 || !params.basketId) throw { statusCode: 422, code: "INVALID_PAYMENT_AMOUNT", message: "A valid payment amount and reference are required." };
 
-    await recordPaymentLedger({
-      providerTransactionId: params.basketId,
-      eventType: "checkout.created",
-      status: "pending",
-      amount: params.amount,
-      currency,
-      bookingId: params.bookingId,
-      bidId: params.bidId,
-      studentId: params.studentId,
-      payerId: params.payerId || params.studentId,
-      tutorId: params.tutorId,
-      feeSnapshot: params.feeSnapshot,
-      metadata: {
-        checkoutUrl: result.checkoutUrl,
-        platformAmount: params.amount,
-        platformCurrency: currency,
-        ...(params.metadata || {}),
-      },
-    });
+    const priorCheckout = await PaymentLedger.exists({ providerTransactionId: params.basketId, eventType: "checkout.created" });
+    if (priorCheckout) throw { statusCode: 409, code: "PAYMENT_ATTEMPT_BLOCKED", message: "A checkout with this reference already exists or requires review." };
+
+    // Never send the same basket twice. A process crash after dispatch must be
+    // reviewed because a provider timeout is not evidence of failure.
+    try {
+      await PaymentCheckoutIntent.create({ _id: params.basketId, provider: "rapidpay", amount: params.amount, currency, state: "prepared", ...(params.bookingId && { booking: params.bookingId }), ...(params.bidId && { bid: params.bidId }), ...(params.studentId && { student: params.studentId }), ...(params.payerId && { payer: params.payerId }), ...(params.tutorId && { tutor: params.tutorId }), ...(params.feeSnapshot && { feeSnapshot: params.feeSnapshot }) });
+    } catch (error) {
+      if ((error as { code?: number }).code === 11000) throw { statusCode: 409, code: "PAYMENT_ATTEMPT_BLOCKED", message: "A checkout with this reference already exists or requires review." };
+      throw error;
+    }
+    const marked = await PaymentCheckoutIntent.updateOne({ _id: params.basketId, state: "prepared" }, { $set: { state: "dispatched" } });
+    if (!marked.matchedCount) throw { statusCode: 409, code: "PAYMENT_ATTEMPT_BLOCKED", message: "This checkout needs review before retrying." };
+    let result: PaymentCheckoutResult;
+    try {
+      result = await rapidPayProvider.createCheckout(checkoutParams);
+      await recordPaymentLedger({
+        providerTransactionId: params.basketId, eventType: "checkout.created", status: "pending", amount: params.amount, currency,
+        bookingId: params.bookingId, bidId: params.bidId, studentId: params.studentId, payerId: params.payerId || params.studentId, tutorId: params.tutorId, feeSnapshot: params.feeSnapshot,
+        metadata: { checkoutUrl: result.checkoutUrl, platformAmount: params.amount, platformCurrency: currency, ...(params.metadata || {}) },
+      });
+      await PaymentCheckoutIntent.updateOne({ _id: params.basketId, state: "dispatched" }, { $set: { state: "responded" } });
+    } catch (error) {
+      await PaymentCheckoutIntent.updateOne({ _id: params.basketId, state: "dispatched" }, { $set: { state: "unknown" } }).catch(() => undefined);
+      throw { statusCode: 503, code: "PAYMENT_OUTCOME_UNKNOWN", message: "The checkout outcome needs review before another attempt. Contact support." };
+    }
 
     return result;
   },

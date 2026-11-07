@@ -38,11 +38,16 @@ export async function seedSchoolOfferings(apply = false) {
         if (!row || clean(row.name) !== clean(name)) throw new Error(`Subject collision: ${name}`);
         matched.set(name, row as typeof subjects[number]);
       }
-      for (const row of SCHOOL_OFFERINGS) {
+      const seededAt = new Date();
+      const operations = SCHOOL_OFFERINGS.map(row => {
         const subject = matched.get(row.subject);
         if (!subject) throw new Error(`Missing subject: ${row.subject}`);
         const { id, ...data } = row;
-        await SchoolOffering.updateOne({ _id: id }, { $setOnInsert: { ...data, subject: subject.name, subjectRef: subject._id, status: "active" } }, { upsert: true, session });
+        return { updateOne: { filter: { _id: id }, update: { $setOnInsert: { ...data, subject: subject.name, subjectRef: subject._id, status: "active" as const, createdAt: seededAt, updatedAt: seededAt } }, upsert: true, timestamps: false } };
+      });
+      // Bound each command while keeping all chunks in the same transaction.
+      for (let offset = 0; offset < operations.length; offset += 250) {
+        await SchoolOffering.bulkWrite(operations.slice(offset, offset + 250), { session });
       }
     });
     return { ...plan, applied: true };

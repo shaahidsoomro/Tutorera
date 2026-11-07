@@ -1,6 +1,7 @@
 import request from "supertest";
 import app from "../app";
 import User from "../models/User.model";
+import TutorProfile from "../models/TutorProfile.model";
 import Request from "../models/Request.model";
 import Bid from "../models/Bid.model";
 import ParentProfile from "../models/ParentProfile.model";
@@ -27,6 +28,7 @@ async function makeFixture(options: { approval?: boolean; cap?: number; feeQuote
     name: "Consent Tutor", email: `consent-tutor-${suffix}@example.test`,
     password: "password123", role: "tutor",
   });
+  await TutorProfile.create({ user: tutor._id, subjectEligibility: [{ subject: "Mathematics", levels: ["Matric"], status: "approved" }] });
   const profile = await ParentProfile.create({
     user: parent._id, approvalRequiredForBookings: options.approval ?? true,
     ...(options.cap !== undefined ? { spendingLimitMonthly: options.cap, spendingLimitCurrency: "PKR" } : {}),

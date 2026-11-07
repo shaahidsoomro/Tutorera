@@ -1,4 +1,5 @@
 import { Response } from "express";
+import mongoose from "mongoose";
 import { AuthRequest } from "../types";
 import Booking from "../models/Booking.model";
 import BookedSlot from "../models/BookedSlot.model";
@@ -128,23 +129,31 @@ export const updateBookingStatus = async (req: AuthRequest, res: Response): Prom
     res.status(409).json({ success: false, code: "PAYMENT_REQUIRED", message: "The student must complete verified payment before starting a lesson." });
     return;
   }
-  const updated = await Booking.findOneAndUpdate(
-    { _id: booking._id, status: "upcoming", ...(status === "ongoing" ? { paymentStatus: "confirmed" } : {}) },
-    { $set: { status, ...(status === "cancelled" ? { cancelReason: typeof cancelReason === "string" ? cancelReason.slice(0, 500) : "Cancelled by participant" } : {}) } },
-    { new: true }
-  );
-  if (!updated) {
-    res.status(409).json({ success: false, code: "BOOKING_CHANGED", message: "Booking status changed. Refresh and retry." });
-    return;
+  const direct = status === "cancelled" && ["pending", "failed"].includes(booking.paymentStatus) && booking.request
+    ? await RequestModel.findById(booking.request).select("isDirect status acceptedOffer").lean() : null;
+  let updated: typeof booking | null = null;
+  if (direct?.isDirect && direct.status === "awaiting_payment") {
+    const session = await mongoose.startSession();
+    try {
+      await session.withTransaction(async () => {
+        const released = await Bid.updateOne({ _id: booking.bid, status: "payment_pending", paymentOutcomeUnknown: { $ne: true }, checkoutStartedAt: { $exists: false } }, { $set: { status: "withdrawn" }, $unset: { paymentPendingExpiresAt: "", paymentReservationId: "" } }, { session });
+        if (!released.matchedCount) throw Object.assign(new Error("A payment is processing or needs review. Contact support before cancelling."), { statusCode: 409, code: "PAYMENT_RECONCILIATION_REQUIRED" });
+        const changed = await RequestModel.updateOne({ _id: direct._id, status: "awaiting_payment", acceptedOffer: booking.bid }, { $set: { status: "cancelled" } }, { session });
+        if (!changed.matchedCount) throw Object.assign(new Error("Booking changed. Refresh and try again."), { statusCode: 409, code: "BOOKING_CHANGED" });
+        updated = await Booking.findOneAndUpdate({ _id: booking._id, status: "upcoming", paymentStatus: { $in: ["pending", "failed"] } }, { $set: { status: "cancelled", cancelReason: typeof cancelReason === "string" ? cancelReason.slice(0, 500) : "Cancelled by participant" } }, { new: true, session });
+        if (!updated) throw Object.assign(new Error("Booking changed. Refresh and try again."), { statusCode: 409, code: "BOOKING_CHANGED" });
+      });
+    } catch (error: any) { res.status(error?.statusCode || 500).json({ success: false, code: error?.code, message: error?.statusCode ? error.message : "Unable to cancel this booking." }); return; }
+    finally { await session.endSession(); }
+  } else {
+    updated = await Booking.findOneAndUpdate(
+      { _id: booking._id, status: "upcoming", ...(status === "ongoing" ? { paymentStatus: "confirmed" } : {}) },
+      { $set: { status, ...(status === "cancelled" ? { cancelReason: typeof cancelReason === "string" ? cancelReason.slice(0, 500) : "Cancelled by participant" } : {}) } },
+      { new: true }
+    );
   }
-  if (status === "cancelled") {
-    await BookedSlot.deleteMany({ booking: booking._id });
-    const request = booking.request ? await RequestModel.findById(booking.request).select("isDirect status acceptedOffer") : null;
-    if (request?.isDirect && request.status === "awaiting_payment") {
-      await Bid.updateOne({ _id: booking.bid, status: "payment_pending" }, { $set: { status: "withdrawn" }, $unset: { paymentPendingExpiresAt: "" } });
-      await RequestModel.updateOne({ _id: request._id, status: "awaiting_payment", acceptedOffer: booking.bid }, { $set: { status: "cancelled" } });
-    }
-  }
+  if (!updated) { res.status(409).json({ success: false, code: "BOOKING_CHANGED", message: "Booking status changed. Refresh and retry." }); return; }
+  if (status === "cancelled") await BookedSlot.deleteMany({ booking: booking._id });
   await logAudit({ action: status === "cancelled" ? "booking_cancelled" : "booking_started", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "Booking", targetId: booking.id, metadata: { status, cancelReason } });
   const recipient = booking.student.toString() === userId?.toString() ? booking.tutor.toString() : booking.student.toString();
   await sendNotification(req.app.get("io"), recipient, { title: status === "cancelled" ? "Booking Cancelled" : "Booking Started", message: status === "cancelled" ? "The booking was cancelled. Review the cancellation policy or contact support if needed." : "Your tutoring booking is now in progress.", type: "booking", link: "/dashboard" });

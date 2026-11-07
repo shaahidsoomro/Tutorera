@@ -6,8 +6,12 @@ import Request from "../models/Request.model";
 import Booking from "../models/Booking.model";
 import OfferNegotiation from "../models/OfferNegotiation.model";
 import TutorProfile from "../models/TutorProfile.model";
+import { checkSubjectEligibility } from "../services/subjectEligibility.service";
+import { assertSchoolOfferingActive } from "../services/schoolOfferingAvailability.service";
+import { isMarketplaceEligible, isHomeTuitionEligible } from "../services/tracking.service";
 import { resolveMarketplaceFees } from "../services/pricing.service";
 import { assertParentBookingPolicy } from "../services/parentBookingPolicy.service";
+import { reserveOffer, releaseFailedOfferReservation } from "../services/offerReservation.service";
 import { containsContactInfo } from "../utils/contentFilter";
 import { sendNotification } from "../utils/socket";
 import { logAudit } from "../utils/logAudit";
@@ -39,6 +43,16 @@ function moderationReasons(message = "", amount?: number, baseline?: number) {
 }
 async function offerEmail(userId: string, subject: string, message: string) { try { const user = await User.findById(userId).select("name email").lean(); if (user?.email) await sendEmail({ to: user.email, subject, html: `<h2>${escapeHtml(subject)}</h2><p>Hello ${escapeHtml(user.name)},</p><p>${escapeHtml(message)}</p><p><a href="https://tutorera.ac.pk/offers">Review your offers</a></p>` }); } catch (error) { console.error("Offer email failed:", error); } }
 
+async function assertTutorCanOffer(request: { schoolOfferingId?: string; subject: string; level: string }, tutorId: Types.ObjectId, session?: mongoose.ClientSession) {
+  await assertSchoolOfferingActive(request.schoolOfferingId, session);
+  const query = TutorProfile.findOne({ user: tutorId }).select("subjectEligibility schoolOfferingIds");
+  if (session) query.session(session);
+  const profile = await query.lean();
+  const eligibility = profile ? checkSubjectEligibility(profile, request.subject, request.level) : { eligible: false, message: "Tutor profile not found." };
+  if (!eligibility.eligible) throw Object.assign(new Error(eligibility.message), { statusCode: 403, code: "SUBJECT_NOT_APPROVED" });
+  if (request.schoolOfferingId && !(profile?.schoolOfferingIds || []).includes(request.schoolOfferingId)) throw Object.assign(new Error("This board and qualification is not in the tutor's teaching preferences."), { statusCode: 403, code: "SCHOOL_OFFERING_NOT_SELECTED" });
+}
+
 async function context(offerId: string) {
   const offer = await Bid.findById(offerId);
   if (!offer) return null;
@@ -65,6 +79,7 @@ export const counterOffer = async (req: AuthRequest, res: Response): Promise<voi
     if (offer.expiresAt.getTime() <= Date.now()) { offer.status = "expired"; await offer.save({ session }); throw { statusCode: 410, message: "This offer has expired." }; }
     const userId = req.user?._id?.toString(); const isStudent = request.student.toString() === userId; const isTutor = offer.tutor.toString() === userId;
     if (!isStudent && !isTutor) throw { statusCode: 403, message: "Not authorized." };
+    await assertTutorCanOffer(request, offer.tutor as Types.ObjectId, session);
     if (!request.allowCounterOffers) throw { statusCode: 409, message: "Counter-offers are disabled for this request." };
     role = isStudent ? "student" : "tutor";
     const [roleCount, last] = await Promise.all([OfferNegotiation.countDocuments({ offer: offer._id, senderRole: role, sequenceNumber: { $gt: 1 } }).session(session), OfferNegotiation.findOne({ offer: offer._id }).sort("-sequenceNumber").session(session)]);
@@ -77,7 +92,7 @@ export const counterOffer = async (req: AuthRequest, res: Response): Promise<voi
     [negotiation] = await OfferNegotiation.create([{ offer: offer._id, senderUser: req.user?._id, senderRole: role, amount: req.body.amount, currency: offer.currency || "PKR", amountUSD, message: req.body.message, sequenceNumber: (last?.sequenceNumber || 0) + 1, expiresAt, flaggedForModeration: reasons.length > 0 }], { session });
     offer.amount = req.body.amount; offer.status = "countered"; offer.expiresAt = expiresAt; if (reasons.length) { offer.flaggedForModeration = true; offer.moderationReasons = [...new Set([...(offer.moderationReasons || []), ...reasons])]; } await offer.save({ session });
     request.status = "negotiating"; await request.save({ session }); savedOffer = offer; recipient = isStudent ? offer.tutor.toString() : request.student.toString(); finalCounterOffer = roleCount === 2;
-  }); } catch (error: any) { if (error?.statusCode === 410) await Bid.updateOne({ _id: req.params.id, status: { $in: [...ACTIVE_OFFER_STATES] } }, { status: "expired" }); res.status(error.statusCode || (error?.code === 11000 ? 409 : 500)).json({ success: false, message: error?.code === 11000 ? "Another counter-offer was submitted first. Refresh and try again." : error.message || "Unable to send counter offer." }); return; } finally { await session.endSession(); }
+  }); } catch (error: any) { if (error?.statusCode === 410) await Bid.updateOne({ _id: req.params.id, status: { $in: [...ACTIVE_OFFER_STATES] } }, { status: "expired" }); res.status(error.statusCode || (error?.code === 11000 ? 409 : 500)).json({ success: false, code: typeof error?.code === "string" ? error.code : undefined, message: error?.code === 11000 ? "Another counter-offer was submitted first. Refresh and try again." : error.message || "Unable to send counter offer." }); return; } finally { await session.endSession(); }
   await sendNotification(req.app.get("io"), recipient, { title: "Counter Offer Received", message: `${role === "student" ? "The student" : "The tutor"} proposed ${savedOffer.currency} ${req.body.amount.toLocaleString()}/${savedOffer.pricingUnit}.`, type: "bid", link: "/offers" });
   await offerEmail(recipient, "Counter Offer Received", `${role === "student" ? "The student" : "The tutor"} proposed ${savedOffer.currency} ${req.body.amount.toLocaleString()} per ${savedOffer.pricingUnit}.`);
   await logAudit({ action: "offer_countered", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "Bid", targetId: savedOffer.id, metadata: { amount: req.body.amount, role, sequenceNumber: negotiation.sequenceNumber, flaggedForModeration: negotiation.flaggedForModeration } });
@@ -85,34 +100,80 @@ export const counterOffer = async (req: AuthRequest, res: Response): Promise<voi
 };
 
 export const declineOffer = async (req: AuthRequest, res: Response): Promise<void> => {
-  const data = await context(req.params.id as string); if (!data) { res.status(404).json({ success: false, message: "Offer not found." }); return; }
-  const userId = req.user?._id?.toString(); const student = data.request.student.toString() === userId; const tutor = data.offer.tutor.toString() === userId;
-  if (!student && !tutor) { res.status(403).json({ success: false, message: "Not authorized." }); return; }
-  if (terminalOfferStates.includes(data.offer.status)) { res.status(409).json({ success: false, message: "This offer can no longer be changed." }); return; }
-  data.offer.status = student ? "rejected" : "withdrawn"; await data.offer.save();
-  await OfferNegotiation.updateMany({ offer: data.offer._id, status: "active" }, { status: "declined" });
-  await logAudit({ action: student ? "offer_declined" : "offer_withdrawn", actor: req.user?.name, actorId: userId, entity: "Bid", targetId: data.offer.id });
-  const recipient = student ? data.offer.tutor.toString() : data.request.student.toString(); await sendNotification(req.app.get("io"), recipient, { title: student ? "Offer Declined" : "Offer Withdrawn", message: student ? "The student declined your tutor offer." : "The tutor withdrew an offer from your request.", type: "bid", link: "/offers" }); await offerEmail(recipient, student ? "Offer Declined" : "Offer Withdrawn", student ? "The student declined your tutor offer." : "The tutor withdrew an offer from your request.");
+  const session = await mongoose.startSession();
+  const userId = req.user?._id?.toString();
+  let student = false; let recipient = ""; let offerId = "";
+  try {
+    await session.withTransaction(async () => {
+      const offer = await Bid.findById(req.params.id).session(session);
+      if (!offer) throw { statusCode: 404, message: "Offer not found." };
+      const request = await Request.findById(offer.request).session(session);
+      if (!request) throw { statusCode: 404, message: "Offer not found." };
+      student = request.student.toString() === userId;
+      if (!student && offer.tutor.toString() !== userId) throw { statusCode: 403, message: "Not authorized." };
+      if (!(ACTIVE_REQUEST_STATES as readonly string[]).includes(request.status) || !(ACTIVE_OFFER_STATES as readonly string[]).includes(offer.status) || offer.expiresAt.getTime() <= Date.now()) throw { statusCode: 409, message: "This offer can no longer be changed." };
+      const locked = await Request.updateOne({ _id: request._id, status: { $in: [...ACTIVE_REQUEST_STATES] } }, { $inc: { __v: 1 } }, { session });
+      if (!locked.matchedCount) throw { statusCode: 409, message: "This offer can no longer be changed." };
+      offer.status = student ? "rejected" : "withdrawn";
+      await offer.save({ session });
+      await OfferNegotiation.updateMany({ offer: offer._id, status: "active" }, { status: "declined" }, { session });
+      recipient = student ? offer.tutor.toString() : request.student.toString(); offerId = offer.id;
+    });
+  } catch (error) {
+    const e = error as { statusCode?: number; message?: string };
+    res.status(e.statusCode || 500).json({ success: false, message: e.statusCode ? e.message : "Unable to update this offer. Please try again." }); return;
+  } finally { await session.endSession(); }
+  await logAudit({ action: student ? "offer_declined" : "offer_withdrawn", actor: req.user?.name, actorId: userId, entity: "Bid", targetId: offerId });
+  await sendNotification(req.app.get("io"), recipient, { title: student ? "Offer Declined" : "Offer Withdrawn", message: student ? "The student declined your tutor offer." : "The tutor withdrew an offer from your request.", type: "bid", link: "/offers" }); await offerEmail(recipient, student ? "Offer Declined" : "Offer Withdrawn", student ? "The student declined your tutor offer." : "The tutor withdrew an offer from your request.");
   res.json({ success: true, message: student ? "Offer declined." : "Offer withdrawn." });
 };
 
 export const markOfferViewed = async (req: AuthRequest, res: Response): Promise<void> => {
   const data = await context(req.params.id as string); if (!data) { res.status(404).json({ success: false, message: "Offer not found." }); return; }
   if (data.request.student.toString() !== req.user?._id?.toString()) { res.status(403).json({ success: false, message: "Not authorized." }); return; }
-  if (data.offer.status === "submitted") { data.offer.status = "viewed"; data.offer.viewedAt = new Date(); await data.offer.save(); await Promise.all([sendNotification(req.app.get("io"), data.offer.tutor.toString(), { title: "Offer Viewed", message: "The student viewed your tutor offer.", type: "bid", link: "/offers" }), offerEmail(data.offer.tutor.toString(), "Offer Viewed", "The student viewed your tutor offer."), logAudit({ action: "offer_viewed", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "Bid", targetId: data.offer.id })]); }
-  res.json({ success: true, offer: data.offer });
+  const viewed = await Bid.findOneAndUpdate({ _id: data.offer._id, status: "submitted", expiresAt: { $gt: new Date() } }, { $set: { status: "viewed", viewedAt: new Date() } }, { returnDocument: "after" });
+  if (viewed) await Promise.all([sendNotification(req.app.get("io"), viewed.tutor.toString(), { title: "Offer Viewed", message: "The student viewed your tutor offer.", type: "bid", link: "/offers" }), offerEmail(viewed.tutor.toString(), "Offer Viewed", "The student viewed your tutor offer."), logAudit({ action: "offer_viewed", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "Bid", targetId: viewed.id })]);
+  const current = viewed || await Bid.findById(data.offer._id);
+  res.json({ success: true, offer: current });
 };
 
 export const renewOffer = async (req: AuthRequest, res: Response): Promise<void> => {
-  const offer = await Bid.findOne({ _id: req.params.id, tutor: req.user?._id }); if (!offer) { res.status(404).json({ success: false, message: "Offer not found." }); return; }
-  const request = await Request.findById(offer.request); if (!request || !(ACTIVE_REQUEST_STATES as readonly string[]).includes(request.status)) { res.status(409).json({ success: false, message: "The request is no longer accepting offers." }); return; }
-  if (offer.status !== "expired" && offer.expiresAt.getTime() > Date.now()) { res.status(409).json({ success: false, message: "Only an expired offer can be renewed." }); return; }
-  if (!request.allowCounterOffers && req.body.amount !== request.budget) { res.status(409).json({ success: false, message: "This request only accepts the proposed rate." }); return; }
-  const last = await OfferNegotiation.findOne({ offer: offer._id }).sort("-sequenceNumber"); const reasons = moderationReasons(req.body.message, req.body.amount, request.budget); const expiresAt = expiry();
-  await OfferNegotiation.updateMany({ offer: offer._id, status: "active" }, { status: "expired" });
-  await OfferNegotiation.create({ offer: offer._id, senderUser: req.user?._id, senderRole: "tutor", amount: req.body.amount, currency: offer.currency || request.currency, message: req.body.message, sequenceNumber: (last?.sequenceNumber || 0) + 1, expiresAt, flaggedForModeration: reasons.length > 0 });
-  offer.amount = req.body.amount; offer.message = req.body.message || offer.message; offer.availability = req.body.availability || offer.availability; offer.status = "submitted"; offer.expiresAt = expiresAt; offer.renewedAt = new Date(); offer.renewalCount = (offer.renewalCount || 0) + 1; offer.viewedAt = undefined; if (reasons.length) { offer.flaggedForModeration = true; offer.moderationReasons = [...new Set([...(offer.moderationReasons || []), ...reasons])]; } await offer.save();
-  await logAudit({ action: "offer_renewed", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "Bid", targetId: offer.id, metadata: { renewalCount: offer.renewalCount } }); res.json({ success: true, message: "Offer renewed for 24 hours.", offer });
+  const session = await mongoose.startSession();
+  let renewed!: InstanceType<typeof Bid>;
+  try {
+    await session.withTransaction(async () => {
+      const offer = await Bid.findOne({ _id: req.params.id, tutor: req.user?._id }).session(session);
+      if (!offer) throw { statusCode: 404, message: "Offer not found." };
+      const request = await Request.findById(offer.request).session(session);
+      if (!request || !(ACTIVE_REQUEST_STATES as readonly string[]).includes(request.status) || (request.expiresAt && request.expiresAt.getTime() <= Date.now())) throw { statusCode: 409, message: "The request is no longer accepting offers." };
+      await assertSchoolOfferingActive(request.schoolOfferingId, session);
+      const expiredActive = (ACTIVE_OFFER_STATES as readonly string[]).includes(offer.status) && offer.expiresAt && offer.expiresAt.getTime() <= Date.now();
+      if (offer.status !== "expired" && !expiredActive) throw { statusCode: 409, message: "Only an expired offer can be renewed." };
+      if (!request.allowCounterOffers && req.body.amount !== request.budget) throw { statusCode: 409, message: "This request only accepts the proposed rate." };
+      await assertMarketFeature(request.countryCode, "offers");
+      const profile = await TutorProfile.findOne({ user: offer.tutor }).session(session);
+      if (!profile || !isMarketplaceEligible(profile)) throw { statusCode: 403, code: "TUTOR_NOT_APPROVED", message: "Your profile must be fully verified before you can send offers." };
+      if (request.teachingMode === "in-person" && !isHomeTuitionEligible(profile)) throw { statusCode: 403, code: "HOME_TUITION_POLICE_REQUIRED", message: "Home tuition requires approved safety verification." };
+      const eligibility = checkSubjectEligibility(profile, request.subject, request.level);
+      if (!eligibility.eligible) throw { statusCode: 403, code: "SUBJECT_NOT_APPROVED", message: eligibility.message };
+      if (request.schoolOfferingId && !(profile.schoolOfferingIds || []).includes(request.schoolOfferingId)) throw { statusCode: 403, code: "SCHOOL_OFFERING_NOT_SELECTED", message: "This offering is not in your teaching preferences." };
+      // Compete with acceptance/cancellation, which also write this request.
+      const locked = await Request.updateOne({ _id: request._id, status: { $in: [...ACTIVE_REQUEST_STATES] } }, { $inc: { __v: 1 } }, { session });
+      if (!locked.matchedCount) throw { statusCode: 409, message: "The request is no longer accepting offers." };
+      const last = await OfferNegotiation.findOne({ offer: offer._id }).sort("-sequenceNumber").session(session);
+      const reasons = moderationReasons(req.body.message, req.body.amount, request.budget); const expiresAt = expiry();
+      await OfferNegotiation.updateMany({ offer: offer._id, status: "active" }, { status: "expired" }, { session });
+      await OfferNegotiation.create([{ offer: offer._id, senderUser: req.user?._id, senderRole: "tutor", amount: req.body.amount, currency: offer.currency || request.currency, message: req.body.message, sequenceNumber: (last?.sequenceNumber || 0) + 1, expiresAt, flaggedForModeration: reasons.length > 0 }], { session });
+      offer.amount = req.body.amount; offer.message = req.body.message || offer.message; offer.availability = req.body.availability || offer.availability; offer.status = "submitted"; offer.expiresAt = expiresAt; offer.renewedAt = new Date(); offer.renewalCount = (offer.renewalCount || 0) + 1; offer.viewedAt = undefined; if (reasons.length) { offer.flaggedForModeration = true; offer.moderationReasons = [...new Set([...(offer.moderationReasons || []), ...reasons])]; }
+      await offer.save({ session }); renewed = offer;
+    });
+  } catch (error) {
+    const e = error as { statusCode?: number; code?: string | number; message?: string };
+    res.status(e.statusCode || (e.code === 11000 ? 409 : 500)).json({ success: false, code: typeof e.code === "string" ? e.code : undefined, message: e.statusCode ? e.message : "Unable to renew this offer. Please try again." });
+    return;
+  } finally { await session.endSession(); }
+  await logAudit({ action: "offer_renewed", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "Bid", targetId: renewed.id, metadata: { renewalCount: renewed.renewalCount } });
+  res.json({ success: true, message: "Offer renewed for 24 hours.", offer: renewed });
 };
 
 // @desc    Accept an offer — reserves it and starts a Rapid Gateway checkout.
@@ -158,6 +219,7 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
+    await assertTutorCanOffer(request, offer.tutor as Types.ObjectId);
     const feeQuote = await resolveMarketplaceFees(offer.amount, request.countryCode || "PK");
 
     // Optional promo code discount applied to studentTotal before checkout
@@ -193,30 +255,26 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
 
     const checkoutAmount = Math.round((feeQuote.studentTotal - promoDiscount) * 100) / 100;
 
+    const payingStudent = await User.findById(request.student).select("name email phone");
+    if (!payingStudent?.phone?.trim()) { res.status(422).json({ success: false, code: "PHONE_REQUIRED", message: "Add a contact phone number to your profile before starting payment." }); return; }
+
+
     await assertParentBookingPolicy({ student: request.student, request: request._id, bid: offer._id,
       amount: checkoutAmount, currency: offer.currency || request.currency || "PKR", queueApprovals: true });
 
-    // Atomic guard — same purpose as before: only one accept attempt can
-    // win this transition, so two concurrent accept clicks can't both
-    // proceed. We reserve the AGREED RATE here too, exactly like before,
-    // just without creating the booking yet.
-    const locked = await Request.updateOne(
-      { _id: request._id, status: { $in: [...ACTIVE_REQUEST_STATES] } },
-      { status: "awaiting_payment", acceptedOffer: offer._id, finalAgreedRate: offer.amount }
-    );
-    if (locked.modifiedCount !== 1) {
-      res.status(409).json({ success: false, message: "This request has already been matched with another tutor." });
+    // Reserve the request and the unchanged offer in one transaction. The
+    // reservation token fences late responses from an earlier attempt.
+    const reservationId = await reserveOffer(request._id as Types.ObjectId, offer, false, undefined, feeQuote, !isTutorOwner);
+    if (!reservationId) throw new Error("Payment reservation was not created.");
+
+    if (isTutorOwner) {
+      await sendNotification(req.app.get("io"), request.student.toString(), { title: "Counter-offer accepted", message: "Your tutor accepted the counter-offer. Complete payment to confirm the booking.", type: "booking", link: "/offers" });
+      res.status(200).json({ success: true, message: "Counter-offer accepted. The student can now complete payment." });
       return;
     }
 
-    const paymentPendingExpiresAt = new Date(Date.now() + PAYMENT_HOLD_MINUTES * 60 * 1000);
-    offer.status = "payment_pending";
-    offer.feeQuote = feeQuote;
-    offer.paymentPendingExpiresAt = paymentPendingExpiresAt;
-    await offer.save();
-
     try {
-      const student = await User.findById(request.student).select("name email phone");
+      const student = payingStudent;
       const checkout = await paymentProvider.createCheckout({
         amount: checkoutAmount,
         currency: offer.currency || request.currency || "PKR",
@@ -225,7 +283,7 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
         bidId: offer._id.toString(),
         studentId: request.student.toString(),
         tutorId: offer.tutor.toString(),
-        customerMobileNo: student?.phone || "03000000000",  // no hardcoded fallback — let gateway handle gracefully
+        customerMobileNo: student.phone!,  // no hardcoded fallback — let gateway handle gracefully
         customerEmail: student?.email || "",
         basketId: `BID-${offer._id.toString()}`,
         description: `TUTORERA offer acceptance ${offer._id.toString()}${promoDiscount > 0 ? ` (promo: ${promoCodeDoc?.code}, discount: ${promoDiscount})` : ""}`,
@@ -233,6 +291,12 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
         failureUrl: `${process.env.CLIENT_URL}/offers?payment=failed&offer=${offer._id}`,
         checkoutUrl: `${process.env.CLIENT_URL}/offers?payment=processing&offer=${offer._id}`,
       });
+
+      const [currentOffer, currentRequest] = await Promise.all([
+        Bid.exists({ _id: offer._id, status: "payment_pending", paymentReservationId: reservationId }),
+        Request.exists({ _id: request._id, status: "awaiting_payment", acceptedOffer: offer._id }),
+      ]);
+      if (!currentOffer || !currentRequest) { res.status(409).json({ success: false, code: "PAYMENT_RESERVATION_CHANGED", message: "This payment reservation changed. Contact support before retrying." }); return; }
 
       // Record promo redemption as "reserved" until booking is confirmed via webhook
       if (promoCodeDoc && promoDiscount > 0) {
@@ -263,17 +327,13 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
         promoDiscount: promoDiscount > 0 ? { code: promoCodeDoc?.code, discountAmount: promoDiscount, finalAmount: checkoutAmount } : undefined,
       });
     } catch (err: any) {
-      // Checkout creation failed — roll back the reservation immediately.
-      await Request.updateOne(
-        { _id: request._id, status: "awaiting_payment" },
-        { status: "receiving_offers", $unset: { acceptedOffer: "", finalAgreedRate: "" } }
-      );
-      await Bid.updateOne(
-        { _id: offer._id, status: "payment_pending" },
-        { status: "submitted", $unset: { paymentPendingExpiresAt: "" } }
-      );
-      console.error("Failed to create Rapid Gateway checkout for offer acceptance:", err);
-      res.status(502).json({ success: false, message: "Unable to start payment. Please try again." });
+      // An error after a gateway request may mean the provider created a
+      // session despite a timeout. Keep the hold for reconciliation instead
+      // of silently permitting a second payment attempt.
+      const knownPreDispatch = ["PHONE_REQUIRED", "PAYMENT_CURRENCY_REQUIRED", "RAPIDPAY_MARKET_OR_CURRENCY_UNSUPPORTED", "PAYMENT_GATEWAY_NOT_CONFIGURED", "INVALID_PAYMENT_AMOUNT"].includes(err?.code);
+      if (knownPreDispatch) await releaseFailedOfferReservation(request._id as Types.ObjectId, offer._id as Types.ObjectId, reservationId);
+      else await Bid.updateOne({ _id: offer._id, status: "payment_pending", paymentReservationId: reservationId }, { $set: { paymentOutcomeUnknown: true } });
+      res.status(knownPreDispatch ? (err.statusCode || 422) : 503).json({ success: false, code: knownPreDispatch ? err.code : "PAYMENT_OUTCOME_UNKNOWN", message: knownPreDispatch ? err.message : "Payment status needs review before another attempt. Contact support." });
     }
   } catch (error: any) {
     res.status(error.statusCode || 500).json({ success: false, code: error.code, message: error.message || "Unable to accept offer." });
@@ -283,6 +343,8 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
 export const retryOfferPayment = async (req: AuthRequest, res: Response): Promise<void> => {
   const offer = await Bid.findById(req.params.id);
   if (!offer) { res.status(404).json({ success: false, message: "Offer not found." }); return; }
+
+  if (offer.paymentOutcomeUnknown) { res.status(409).json({ success: false, code: "PAYMENT_OUTCOME_UNKNOWN", message: "Payment status needs review before another attempt. Contact support." }); return; }
 
   if (offer.status !== "payment_pending") {
     res.status(409).json({ success: false, message: "This offer is not currently awaiting payment." });
@@ -298,6 +360,8 @@ export const retryOfferPayment = async (req: AuthRequest, res: Response): Promis
     return;
   }
 
+  if (request.status !== "awaiting_payment" || request.acceptedOffer?.toString() !== offer._id.toString() || !offer.paymentReservationId) { res.status(409).json({ success: false, code: "PAYMENT_RESERVATION_CHANGED", message: "This payment reservation needs review before another checkout can start." }); return; }
+
   // Reuse the originally quoted rates on retry (never recalculate a new fee).
   const feeQuote = offer.feeQuote || await resolveMarketplaceFees(offer.amount, request.countryCode || "PK");
   offer.feeQuote = feeQuote;
@@ -309,13 +373,20 @@ export const retryOfferPayment = async (req: AuthRequest, res: Response): Promis
     return;
   }
 
-  // Extend the hold from this retry attempt, so the student gets a full
-  // fresh window instead of racing whatever was left of the original one.
-  offer.paymentPendingExpiresAt = new Date(Date.now() + PAYMENT_HOLD_MINUTES * 60 * 1000);
-  await offer.save();
+  const retryStudent = await User.findById(request.student).select("name email phone");
+  if (!retryStudent?.phone?.trim()) { res.status(422).json({ success: false, code: "PHONE_REQUIRED", message: "Add a contact phone number to your profile before starting payment." }); return; }
+
+  // RapidPay has no configured status reconciliation in this deployment.
+  // A checkout already dispatched must be reviewed before creating another.
+  const attempt = await Bid.findOneAndUpdate(
+    { _id: offer._id, status: "payment_pending", paymentReservationId: offer.paymentReservationId, paymentOutcomeUnknown: { $ne: true }, checkoutStartedAt: { $exists: false } },
+    { $set: { checkoutStartedAt: new Date(), paymentPendingExpiresAt: new Date(Date.now() + PAYMENT_HOLD_MINUTES * 60 * 1000), feeQuote } },
+    { returnDocument: "after" },
+  );
+  if (!attempt) { res.status(409).json({ success: false, code: "PAYMENT_ATTEMPT_BLOCKED", message: "A checkout has already started or needs review. Contact support before retrying." }); return; }
 
   try {
-    const student = await User.findById(request.student).select("name email phone");
+    const student = retryStudent;
     const checkout = await paymentProvider.createCheckout({
       amount: feeQuote.studentTotal,
       currency: offer.currency || request.currency || "PKR",
@@ -324,7 +395,7 @@ export const retryOfferPayment = async (req: AuthRequest, res: Response): Promis
       bidId: offer._id.toString(),
       studentId: request.student.toString(),
       tutorId: offer.tutor.toString(),
-      customerMobileNo: student?.phone || "03000000000",
+      customerMobileNo: student.phone!,
       customerEmail: student?.email || "",
       basketId: `BID-${offer._id.toString()}`,
       description: `TUTORERA offer acceptance ${offer._id.toString()} (retry)`,
@@ -333,10 +404,16 @@ export const retryOfferPayment = async (req: AuthRequest, res: Response): Promis
       checkoutUrl: `${process.env.CLIENT_URL}/offers?payment=processing&offer=${offer._id}`,
     });
 
+    const [stillHeld, stillSelected] = await Promise.all([
+      Bid.exists({ _id: offer._id, status: "payment_pending", paymentReservationId: attempt.paymentReservationId, checkoutStartedAt: attempt.checkoutStartedAt }),
+      Request.exists({ _id: request._id, status: "awaiting_payment", acceptedOffer: offer._id }),
+    ]);
+    if (!stillHeld || !stillSelected) { res.status(409).json({ success: false, code: "PAYMENT_RESERVATION_CHANGED", message: "This payment reservation changed. Contact support before retrying." }); return; }
     res.status(200).json({ success: true, message: "Payment session created.", checkoutUrl: checkout.checkoutUrl });
   } catch (err: any) {
-    console.error("Failed to create retry checkout:", err);
-    res.status(502).json({ success: false, message: "Unable to start payment. Please try again." });
+    const knownPreDispatch = ["PHONE_REQUIRED", "PAYMENT_CURRENCY_REQUIRED", "RAPIDPAY_MARKET_OR_CURRENCY_UNSUPPORTED", "PAYMENT_GATEWAY_NOT_CONFIGURED", "INVALID_PAYMENT_AMOUNT"].includes(err?.code);
+    await Bid.updateOne({ _id: offer._id, status: "payment_pending", paymentReservationId: attempt.paymentReservationId, checkoutStartedAt: attempt.checkoutStartedAt }, knownPreDispatch ? { $unset: { checkoutStartedAt: "" } } : { $set: { paymentOutcomeUnknown: true } });
+    res.status(knownPreDispatch ? (err.statusCode || 422) : 503).json({ success: false, code: knownPreDispatch ? err.code : "PAYMENT_OUTCOME_UNKNOWN", message: knownPreDispatch ? err.message : "Payment status needs review before another attempt. Contact support." });
   }
 };
 

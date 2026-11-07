@@ -43,6 +43,7 @@ export default async function TutorsPage({ searchParams }: Props) {
   // Keep the subject as a dedicated filter so client-side pagination retains it.
 
   const result = await fetchTutors({
+    schoolOfferingId: value(params.schoolOfferingId),
     search: initialFilters.search,
     city: initialFilters.city,
     countryCode: value(params.countryCode),

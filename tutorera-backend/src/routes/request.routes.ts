@@ -11,16 +11,16 @@ import {
   initiateAcceptBid,
   inviteTutorToRequest,
 } from "../controllers/request.controller";
-import { protect, authorize } from "../middlewares/auth.middleware";
+import { protect, optionalAuth, authorize } from "../middlewares/auth.middleware";
 import { validate, createRequestSchema, placeBidSchema, createDirectBookingRequestSchema } from "../validators/request.validator";
 
 const router = Router();
 
 router.get("/seo-facets", getRequestSeoFacets);
 router.get("/public/preview", getPublicRequestsPreview);
-// Full demand feed is for verified tutors only. Public discovery uses the
-// separately redacted `/public/preview` endpoint above.
-router.get("/", protect, authorize("tutor"), getAllRequests);
+// Request discovery is public. Mutating actions, including bidding, remain
+// protected and enforce the relevant role and eligibility checks.
+router.get("/", optionalAuth, getAllRequests);
 router.post("/direct", protect, authorize("student", "parent"), validate(createDirectBookingRequestSchema), createDirectBookingRequest);
 router.get("/direct/my", protect, authorize("tutor"), getMyDirectRequests);
 router.post("/draft", protect, authorize("student", "parent"), saveRequestDraftProgress);

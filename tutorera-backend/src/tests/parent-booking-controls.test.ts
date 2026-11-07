@@ -1,6 +1,7 @@
 import request from "supertest";
 import app from "../app";
 import User from "../models/User.model";
+import TutorProfile from "../models/TutorProfile.model";
 import ParentProfile from "../models/ParentProfile.model";
 import ParentBookingApproval from "../models/ParentBookingApproval.model";
 import RequestModel from "../models/Request.model";
@@ -16,7 +17,7 @@ const uniqueEmail = (prefix: string) => `parent-policy-${prefix}-${Date.now()}-$
 
 async function actor(role: "parent" | "student" | "tutor") {
   const email = uniqueEmail(role);
-  const user = await User.create({ name: `Policy ${role}`, email, password: "password123", role, countryCode: "PK", currency: "PKR" });
+  const user = await User.create({ name: `Policy ${role}`, email, password: "password123", role, countryCode: "PK", currency: "PKR", phone: "03001234567" });
   const agent = request.agent(app);
   await agent.post("/api/v1/auth/login").send({ email, password: "password123" }).expect(200);
   return { user, agent };
@@ -26,6 +27,7 @@ async function fixture() {
   const student = await actor("student");
   const parent = await actor("parent");
   const tutor = await actor("tutor");
+  await TutorProfile.create({ user: tutor.user._id, subjectEligibility: [{ subject: "Mathematics", levels: ["Matric"], status: "approved" }] });
   const guardian = await ParentProfile.create({ user: parent.user._id, approvalRequiredForBookings: true,
     spendingLimitMonthly: 4000, spendingLimitCurrency: "PKR", children: [{ studentUser: student.user._id, name: "Linked student", relationship: "child" }] });
   const req = await RequestModel.create({ student: student.user._id,
@@ -87,6 +89,14 @@ describe("Fix 4: enforce linked guardian spending and booking decisions", () => 
         subtotal: 600, studentFee: 0, tutorFee: 120, tax: 18,
         studentTotal: 600, tutorNet: 462, feeConfig: { version: "test" },
       }, paymentPendingExpiresAt: new Date(Date.now() + 3600_000) });
+    await expect(policy(f, 800)).rejects.toMatchObject({ code: "PARENT_SPENDING_LIMIT_EXCEEDED" });
+  });
+
+  it("counts unresolved gateway attempts after their original hold expiry", async () => {
+    const f = await fixture();
+    await ParentProfile.updateOne({ _id: f.guardian._id }, { $set: { approvalRequiredForBookings: false, spendingLimitMonthly: 1300 } });
+    const other = await RequestModel.create({ student: f.student.user._id, subject: "English", level: "Matric", description: "English tuition request", budget: 600, currency: "PKR", countryCode: "PK", pricingUnit: "hour", teachingMode: "online", schedule: "Flexible", status: "awaiting_payment" });
+    await Bid.create({ request: other._id, tutor: f.tutor.user._id, amount: 600, initialStudentRate: 600, currency: "PKR", status: "payment_pending", pricingUnit: "hour", message: "Awaiting provider reconciliation", expiresAt: new Date(Date.now() + 7200_000), paymentPendingExpiresAt: new Date(Date.now() - 1000), paymentOutcomeUnknown: true });
     await expect(policy(f, 800)).rejects.toMatchObject({ code: "PARENT_SPENDING_LIMIT_EXCEEDED" });
   });
 

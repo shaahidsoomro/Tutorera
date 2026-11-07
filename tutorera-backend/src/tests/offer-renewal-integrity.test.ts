@@ -9,6 +9,7 @@ import Request from "../models/Request.model";
 import Bid from "../models/Bid.model";
 import TutorProfile from "../models/TutorProfile.model";
 import ParentProfile from "../models/ParentProfile.model";
+import ParentBookingApproval from "../models/ParentBookingApproval.model";
 import OfferNegotiation from "../models/OfferNegotiation.model";
 import { paymentProvider } from "../services/paymentProvider.service";
 import { releaseExpiredPaymentHold } from "../controllers/request.controller";
@@ -109,6 +110,16 @@ describe("offer renewal and acceptance integrity", () => {
     expect(await OfferNegotiation.countDocuments({ offer: f.offer._id })).toBe(0);
   });
 
+  it("requires a real student phone before reserving a gateway checkout", async () => {
+    const f = await fixture("submitted");
+    await User.updateOne({ _id: f.student._id }, { $unset: { phone: "" } });
+    await Bid.updateOne({ _id: f.offer._id }, { $set: { expiresAt: new Date(Date.now() + 86400000) } });
+    const res = await request(app).post(`/api/v1/offers/${f.offer.id}/accept`).set("Authorization", `Bearer ${f.studentToken}`).send({});
+    expect(res.status).toBe(422); expect(res.body.code).toBe("PHONE_REQUIRED");
+    expect((await Request.findById(f.requirement._id))?.status).toBe("open");
+    expect((await Bid.findById(f.offer._id))?.status).toBe("submitted");
+  });
+
   it("rejects acceptance after subject approval is revoked before any payment reservation", async () => {
     const f = await fixture("submitted", false);
     await Bid.updateOne({ _id: f.offer._id }, { $set: { expiresAt: new Date(Date.now() + 86400000) } });
@@ -157,85 +168,96 @@ describe("offer renewal and acceptance integrity", () => {
     }
   });
 
-  it("reserves a valid offer for parent approval without starting payment", async () => {
+  async function pendingGuardianSelection() {
     const f = await fixture("submitted");
     await Bid.updateOne({ _id: f.offer._id }, { $set: { expiresAt: new Date(Date.now() + 86400000) } });
-    const parent = await User.create({ name: "Parent", email: `p-${Date.now()}-${Math.random()}@test.local`, password: "password123", role: "parent", isActive: true });
+    const parent = await User.create({ name: "Parent", email: `parent-${Date.now()}-${Math.random()}@test.local`, password: "password123", role: "parent", isActive: true });
     await ParentProfile.create({ user: parent._id, children: [{ studentUser: f.student._id, name: "Student" }], approvalRequiredForBookings: true });
-    const res = await request(app).post(`/api/v1/offers/${f.offer.id}/accept`).set("Authorization", `Bearer ${f.studentToken}`).send({});
-    expect(res.status).toBe(202);
-    expect(res.body.code).toBe("PARENT_APPROVAL_REQUIRED");
-    const requirement = await Request.findById(f.requirement._id);
-    expect(requirement?.status).toBe("awaiting_parent_approval");
-    expect(requirement?.acceptedOffer?.toString()).toBe(f.offer.id);
-    expect((await Bid.findById(f.offer._id))?.status).toBe("submitted");
-    const withdrawal = await request(app).post(`/api/v1/offers/${f.offer.id}/withdraw`).set("Authorization", `Bearer ${f.tutorToken}`).send({});
-    expect(withdrawal.status).toBe(409);
+    const selected = await request(app).post(`/api/v1/offers/${f.offer.id}/accept`).set("Authorization", `Bearer ${f.studentToken}`).send({});
+    expect(selected.status).toBe(409); expect(selected.body.code).toBe("PARENT_APPROVAL_REQUIRED");
+    const approval = await ParentBookingApproval.findOne({ parent: parent._id, bid: f.offer._id }); expect(approval).not.toBeNull();
+    const token = jwt.sign({ id: parent.id }, process.env.JWT_SECRET as string, { expiresIn: "1h" });
+    return { ...f, parent, approval: approval!, parentToken: token };
+  }
+
+  it("queues price-specific guardian consent without starting checkout", async () => {
+    jest.mocked(paymentProvider.createCheckout).mockClear();
+    const f = await pendingGuardianSelection();
+    expect(f.approval.status).toBe("pending"); expect((await Request.findById(f.requirement._id))?.status).toBe("open");
+    expect((await Bid.findById(f.offer._id))?.status).toBe("submitted"); expect(paymentProvider.createCheckout).not.toHaveBeenCalled();
   });
 
-  it("requires an explicit parent decision and lets only the student start checkout after approval", async () => {
-    const f = await fixture("submitted");
-    await Bid.updateOne({ _id: f.offer._id }, { $set: { expiresAt: new Date(Date.now() + 86400000) } });
-    const parent = await User.create({ name: "Parent", email: `approval-${Date.now()}-${Math.random()}@test.local`, password: "password123", role: "parent", isActive: true });
-    await ParentProfile.create({ user: parent._id, children: [{ studentUser: f.student._id, name: "Student" }], approvalRequiredForBookings: true });
-    const parentToken = jwt.sign({ id: parent.id }, process.env.JWT_SECRET as string, { expiresIn: "1h" });
-    const selected = await request(app).post(`/api/v1/offers/${f.offer.id}/accept`).set("Authorization", `Bearer ${f.studentToken}`).send({});
-    expect(selected.status).toBe(202);
-    const decide = (decision?: string) => request(app).post(`/api/v1/parent/booking-approvals/${f.requirement.id}`).set("Authorization", `Bearer ${parentToken}`).send(decision ? { decision } : {});
-    expect((await decide()).status).toBe(400);
-    expect((await decide("typo")).status).toBe(400);
-    expect((await Request.findById(f.requirement._id))?.status).toBe("awaiting_parent_approval");
-    jest.mocked(paymentProvider.createCheckout).mockClear();
-    const approved = await decide("approve");
-    expect(approved.status).toBe(200);
-    expect(approved.body.sessionId).toBeUndefined();
-    expect(jest.mocked(paymentProvider.createCheckout)).not.toHaveBeenCalled();
-    expect((await Request.findById(f.requirement._id))?.status).toBe("awaiting_payment");
-    expect((await Bid.findById(f.offer._id))?.paymentReservationId).toBeTruthy();
-    expect((await decide("approve")).status).toBe(404);
-    const retry = await request(app).post(`/api/v1/offers/${f.offer.id}/retry-payment`).set("Authorization", `Bearer ${f.studentToken}`).send({ cnic: "4210112345671" });
-    expect(retry.status).toBe(200);
-    expect(retry.body.sessionId).toBe("checkout-test-session");
+  it("requires an explicit guardian decision before the student starts checkout", async () => {
+    const f = await pendingGuardianSelection();
+    const decide = (decision?: string) => request(app).post(`/api/v1/parent/booking-approvals/${f.approval.id}/decision`).set("Authorization", `Bearer ${f.parentToken}`).send(decision ? { decision } : {});
+    expect((await decide()).status).toBe(400); expect((await decide("typo")).status).toBe(400);
+    jest.mocked(paymentProvider.createCheckout).mockClear(); expect((await decide("approved")).status).toBe(200); expect(paymentProvider.createCheckout).not.toHaveBeenCalled();
+    expect((await decide("approved")).status).toBe(409);
+    expect((await request(app).post(`/api/v1/offers/${f.offer.id}/accept`).set("Authorization", `Bearer ${f.studentToken}`).send({})).status).toBe(200);
+    expect((await Request.findById(f.requirement._id))?.status).toBe("awaiting_payment"); expect((await Bid.findById(f.offer._id))?.paymentReservationId).toBeTruthy();
   });
 
   it("does not approve a parent selection after tutor subject approval is revoked", async () => {
-    const f = await fixture("submitted");
-    await Bid.updateOne({ _id: f.offer._id }, { $set: { expiresAt: new Date(Date.now() + 86400000) } });
-    const parent = await User.create({ name: "Parent", email: `revoked-${Date.now()}-${Math.random()}@test.local`, password: "password123", role: "parent", isActive: true });
-    await ParentProfile.create({ user: parent._id, children: [{ studentUser: f.student._id, name: "Student" }], approvalRequiredForBookings: true });
-    const selected = await request(app).post(`/api/v1/offers/${f.offer.id}/accept`).set("Authorization", `Bearer ${f.studentToken}`).send({});
-    expect(selected.status).toBe(202);
+    const f = await pendingGuardianSelection();
     await TutorProfile.updateOne({ user: f.tutor._id }, { $set: { "subjectEligibility.0.status": "rejected" } });
-    const token = jwt.sign({ id: parent.id }, process.env.JWT_SECRET as string, { expiresIn: "1h" });
-    const result = await request(app).post(`/api/v1/parent/booking-approvals/${f.requirement.id}`).set("Authorization", `Bearer ${token}`).send({ decision: "approve" });
-    expect(result.status).toBe(403);
-    expect(result.body.code).toBe("SUBJECT_NOT_APPROVED");
-    expect((await Request.findById(f.requirement._id))?.status).toBe("awaiting_parent_approval");
-    expect((await Bid.findById(f.offer._id))?.status).toBe("submitted");
+    const result = await request(app).post(`/api/v1/parent/booking-approvals/${f.approval.id}/decision`).set("Authorization", `Bearer ${f.parentToken}`).send({ decision: "approved" });
+    expect(result.status).toBe(403); expect(result.body.code).toBe("SUBJECT_NOT_APPROVED"); expect((await ParentBookingApproval.findById(f.approval._id))?.status).toBe("pending");
   });
 
   it("rejects an unrelated parent and applies only one simultaneous guardian decision", async () => {
+    const f = await pendingGuardianSelection();
+    const stranger = await User.create({ name: "Stranger", email: `stranger-${Date.now()}-${Math.random()}@test.local`, password: "password123", role: "parent", isActive: true });
+    const strangerToken = jwt.sign({ id: stranger.id }, process.env.JWT_SECRET as string, { expiresIn: "1h" });
+    const decide = (token: string, decision: string) => request(app).post(`/api/v1/parent/booking-approvals/${f.approval.id}/decision`).set("Authorization", `Bearer ${token}`).send({ decision });
+    expect((await decide(strangerToken, "approved")).status).toBe(409);
+    const results = await Promise.all([decide(f.parentToken, "approved"), decide(f.parentToken, "rejected")]);
+    expect(results.filter(result => result.status === 200)).toHaveLength(1); expect((await Request.findById(f.requirement._id))?.status).toBe("open");
+  });
+
+  it("does not cancel a request while a dispatched checkout awaits reconciliation", async () => {
+    const f = await fixture("payment_pending");
+    await Request.updateOne({ _id: f.requirement._id }, { $set: { status: "awaiting_payment", acceptedOffer: f.offer._id } });
+    await Bid.updateOne({ _id: f.offer._id }, { $set: { paymentReservationId: "hold", checkoutStartedAt: new Date(), paymentPendingExpiresAt: new Date(Date.now() + 60000) } });
+    const result = await request(app).patch(`/api/v1/requests/${f.requirement.id}/cancel`).set("Authorization", `Bearer ${f.studentToken}`).send({});
+    expect(result.status).toBe(409); expect(result.body.code).toBe("PAYMENT_RECONCILIATION_REQUIRED");
+    expect((await Request.findById(f.requirement._id))?.status).toBe("awaiting_payment"); expect((await Bid.findById(f.offer._id))?.status).toBe("payment_pending");
+  });
+
+  it("does not cancel a direct booking after checkout dispatch", async () => {
+    const f = await fixture("submitted");
+    await Request.updateOne({ _id: f.requirement._id }, { $set: { isDirect: true, targetTutor: f.tutor._id } });
+    await Bid.updateOne({ _id: f.offer._id }, { $set: { expiresAt: new Date(Date.now() + 86400000) } });
+    const accepted = await request(app).patch(`/api/v1/requests/${f.requirement.id}/bids/${f.offer.id}/accept`).set("Authorization", `Bearer ${f.tutorToken}`).send({});
+    expect(accepted.status).toBe(200);
+    await Bid.updateOne({ _id: f.offer._id }, { $set: { checkoutStartedAt: new Date() } });
+    const result = await request(app).patch(`/api/v1/bookings/${accepted.body.bookingId}/status`).set("Authorization", `Bearer ${f.studentToken}`).send({ status: "cancelled" });
+    expect(result.status).toBe(409); expect(result.body.code).toBe("PAYMENT_RECONCILIATION_REQUIRED");
+    expect((await Bid.findById(f.offer._id))?.status).toBe("payment_pending");
+    expect((await Request.findById(f.requirement._id))?.status).toBe("awaiting_payment");
+  });
+
+  it("blocks a second checkout when a session has already been dispatched", async () => {
+    const f = await fixture("payment_pending");
+    await Request.updateOne({ _id: f.requirement._id }, { $set: { status: "awaiting_payment", acceptedOffer: f.offer._id } });
+    await Bid.updateOne({ _id: f.offer._id }, { $set: { paymentReservationId: "held-checkout", checkoutStartedAt: new Date(), paymentPendingExpiresAt: new Date(Date.now() + 60000) } });
+    jest.mocked(paymentProvider.createCheckout).mockClear();
+    const result = await request(app).post(`/api/v1/offers/${f.offer.id}/retry-payment`).set("Authorization", `Bearer ${f.studentToken}`).send({});
+    expect(result.status).toBe(409); expect(result.body.code).toBe("PAYMENT_ATTEMPT_BLOCKED");
+    expect(paymentProvider.createCheckout).not.toHaveBeenCalled();
+  });
+
+  it("keeps an ambiguous gateway failure fenced from retry and expiry cleanup", async () => {
     const f = await fixture("submitted");
     await Bid.updateOne({ _id: f.offer._id }, { $set: { expiresAt: new Date(Date.now() + 86400000) } });
-    const parent = await User.create({ name: "Parent", email: `parent-race-${Date.now()}-${Math.random()}@test.local`, password: "password123", role: "parent", isActive: true });
-    const stranger = await User.create({ name: "Stranger", email: `stranger-${Date.now()}-${Math.random()}@test.local`, password: "password123", role: "parent", isActive: true });
-    await ParentProfile.create({ user: parent._id, children: [{ studentUser: f.student._id, name: "Student" }], approvalRequiredForBookings: true });
-    expect((await request(app).post(`/api/v1/offers/${f.offer.id}/accept`).set("Authorization", `Bearer ${f.studentToken}`).send({})).status).toBe(202);
-    const token = (id: string) => jwt.sign({ id }, process.env.JWT_SECRET as string, { expiresIn: "1h" });
-    const decide = (id: string, decision: string) => request(app).post(`/api/v1/parent/booking-approvals/${f.requirement.id}`).set("Authorization", `Bearer ${token(id)}`).send({ decision });
-    expect((await decide(stranger.id, "approve")).status).toBe(403);
-    const [approve, decline] = await Promise.all([decide(parent.id, "approve"), decide(parent.id, "decline")]);
-    expect([approve.status, decline.status].filter((status) => status === 200)).toHaveLength(1);
-    const requirement = await Request.findById(f.requirement._id);
-    const offer = await Bid.findById(f.offer._id);
-    if (approve.status === 200) {
-      expect(requirement?.status).toBe("awaiting_payment");
-      expect(offer?.status).toBe("payment_pending");
-    } else {
-      expect(requirement?.status).toBe("open");
-      expect(offer?.status).toBe("submitted");
-      expect(requirement?.acceptedOffer).toBeUndefined();
-    }
+    jest.mocked(paymentProvider.createCheckout).mockRejectedValueOnce(new Error("gateway timeout"));
+    const result = await request(app).post(`/api/v1/offers/${f.offer.id}/accept`).set("Authorization", `Bearer ${f.studentToken}`).send({});
+    expect(result.status).toBe(503); expect(result.body.code).toBe("PAYMENT_OUTCOME_UNKNOWN");
+    const held = await Bid.findById(f.offer._id); expect(held?.paymentReservationId).toBeTruthy(); expect(held?.paymentOutcomeUnknown).toBe(true);
+    const retry = await request(app).post(`/api/v1/offers/${f.offer.id}/retry-payment`).set("Authorization", `Bearer ${f.studentToken}`).send({});
+    expect(retry.status).toBe(409); expect(retry.body.code).toBe("PAYMENT_OUTCOME_UNKNOWN");
+    await Bid.updateOne({ _id: f.offer._id }, { $set: { paymentPendingExpiresAt: new Date(Date.now() - 1000) } });
+    expect(await releaseExpiredPaymentHold(f.requirement._id)).toBe(false);
+    expect((await Request.findById(f.requirement._id))?.status).toBe("awaiting_payment");
   });
 
   it("a late checkout failure cannot release a newer reservation for the same offer", async () => {
@@ -253,19 +275,19 @@ describe("offer renewal and acceptance integrity", () => {
     await Bid.updateOne({ _id: f.offer._id }, { $set: { paymentReservationId: "new-reservation-fixture", paymentPendingExpiresAt: new Date(Date.now() + 86400000) } });
     rejectCheckout(new Error("fixture checkout failure"));
     const res = await pending;
-    expect(res.status).toBe(502);
+    expect(res.status).toBe(503);
     expect((await Request.findById(f.requirement._id))?.status).toBe("awaiting_payment");
     const after = await Bid.findById(f.offer._id);
     expect(after?.status).toBe("payment_pending");
     expect(after?.paymentReservationId).toBe("new-reservation-fixture");
   });
 
-  it("releases its own reservation when checkout creation fails", async () => {
+  it("releases its own reservation when checkout fails before dispatch", async () => {
     const f = await fixture("submitted");
     await Bid.updateOne({ _id: f.offer._id }, { $set: { expiresAt: new Date(Date.now() + 86400000) } });
-    jest.mocked(paymentProvider.createCheckout).mockRejectedValueOnce(new Error("fixture checkout failure"));
+    jest.mocked(paymentProvider.createCheckout).mockRejectedValueOnce(Object.assign(new Error("missing phone"), { code: "PHONE_REQUIRED", statusCode: 422 }));
     const res = await request(app).post(`/api/v1/offers/${f.offer.id}/accept`).set("Authorization", `Bearer ${f.studentToken}`).send({ cnic: "4210112345671" });
-    expect(res.status).toBe(502);
+    expect(res.status).toBe(422);
     const requirement = await Request.findById(f.requirement._id);
     const offer = await Bid.findById(f.offer._id);
     expect(requirement?.status).toBe("receiving_offers");
@@ -330,6 +352,28 @@ describe("offer renewal and acceptance integrity", () => {
     expect(requirement?.status).toBe("awaiting_payment");
     expect(requirement?.acceptedOffer?.toString()).toBe(f.offer.id);
     expect(bid?.paymentReservationId).toBeTruthy();
+  });
+
+  it("keeps an ambiguous legacy checkout on hold instead of allowing a duplicate", async () => {
+    const f = await fixture("submitted");
+    await Bid.updateOne({ _id: f.offer._id }, { $set: { expiresAt: new Date(Date.now() + 86400000) } });
+    jest.mocked(paymentProvider.createCheckout).mockRejectedValueOnce(new Error("gateway timeout"));
+    const result = await request(app).patch(`/api/v1/requests/${f.requirement.id}/bids/${f.offer.id}/accept`).set("Authorization", `Bearer ${f.studentToken}`).send({});
+    expect(result.status).toBe(503); expect(result.body.code).toBe("PAYMENT_OUTCOME_UNKNOWN");
+    const held = await Bid.findById(f.offer._id); expect(held?.paymentReservationId).toBeTruthy(); expect(held?.paymentOutcomeUnknown).toBe(true);
+    expect((await Request.findById(f.requirement._id))?.acceptedOffer?.toString()).toBe(f.offer.id);
+  });
+
+  it("allows only one direct-booking checkout to be dispatched", async () => {
+    const f = await fixture("submitted");
+    await Request.updateOne({ _id: f.requirement._id }, { $set: { isDirect: true, targetTutor: f.tutor._id } });
+    await Bid.updateOne({ _id: f.offer._id }, { $set: { expiresAt: new Date(Date.now() + 86400000) } });
+    const accepted = await request(app).patch(`/api/v1/requests/${f.requirement.id}/bids/${f.offer.id}/accept`).set("Authorization", `Bearer ${f.tutorToken}`).send({});
+    expect(accepted.status).toBe(200); expect(accepted.body.bookingId).toBeTruthy();
+    jest.mocked(paymentProvider.createCheckout).mockClear();
+    const checkout = () => request(app).post(`/api/v1/payments/booking/${accepted.body.bookingId}/checkout`).set("Authorization", `Bearer ${f.studentToken}`).send({});
+    const results = await Promise.all([checkout(), checkout()]);
+    expect(results.map(r => r.status).sort()).toEqual([200, 409]); expect(paymentProvider.createCheckout).toHaveBeenCalledTimes(1);
   });
 
   it("legacy acceptance refuses missing student payment details without reserving", async () => {

@@ -90,7 +90,7 @@ export async function assertParentBookingPolicy(args: {
           request: { $in: childRequests.map(row => row._id) },
           _id: { $ne: new mongoose.Types.ObjectId(String(bid)) },
           status: "payment_pending",
-          paymentPendingExpiresAt: { $gt: now },
+          $or: [{ paymentPendingExpiresAt: { $gt: now } }, { paymentOutcomeUnknown: true }, { checkoutStartedAt: { $exists: true } }],
           createdAt: { $lt: end },
         }).select("feeQuote amount currency").session(session || null).lean()
         : [];

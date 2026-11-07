@@ -306,14 +306,24 @@ export const decideBookingApproval = async (req: AuthRequest, res: Response): Pr
   const linked = await ParentProfile.exists({ user: req.user._id, "children.studentUser": approval.student });
   if (!linked) { res.status(403).json({ success: false, code: "PARENT_LINK_REVOKED" }); return; }
   const [bid, request] = await Promise.all([
-    Bid.findById(approval.bid).select("amount currency status expiresAt feeQuote request"),
-    RequestModel.findById(approval.request).select("student status countryCode currency"),
+    Bid.findById(approval.bid).select("amount currency status expiresAt feeQuote request tutor"),
+    RequestModel.findById(approval.request).select("student status countryCode currency subject level schoolOfferingId"),
   ]);
   if (!bid || !request || request.student.toString() !== approval.student.toString() ||
     !["open", "published", "receiving_offers", "negotiating", "awaiting_payment"].includes(request.status) ||
     !["pending", "submitted", "viewed", "countered", "payment_pending"].includes(bid.status) ||
     (bid.expiresAt && bid.expiresAt <= new Date())) {
     res.status(409).json({ success: false, code: "OFFER_NO_LONGER_AVAILABLE" }); return;
+  }
+  if (decision === "approved") {
+    const { schoolOfferingIsActive } = await import("../services/schoolOfferingAvailability.service");
+    const { checkSubjectEligibility } = await import("../services/subjectEligibility.service");
+    const TutorProfile = (await import("../models/TutorProfile.model")).default;
+    if (!(await schoolOfferingIsActive(request.schoolOfferingId))) { res.status(409).json({ success: false, code: "SCHOOL_OFFERING_UNAVAILABLE", message: "This school offering is no longer available." }); return; }
+    const tutor = await TutorProfile.findOne({ user: bid.tutor }).select("subjectEligibility schoolOfferingIds").lean();
+    const eligibility = tutor ? checkSubjectEligibility(tutor, request.subject, request.level) : { eligible: false, message: "Tutor profile not found." };
+    if (!eligibility.eligible) { res.status(403).json({ success: false, code: "SUBJECT_NOT_APPROVED", message: eligibility.message }); return; }
+    if (request.schoolOfferingId && !(tutor?.schoolOfferingIds || []).includes(request.schoolOfferingId)) { res.status(403).json({ success: false, code: "SCHOOL_OFFERING_NOT_SELECTED", message: "The tutor no longer teaches this board and qualification." }); return; }
   }
   // Approval is consent for a specific checkout total, not merely a bid ID.
   // If the tutor changes the quote after the guardian opened this request,

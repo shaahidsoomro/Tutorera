@@ -29,7 +29,7 @@ export const PRIMARY_CITY_SLUGS = ["lahore", "karachi", "islamabad", "rawalpindi
 export const LOCAL_SUBJECT_SLUGS = ["mathematics", "physics", "chemistry", "biology", "english", "computer-science", "mdcat", "ielts"] as const;
 
 export type DirectoryKind = "subject" | "city" | "level";
-export type TutorSearchFilters = Partial<Record<DirectoryKind | "curriculum" | "search" | "teachingMode" | "minPrice" | "maxPrice" | "minRating" | "countryCode" | "country" | "currency", string>>;
+export type TutorSearchFilters = Partial<Record<DirectoryKind | "curriculum" | "search" | "teachingMode" | "minPrice" | "maxPrice" | "minRating" | "countryCode" | "country" | "currency" | "schoolOfferingId", string>>;
 
 export interface TutorSeoFacets {
   countries: Array<{ _id: string; count: number }>;
