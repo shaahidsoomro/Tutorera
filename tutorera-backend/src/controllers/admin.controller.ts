@@ -23,6 +23,7 @@ import { creditReferrerOnFirstBooking } from "../controllers/referral.controller
 import { logAudit } from "../utils/logAudit";
 import AuditLog from "../models/AuditLog.model";
 import EmailLog from "../models/EmailLog.model";
+import EmailOutbox from "../models/EmailOutbox.model";
 import Broadcast from "../models/Broadcast.model";
 import Notification from "../models/Notification.model";
 import sendEmail from "../utils/sendEmail";
@@ -1133,6 +1134,19 @@ export const getEmailLogs = async (req: AuthRequest, res: Response): Promise<voi
       }, {}),
     },
   });
+};
+
+export const retryEmailLog = async (req: AuthRequest, res: Response): Promise<void> => {
+  const log = await EmailLog.findById(req.params.id);
+  if (!log) { res.status(404).json({ success: false, message: "Email log not found." }); return; }
+  if (!["failed", "bounced", "queued"].includes(log.status)) {
+    res.status(409).json({ success: false, message: `Cannot retry an email with status '${log.status}'.` }); return;
+  }
+  const outbox = await EmailOutbox.findOne({ emailLog: log._id });
+  if (!outbox) { res.status(409).json({ success: false, message: "No outbox job found for this log entry." }); return; }
+  await EmailOutbox.updateOne({ _id: outbox._id }, { $set: { status: "queued", nextAttemptAt: new Date(), lastError: undefined } });
+  await EmailLog.updateOne({ _id: log._id }, { $set: { status: "queued" }, $inc: { retryCount: 1 } });
+  res.json({ success: true, message: "Email queued for retry." });
 };
 
 // @desc    Send a broadcast notification to a group of users

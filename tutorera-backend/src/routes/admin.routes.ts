@@ -28,6 +28,7 @@ import {
   getOnboardingStudents,
   getOnboardingParents,
   getOnboardingTutors,
+  retryEmailLog,
 } from "../controllers/admin.controller";
 import {
   getAllClaims,
@@ -39,10 +40,11 @@ import {
   recordExternalRefundTransfer,
   verifyExternalRefundTransfer,
 } from "../controllers/refundRequest.controller";
-import { getAllReferrals, getReferralConfigAdmin, updateReferralConfigAdmin, exportReferralsAdmin } from "../controllers/referral.controller";
+import { getAllReferrals, getReferralConfigAdmin, updateReferralConfigAdmin, exportReferralsAdmin, flagReferralFraud } from "../controllers/referral.controller";
 import { getAllStudentRatings, getStudentRatings } from "../controllers/studentRating.controller";
 import { getTutorRatingsForAdmin } from "../controllers/review.controller";
 import { listApprovals, reviewApproval, submitApproval } from "../controllers/adminApproval.controller";
+import TutorProfile from "../models/TutorProfile.model";
 import { protect, authorize } from "../middlewares/auth.middleware";
 import { requirePermission } from "../middlewares/rbac.middleware";
 import { enforceCountryScope } from "../middlewares/countryScope.middleware";
@@ -92,6 +94,7 @@ import {
   getAgentSummary,
 } from "../controllers/supervisorAgent.controller";
 import { agentRequestMiddleware, adminAgentLimiter } from "../middlewares/agentRequest.middleware";
+import { uploadApplicationDocumentOnBehalf } from "../controllers/tracking.controller";
 
 const router = Router();
 
@@ -174,6 +177,14 @@ router.post("/users/:id/enforcement", requirePermission("users.manage"), (req, r
   return moderateUser(req as any, res);
 });
 
+// Upload document on behalf of a tutor (by User ID → resolves to TutorProfile ID)
+router.post("/tutors/:id/upload-docs", requirePermission("tutor.verify"), async (req, res, next) => {
+  const profile = await TutorProfile.findOne({ user: req.params.id }).select("_id").lean();
+  if (!profile) { res.status(404).json({ success: false, message: "Tutor profile not found for this user." }); return; }
+  req.params.id = String(profile._id);
+  return uploadApplicationDocumentOnBehalf(req as any, res);
+});
+
 // Customer 360°
 router.get("/customers/students/:id/360", requirePermission("student.read"), getStudent360);
 router.get("/customers/tutors/:id/360", requirePermission("tutor.read"), getTutor360);
@@ -189,6 +200,7 @@ router.get("/verifications", requirePermission("tutor.read"), getPendingVerifica
 router.get("/payouts", requirePermission("payout.read"), getPayouts);
 router.get("/audit-logs", requirePermission("audit.read"), getAuditLogs);
 router.get("/email-logs", requirePermission("growth.read"), getEmailLogs);
+router.post("/email-logs/:id/retry", requirePermission("growth.manage"), retryEmailLog);
 router.post("/broadcasts", requirePermission("broadcast.send"), sendBroadcast);
 router.get("/broadcasts",  requirePermission("broadcast.send"), getBroadcasts);
 router.get("/tutors/:id/document/:field", requirePermission("tutor.read"), getTutorDocumentUrl);
@@ -213,6 +225,7 @@ router.post("/refund-requests/:id/external-transfer", requirePermission("payment
 router.post("/refund-requests/:id/external-verify", requirePermission("payment.refund"), verifyExternalRefundTransfer);
 router.get("/referrals", requirePermission("growth.read"), getAllReferrals);
 router.get("/referrals/export", requirePermission("growth.read"), exportReferralsAdmin);
+router.patch("/referrals/:id/fraud", requirePermission("growth.manage"), flagReferralFraud);
 router.get("/referral-config", requirePermission("growth.manage"), getReferralConfigAdmin);
 router.put("/referral-config", requirePermission("growth.manage"), updateReferralConfigAdmin);
 router.get("/tutor-ratings", requirePermission("tutor.read"), getTutorRatingsForAdmin);

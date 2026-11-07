@@ -62,7 +62,7 @@ export default function ReferralDashboardPage() {
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    api.get("/referrals/my")
+    api.get("/referral/my")
       .then(res => setData(res.data))
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -82,7 +82,7 @@ export default function ReferralDashboardPage() {
     if (!applyCode.trim()) return;
     setApplying(true);
     try {
-      await api.post("/referrals/apply", { code: applyCode.trim().toUpperCase() });
+      await api.post("/referral/apply", { code: applyCode.trim().toUpperCase() });
       showSuccess("Referral code applied successfully!");
       setApplyCode("");
     } catch (err) {
