@@ -1062,3 +1062,90 @@ export const recalculateMatchesDiscipline = async (req: AuthRequest, res: Respon
   await logAudit({ action: "maintenance_recalculate_matches_discipline", actor: (req.user as any)?.name || "admin", entity: "TutorProfile", targetId: "batch" });
   res.json({ success: true, message: "matchesDiscipline recalculated.", report });
 };
+
+export const getGlobalAnalytics = async (req: AuthRequest, res: Response) => {
+  const [markets, tutorsByCountry, studentsByCountry, requestsByCountry, bookingsByCountry] = await Promise.all([
+    MarketConfig.find({}, { countryCode: 1, countryName: 1, launchStatus: 1, flagEmoji: 1, flag: 1 }).lean(),
+    User.aggregate([
+      { $match: { role: "tutor" } },
+      { $group: { _id: "$countryCode", total: { $sum: 1 } } },
+    ]),
+    User.aggregate([
+      { $match: { role: { $in: ["student", "parent"] } } },
+      { $group: { _id: "$countryCode", total: { $sum: 1 } } },
+    ]),
+    Request.aggregate([
+      { $group: { _id: "$countryCode", total: { $sum: 1 }, active: { $sum: { $cond: [{ $in: ["$status", ["open", "published", "receiving_offers", "negotiating"]] }, 1, 0] } } } },
+    ]),
+    Booking.aggregate([
+      { $group: { _id: "$countryCode", total: { $sum: 1 }, revenueUSD: { $sum: "$amount" } } },
+    ]),
+  ]);
+
+  const verifiedTutorsByCountry = await TutorProfile.aggregate([
+    { $match: { isVerified: true } },
+    { $lookup: { from: "users", localField: "user", foreignField: "_id", as: "u" } },
+    { $unwind: { path: "$u", preserveNullAndEmptyArrays: true } },
+    { $group: { _id: "$u.countryCode", verified: { $sum: 1 }, avgRating: { $avg: "$averageRating" } } },
+  ]);
+
+  const toMap = <T extends { _id: string | null }>(arr: T[]) =>
+    Object.fromEntries(arr.map((r) => [r._id ?? "UNKNOWN", r]));
+
+  const tutorMap = toMap(tutorsByCountry as any[]);
+  const studentMap = toMap(studentsByCountry as any[]);
+  const requestMap = toMap(requestsByCountry as any[]);
+  const bookingMap = toMap(bookingsByCountry as any[]);
+  const verifiedMap = toMap(verifiedTutorsByCountry as any[]);
+
+  const knownCodes = new Set([
+    ...markets.map((m) => m.countryCode),
+    ...Object.keys(tutorMap),
+    ...Object.keys(studentMap),
+    ...Object.keys(requestMap),
+    ...Object.keys(bookingMap),
+  ].filter(Boolean));
+
+  const marketByCode = Object.fromEntries(markets.map((m) => [m.countryCode, m]));
+
+  const countries = Array.from(knownCodes).map((cc) => {
+    const m = marketByCode[cc];
+    const t = (tutorMap[cc] as any) ?? { total: 0 };
+    const s = (studentMap[cc] as any) ?? { total: 0 };
+    const r = (requestMap[cc] as any) ?? { total: 0, active: 0 };
+    const b = (bookingMap[cc] as any) ?? { total: 0, revenueUSD: 0 };
+    const v = (verifiedMap[cc] as any) ?? { verified: 0, avgRating: 0 };
+    const totalReqs = r.total || 0;
+    const totalBookings = b.total || 0;
+    return {
+      countryCode: cc,
+      countryName: m?.countryName ?? cc,
+      flag: (m as any)?.flagEmoji ?? (m as any)?.flag ?? undefined,
+      launchStatus: m?.launchStatus ?? "coming_soon",
+      totalTutors: t.total,
+      verifiedTutors: v.verified,
+      totalStudents: s.total,
+      totalRequests: totalReqs,
+      activeRequests: r.active,
+      totalBookings,
+      totalRevenueUSD: Math.round(b.revenueUSD ?? 0),
+      avgRating: v.avgRating ? Math.round(v.avgRating * 10) / 10 : 0,
+      matchRate: totalReqs > 0 ? Math.round((totalBookings / totalReqs) * 1000) / 10 : 0,
+      avgResponseMin: 0, // placeholder — no response-time data model yet
+    };
+  });
+
+  countries.sort((a, b) => b.totalBookings - a.totalBookings);
+
+  const liveStatuses = new Set(["live", "beta"]);
+  res.json({
+    success: true,
+    totalCountries: countries.length,
+    liveCountries: countries.filter((c) => liveStatuses.has(c.launchStatus)).length,
+    totalTutors: countries.reduce((s, c) => s + c.totalTutors, 0),
+    totalStudents: countries.reduce((s, c) => s + c.totalStudents, 0),
+    totalBookings: countries.reduce((s, c) => s + c.totalBookings, 0),
+    totalRevenueUSD: countries.reduce((s, c) => s + c.totalRevenueUSD, 0),
+    countries,
+  });
+};

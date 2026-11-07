@@ -74,6 +74,7 @@ import {
   seedZoologyEligibilityRules,
   recalculateMatchesDiscipline,
   getTutor360,
+  getGlobalAnalytics,
 } from "../controllers/adminControlTower.controller";
 import taxConfigRoutes from "./admin/taxConfig.routes";
 import exchangeRateAdminRoutes from "./admin/exchangeRate.routes";
@@ -133,6 +134,9 @@ router.post("/safety/cases/:id/resolve", requirePermission("safety.resolve"), re
 
 // Disputed Bookings (finance triage)
 router.get("/disputes", requirePermission("claims.read"), getDisputedBookings);
+
+// Global Analytics
+router.get("/global-analytics", requirePermission("analytics.read"), getGlobalAnalytics);
 
 // Global Market Operations
 router.get("/markets", requirePermission("market.read"), getMarketConfigs);
