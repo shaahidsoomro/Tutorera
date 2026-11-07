@@ -81,7 +81,16 @@ export const listAcademicCategories = async (req: AuthRequest, res: Response): P
     if (req.query.q) filter.$or = [{ name: new RegExp(String(req.query.q), "i") }, { code: new RegExp(String(req.query.q), "i") }];
     const limit = safeLimit(req.query.limit); const page = safePage(req.query.page); const skip = (page - 1) * limit;
     const [categories, total] = await Promise.all([
-      SubjectCategory.find(filter).sort({ displayOrder: 1, name: 1 }).skip(skip).limit(limit).lean(),
+      SubjectCategory.aggregate([
+        { $match: filter },
+        { $lookup: { from: "subjects", let: { catId: "$_id" }, pipeline: [{ $match: { $expr: { $eq: ["$categoryRef", "$$catId"] }, isActive: true } }], as: "activeSubjects" } },
+        { $lookup: { from: "subjectcategories", localField: "parentCategory", foreignField: "_id", as: "parentCategoryDoc" } },
+        { $addFields: { subjectCount: { $size: "$activeSubjects" }, parentCategoryName: { $arrayElemAt: ["$parentCategoryDoc.name", 0] } } },
+        { $project: { activeSubjects: 0, parentCategoryDoc: 0 } },
+        { $sort: { displayOrder: 1, name: 1 } },
+        { $skip: skip },
+        { $limit: limit },
+      ]),
       SubjectCategory.countDocuments(filter),
     ]);
     res.json({ success: true, categories, pagination: paginationMeta(total, page, limit) });
@@ -94,7 +103,9 @@ export const createAcademicCategory = async (req: AuthRequest, res: Response): P
     const code = codeify(req.body.code || name || "");
     if (!name || !code) { res.status(400).json({ success: false, message: "A category name and code are required" }); return; }
     const status = resolveStatus(res, req.body.status); if (status === null) return;
-    const category = await SubjectCategory.create({ code, name: String(name).trim(), slug: slugify(name), description: description || "", displayOrder: Number(displayOrder) || 0, status: status ?? "active", createdBy: req.user?._id, updatedBy: req.user?._id });
+    const parentCategory = validId(req.body.parentCategory) ? req.body.parentCategory : null;
+    const isPublic = req.body.isPublic !== undefined ? Boolean(req.body.isPublic) : true;
+    const category = await SubjectCategory.create({ code, name: String(name).trim(), slug: slugify(name), description: description || "", displayOrder: Number(displayOrder) || 0, status: status ?? "active", parentCategory, isPublic, createdBy: req.user?._id, updatedBy: req.user?._id });
     await writeAudit(req, "academic_category_created", "SubjectCategory", category);
     res.status(201).json({ success: true, category });
   } catch (error) { databaseError(res, error, "Failed to create academic category"); }
@@ -113,7 +124,14 @@ export const updateAcademicCategory = async (req: AuthRequest, res: Response): P
       return;
     }
     const status = resolveStatus(res, req.body.status); if (status === null) return;
-    for (const key of ["name", "description", "displayOrder"] as const) if (typeof req.body[key] !== "undefined") (category as any)[key] = key === "name" ? String(req.body[key]).trim() : req.body[key];
+    if (status === "archived") {
+      const activeSubjectCount = await Subject.countDocuments({ categoryRef: category._id, isActive: true });
+      if (activeSubjectCount > 0) {
+        res.status(409).json({ success: false, code: "CATEGORY_HAS_ACTIVE_SUBJECTS", message: `Cannot archive this category: it has ${activeSubjectCount} active subject${activeSubjectCount === 1 ? "" : "s"}. Archive or reassign those subjects first.`, activeSubjectCount });
+        return;
+      }
+    }
+    for (const key of ["name", "description", "displayOrder", "isPublic", "parentCategory"] as const) if (typeof req.body[key] !== "undefined") (category as any)[key] = key === "name" ? String(req.body[key]).trim() : req.body[key];
     if (typeof req.body.name !== "undefined") category.slug = slugify(req.body.name);
     if (status !== undefined) { category.status = status; category.archivedAt = status === "archived" ? new Date() : undefined; }
     category.updatedBy = req.user?._id; await category.save();
@@ -244,6 +262,41 @@ export const createTeachingEligibilityRule = async (req: AuthRequest, res: Respo
     await writeAudit(req, "teaching_eligibility_rule_created", "TeachingEligibilityRule", rule, { discipline: discipline.code, subject: subject.code, eligibilityType });
     res.status(201).json({ success: true, rule });
   } catch (error) { databaseError(res, error, "Failed to create teaching eligibility rule"); }
+};
+
+export const seedRecommendedCategories = async (_req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const categories = [
+      { code: "CAT-MATH", name: "Mathematics & Statistics", slug: "mathematics-statistics", description: "Mathematics, Additional Mathematics, Statistics, and related quantitative disciplines.", displayOrder: 1, isPublic: true },
+      { code: "CAT-SCI", name: "Natural Sciences", slug: "natural-sciences", description: "Physics, Chemistry, Biology, Environmental Science, and Earth Sciences.", displayOrder: 2, isPublic: true },
+      { code: "CAT-COMP", name: "Computer Science & Technology", slug: "computer-science-technology", description: "Computer Science, Programming, Artificial Intelligence, Data Science, and IT.", displayOrder: 3, isPublic: true },
+      { code: "CAT-ENG", name: "Engineering & Applied Sciences", slug: "engineering-applied-sciences", description: "Electrical Engineering, Mechanical Engineering, Civil Engineering, and Applied Sciences.", displayOrder: 4, isPublic: true },
+      { code: "CAT-BUS", name: "Business, Economics & Accounting", slug: "business-economics-accounting", description: "Accounting, Economics, Business Studies, Finance, and Commerce.", displayOrder: 5, isPublic: true },
+      { code: "CAT-LANG", name: "Languages & Literature", slug: "languages-literature", description: "English, Urdu, Arabic, French, English Literature, and other languages.", displayOrder: 6, isPublic: true },
+      { code: "CAT-SOC", name: "Social Sciences", slug: "social-sciences", description: "Sociology, Psychology, Political Science, International Relations, and Social Studies.", displayOrder: 7, isPublic: true },
+      { code: "CAT-HUM", name: "Humanities", slug: "humanities", description: "History, Philosophy, Geography, Cultural Studies, and Liberal Arts.", displayOrder: 8, isPublic: true },
+      { code: "CAT-REL", name: "Religious & Islamic Studies", slug: "religious-islamic-studies", description: "Islamic Studies, Quranic Studies, Comparative Religion, and Theology.", displayOrder: 9, isPublic: true },
+      { code: "CAT-ART", name: "Arts, Design & Media", slug: "arts-design-media", description: "Fine Arts, Graphic Design, Music, Media Studies, and Creative Arts.", displayOrder: 10, isPublic: true },
+      { code: "CAT-LAW", name: "Law & Legal Studies", slug: "law-legal-studies", description: "Constitutional Law, Criminal Law, Legal Studies, and Jurisprudence.", displayOrder: 11, isPublic: true },
+      { code: "CAT-HEALTH", name: "Health & Medical Sciences", slug: "health-medical-sciences", description: "Anatomy, Physiology, Public Health, Nursing, and Pre-Medical Sciences.", displayOrder: 12, isPublic: true },
+      { code: "CAT-EDU", name: "Education & Teaching", slug: "education-teaching", description: "Education, Pedagogy, Educational Psychology, and Teacher Training.", displayOrder: 13, isPublic: true },
+      { code: "CAT-TEST", name: "Test Preparation", slug: "test-preparation", description: "MDCAT, ECAT, SAT, IELTS, CSS, PPSC, and other competitive examination preparation.", displayOrder: 14, isPublic: true },
+      { code: "CAT-STEM", name: "STEM", slug: "stem", description: "Science, Technology, Engineering, and Mathematics — parent navigation group.", displayOrder: 0, isPublic: true },
+      { code: "CAT-UNCATEGORIZED", name: "Uncategorized", slug: "uncategorized", description: "Internal administrative classification. Not shown in public catalogue.", displayOrder: 99, isPublic: false },
+    ];
+    const results = { created: 0, updated: 0 };
+    for (const cat of categories) {
+      const existing = await SubjectCategory.findOne({ code: cat.code });
+      if (!existing) {
+        await SubjectCategory.create({ ...cat, status: "active" });
+        results.created++;
+      } else {
+        await SubjectCategory.updateOne({ code: cat.code }, { $set: { name: cat.name, description: cat.description, displayOrder: cat.displayOrder, isPublic: cat.isPublic, slug: cat.slug } });
+        results.updated++;
+      }
+    }
+    res.json({ success: true, message: "Category seed complete.", results });
+  } catch (error) { databaseError(res, error, "Failed to seed recommended categories"); }
 };
 
 export const updateTeachingEligibilityRule = async (req: AuthRequest, res: Response): Promise<void> => {

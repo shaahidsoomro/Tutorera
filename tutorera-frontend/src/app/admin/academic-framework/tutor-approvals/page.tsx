@@ -2,16 +2,113 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ExternalLink, Filter } from "lucide-react";
+import { ArrowLeft, ExternalLink, Filter } from "lucide-react";
 import api from "@/lib/axios";
 import { showError } from "@/lib/toast";
+import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 
-type Approval = { profileId: string; tutorName: string; tutorEmail: string; subject: string; levels: string[]; status: string; eligibilityType: string; evidenceRequired: boolean; requestedAt?: string; reason?: string };
-const pill: Record<string, string> = { pending: "bg-amber-100 text-amber-800", needs_evidence: "bg-orange-100 text-orange-800", approved: "bg-emerald-100 text-emerald-800", rejected: "bg-red-100 text-red-800", revoked: "bg-red-100 text-red-800", suspended: "bg-slate-200 text-slate-800" };
+type Approval = { profileId: string; tutorName: string; tutorEmail: string; subject: string; levels: string[]; status: string; eligibilityType: string; evidenceRequired: boolean; requestedAt?: string };
+
+const statusStyle = (s: string): React.CSSProperties => {
+  if (s === "approved") return { backgroundColor: STATUS_COLORS.success.bg, color: STATUS_COLORS.success.color };
+  if (s === "rejected" || s === "revoked") return { backgroundColor: STATUS_COLORS.danger.bg, color: STATUS_COLORS.danger.color };
+  if (s === "needs_evidence") return { backgroundColor: STATUS_COLORS.warning.bg, color: STATUS_COLORS.warning.color };
+  return { backgroundColor: STATUS_COLORS.neutral.bg, color: STATUS_COLORS.neutral.color };
+};
+
 export default function TutorApprovalsPage() {
-  const [status, setStatus] = useState("pending,needs_evidence"); const [items, setItems] = useState<Approval[]>([]); const [loading, setLoading] = useState(true);
-  useEffect(() => { setLoading(true); api.get(`/admin/academic-framework/tutor-approvals?status=${encodeURIComponent(status)}`).then(({ data }) => setItems(data.approvals || [])).catch((error) => showError(error, "Could not load tutor subject approvals")).finally(() => setLoading(false)); }, [status]);
-  return <main className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8"><p className="text-sm font-bold uppercase tracking-[.14em] text-[#016EF8]">Academic framework</p><h1 className="mt-1 text-3xl font-extrabold text-slate-900">Tutor subject approvals</h1><p className="mt-2 max-w-3xl text-slate-600">Review pending teaching requests. Final actions stay on the tutor application, where document evidence and the full audit history are visible.</p>
-    <label className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-slate-700"><Filter className="h-4 w-4" aria-hidden />Status<select value={status} onChange={(event) => setStatus(event.target.value)} className="rounded-lg border border-slate-300 px-3 py-2"><option value="pending,needs_evidence">Needs review</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="all">All statuses</option></select></label>
-    <section className="mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">{loading ? <p className="p-8 text-slate-600">Loading review queue…</p> : items.length === 0 ? <p className="p-8 text-slate-600">No tutor subject requests match this filter.</p> : <table className="w-full min-w-[780px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-600"><tr><th className="p-4">Tutor</th><th className="p-4">Requested subject</th><th className="p-4">Eligibility</th><th className="p-4">Status</th><th className="p-4">Requested</th><th className="p-4"><span className="sr-only">Review</span></th></tr></thead><tbody>{items.map((item, index) => <tr key={`${item.profileId}-${item.subject}-${index}`} className="border-t border-slate-100"><td className="p-4"><p className="font-bold text-slate-900">{item.tutorName}</p><p className="text-slate-500">{item.tutorEmail}</p></td><td className="p-4 font-semibold text-slate-800">{item.subject}{item.levels.length ? <p className="mt-1 text-xs font-normal text-slate-500">{item.levels.join(", ")}</p> : null}</td><td className="p-4 capitalize text-slate-700">{item.eligibilityType.replace("_", " ")}{item.evidenceRequired ? <p className="mt-1 text-xs text-orange-700">Evidence required</p> : null}</td><td className="p-4"><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${pill[item.status] || pill.pending}`}>{item.status.replace("_", " ")}</span></td><td className="p-4 text-slate-600">{item.requestedAt ? new Date(item.requestedAt).toLocaleDateString() : "—"}</td><td className="p-4"><Link className="inline-flex items-center gap-1 font-bold text-[#0329B2] hover:underline" href={`/admin/applications/${item.profileId}`}>Review <ExternalLink className="h-4 w-4" aria-hidden /></Link></td></tr>)}</tbody></table>}</section></main>;
+  const [status, setStatus] = useState("pending,needs_evidence");
+  const [items, setItems] = useState<Approval[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    api.get(`/admin/academic-framework/tutor-approvals?status=${encodeURIComponent(status)}`)
+      .then(({ data }) => setItems(data.approvals || []))
+      .catch(error => showError(error, "Could not load tutor subject approvals"))
+      .finally(() => setLoading(false));
+  }, [status]);
+
+  const inp: React.CSSProperties = { marginTop:"0.25rem", borderRadius:"0.4rem", border:`1px solid ${UI_COLORS.border}`, padding:"0.4rem 0.6rem", fontSize:"0.875rem" };
+
+  return (
+    <div style={{ padding:"1.75rem 2rem" }}>
+      {/* Breadcrumb */}
+      <div style={{ display:"flex", alignItems:"center", gap:"0.5rem", marginBottom:"0.4rem" }}>
+        <Link href="/admin" style={{ color:TEXT_COLORS.muted, textDecoration:"none", display:"inline-flex", alignItems:"center", gap:"0.3rem", fontSize:"0.82rem", fontWeight:700 }}>
+          <ArrowLeft size={14} /> Control Tower
+        </Link>
+        <span style={{ color:UI_COLORS.border }}>/</span>
+        <Link href="/admin/academic-framework" style={{ color:TEXT_COLORS.muted, textDecoration:"none", fontSize:"0.82rem", fontWeight:700 }}>Academic Framework</Link>
+        <span style={{ color:UI_COLORS.border }}>/</span>
+        <span style={{ fontSize:"0.82rem", fontWeight:700, color:STATUS_COLORS.purple.color }}>Tutor Approvals</span>
+      </div>
+
+      <h1 style={{ fontSize:"1.5rem", fontWeight:800, color:TEXT_COLORS.body, margin:"0 0 0.25rem" }}>Tutor Subject Approvals</h1>
+      <p style={{ color:TEXT_COLORS.muted, fontSize:"0.85rem", margin:"0 0 1.25rem" }}>
+        Review pending teaching requests. Final actions stay on the tutor application, where document evidence and the full audit history are visible.
+      </p>
+
+      <label style={{ display:"inline-flex", alignItems:"center", gap:"0.5rem", fontSize:"0.875rem", fontWeight:700, color:TEXT_COLORS.secondary, marginBottom:"1rem" }}>
+        <Filter size={15} aria-hidden="true" /> Status
+        <select value={status} onChange={e => setStatus(e.target.value)} style={inp} aria-label="Filter by status">
+          <option value="pending,needs_evidence">Needs review</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+          <option value="all">All statuses</option>
+        </select>
+      </label>
+
+      <div style={{ borderRadius:"0.75rem", border:`1px solid ${UI_COLORS.border}`, backgroundColor:UI_COLORS.surface, overflowX:"auto" }}>
+        {loading ? (
+          <div role="status" aria-label="Loading tutor approvals" style={{ padding:"3rem", textAlign:"center", color:TEXT_COLORS.muted }}>Loading review queue…</div>
+        ) : items.length === 0 ? (
+          <div style={{ padding:"3rem", textAlign:"center", color:TEXT_COLORS.muted }}>No tutor subject requests match this filter.</div>
+        ) : (
+          <table style={{ width:"100%", minWidth:780, borderCollapse:"collapse", fontSize:"0.875rem", textAlign:"left" }}>
+            <thead>
+              <tr style={{ background:UI_COLORS.card, borderBottom:`1px solid ${UI_COLORS.border}` }}>
+                {["Tutor","Requested Subject","Eligibility","Status","Requested","Review"].map(h => (
+                  <th key={h} scope="col" style={{ padding:"0.75rem 1rem", fontSize:"0.72rem", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.05em", color:TEXT_COLORS.muted }}>
+                    {h === "Review" ? <span className="sr-only">Review</span> : h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item, i) => (
+                <tr key={`${item.profileId}-${item.subject}-${i}`} style={{ borderTop:`1px solid ${UI_COLORS.border}` }}>
+                  <td style={{ padding:"0.875rem 1rem" }}>
+                    <p style={{ fontWeight:700, color:TEXT_COLORS.body, margin:0 }}>{item.tutorName}</p>
+                    <p style={{ fontSize:"0.78rem", color:TEXT_COLORS.muted, margin:"0.2rem 0 0" }}>{item.tutorEmail}</p>
+                  </td>
+                  <td style={{ padding:"0.875rem 1rem" }}>
+                    <p style={{ fontWeight:600, color:TEXT_COLORS.body, margin:0 }}>{item.subject}</p>
+                    {item.levels.length > 0 && <p style={{ fontSize:"0.75rem", color:TEXT_COLORS.muted, margin:"0.2rem 0 0" }}>{item.levels.join(", ")}</p>}
+                  </td>
+                  <td style={{ padding:"0.875rem 1rem", color:TEXT_COLORS.secondary, textTransform:"capitalize" }}>
+                    {item.eligibilityType.replace("_", " ")}
+                    {item.evidenceRequired && <p style={{ fontSize:"0.75rem", color:"#c2410c", margin:"0.2rem 0 0" }}>Evidence required</p>}
+                  </td>
+                  <td style={{ padding:"0.875rem 1rem" }}>
+                    <span style={{ padding:"0.2rem 0.6rem", borderRadius:"999px", fontSize:"0.72rem", fontWeight:700, ...statusStyle(item.status) }}>
+                      {item.status.replace("_", " ")}
+                    </span>
+                  </td>
+                  <td style={{ padding:"0.875rem 1rem", color:TEXT_COLORS.muted }}>
+                    {item.requestedAt ? new Date(item.requestedAt).toLocaleDateString() : "—"}
+                  </td>
+                  <td style={{ padding:"0.875rem 1rem" }}>
+                    <Link href={`/admin/applications/${item.profileId}`} style={{ display:"inline-flex", alignItems:"center", gap:"0.3rem", fontWeight:700, color:UI_COLORS.accent, fontSize:"0.82rem", textDecoration:"none" }}>
+                      Review <ExternalLink size={14} aria-hidden="true" />
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
 }

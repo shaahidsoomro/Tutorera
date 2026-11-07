@@ -9,6 +9,8 @@ export interface ISubjectCategory extends Document {
   description?: string;
   status: AcademicRecordStatus;
   displayOrder: number;
+  parentCategory?: Types.ObjectId | null;
+  isPublic: boolean;
   createdBy?: Types.ObjectId;
   updatedBy?: Types.ObjectId;
   archivedAt?: Date;
@@ -23,11 +25,14 @@ const schema = new Schema<ISubjectCategory>({
   description: { type: String, default: "" },
   status: { type: String, enum: ["active", "inactive", "archived"], default: "active", index: true },
   displayOrder: { type: Number, default: 0 },
+  parentCategory: { type: Schema.Types.ObjectId, ref: "SubjectCategory", default: null },
+  isPublic: { type: Boolean, default: true },
   createdBy: { type: Schema.Types.ObjectId, ref: "User" },
   updatedBy: { type: Schema.Types.ObjectId, ref: "User" },
   archivedAt: { type: Date },
 }, { timestamps: true });
 
 schema.index({ status: 1, displayOrder: 1, name: 1 });
+schema.index({ parentCategory: 1 });
 
 export default mongoose.model<ISubjectCategory>("SubjectCategory", schema);

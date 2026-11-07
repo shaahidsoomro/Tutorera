@@ -5,8 +5,8 @@ import multer from "multer";
 import {
   createAcademicCategory, createAcademicDiscipline, createAcademicSubject, createTeachingEligibilityRule,
   getAcademicFrameworkOverview, listAcademicCategories, listAcademicDisciplines, listAcademicSubjects,
-  listTeachingEligibilityRules, listTutorSubjectApprovals, updateAcademicCategory, updateAcademicDiscipline, updateAcademicSubject,
-  updateTeachingEligibilityRule,
+  listTeachingEligibilityRules, listTutorSubjectApprovals, seedRecommendedCategories, updateAcademicCategory,
+  updateAcademicDiscipline, updateAcademicSubject, updateTeachingEligibilityRule,
 } from "../../controllers/academicFramework.controller";
 import { commitAcademicImport, downloadAcademicTemplate, exportAcademicDataset, listAcademicImportHistory, previewAcademicImport } from "../../controllers/academicImportExport.controller";
 import { listAdminSchoolOfferings, updateAdminSchoolOffering } from "../../controllers/schoolOffering.controller";
@@ -20,6 +20,7 @@ router.get("/school-offerings", listAdminSchoolOfferings);
 router.patch("/school-offerings/:id", updateAdminSchoolOffering);
 router.get("/tutor-approvals", listTutorSubjectApprovals);
 router.route("/categories").get(listAcademicCategories).post(createAcademicCategory);
+router.post("/categories/seed", seedRecommendedCategories);
 router.patch("/categories/:id", updateAcademicCategory);
 router.route("/disciplines").get(listAcademicDisciplines).post(createAcademicDiscipline);
 router.patch("/disciplines/:id", updateAcademicDiscipline);
