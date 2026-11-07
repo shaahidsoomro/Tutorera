@@ -149,11 +149,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       )}
 
       {/* Nav — single ordered list per role, per spec §22 / §23. */}
-      <nav style={{ flex: 1, padding: '0.75rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
+      <nav aria-label="Main navigation" style={{ flex: 1, padding: '0.75rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
+        <ul role="list" style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
         {sidebarNav.map(item => {
           const isActive = pathname === item.href;
           return (
-            <Link key={item.href} href={item.href}
+            <li key={item.href}>
+            <Link href={item.href}
+              aria-current={isActive ? 'page' : undefined}
+              aria-label={collapsed ? item.label : undefined}
               onClick={() => setMobileOpen(false)}
               style={{
                 display: 'flex', alignItems: 'center', gap: '0.625rem',
@@ -167,16 +171,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               }}
               onMouseEnter={e => { if (!isActive) e.currentTarget.style.backgroundColor = C.gray50; }}
               onMouseLeave={e => { if (!isActive) e.currentTarget.style.backgroundColor = 'transparent'; }}>
-              {item.icon}
+              <span aria-hidden="true">{item.icon}</span>
               {!collapsed && <span>{item.label}</span>}
             </Link>
+            </li>
           );
         })}
+        </ul>
       </nav>
 
       {/* Sign Out */}
       <div style={{ padding: '0.75rem', borderTop: `1px solid ${C.sidebarBorder}` }}>
         <button onClick={handleLogout}
+          aria-label="Sign out"
           style={{
             display: 'flex', alignItems: 'center', gap: '0.625rem',
             padding: collapsed ? '0.625rem' : '0.625rem 0.875rem',
@@ -187,7 +194,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           }}
           onMouseEnter={e => (e.currentTarget.style.backgroundColor = STATUS_COLORS.danger.bg)}
           onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
-          <LogOut size={18} />
+          <span aria-hidden="true"><LogOut size={18} /></span>
           {!collapsed && <span>Sign out</span>}
         </button>
       </div>
@@ -196,6 +203,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: C.gray50 }}>
+      <a href="#main-content" style={{ position: 'absolute', top: '-100%', left: '1rem', background: C.primary, color: 'white', padding: '0.75rem 1.25rem', borderRadius: '0 0 0.5rem 0.5rem', fontWeight: 700, fontSize: '0.875rem', textDecoration: 'none', zIndex: 99999, transition: 'top 0.15s' }} onFocus={e => { e.currentTarget.style.top = '0'; }} onBlur={e => { e.currentTarget.style.top = '-100%'; }}>Skip to main content</a>
 
       {/* Desktop Sidebar */}
       <div style={{
@@ -254,8 +262,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <Link href="/notifications" style={{ position: 'relative', color: C.gray500, display: 'flex' }}>
-              <Bell size={20} />
+            <Link href="/notifications" aria-label="Notifications" style={{ position: 'relative', color: C.gray500, display: 'flex' }}>
+              <Bell size={20} aria-hidden="true" />
             </Link>
             <Link href="/settings" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', padding: '0.25rem 0.75rem', border: `1px solid ${C.border}`, borderRadius: '2rem', backgroundColor: 'white' }}>
               <div style={{ width: '26px', height: '26px', borderRadius: '50%', backgroundColor: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.75rem', fontWeight: '700', overflow: 'hidden' }}>
@@ -267,9 +275,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         {/* Page Content */}
-        <div className="dashboard-content" style={{ flex: 1, padding: '1.5rem', width: '100%', boxSizing: 'border-box', overflowX: 'hidden', minWidth: 0 }}>
+        <main id="main-content" className="dashboard-content" style={{ flex: 1, padding: '1.5rem', width: '100%', boxSizing: 'border-box', overflowX: 'hidden', minWidth: 0 }}>
           {children}
-        </div>
+        </main>
       </div>
 
       <style>{`

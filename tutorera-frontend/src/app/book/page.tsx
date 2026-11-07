@@ -98,10 +98,12 @@ export default function BookingsPage() {
         <h1 style={{ fontSize: "1.75rem", fontWeight: 800, color: C.primary, margin: "0 0 1.75rem" }}>My Bookings</h1>
 
         {/* Tabs */}
-        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "1.5rem" }}>
+        <div role="tablist" aria-label="Filter bookings by status" style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "1.5rem" }}>
           {TABS.map(t => (
             <button
               key={t.key}
+              role="tab"
+              aria-selected={tab === t.key}
               onClick={() => setTab(t.key)}
               style={{
                 padding: "0.45rem 1rem", borderRadius: 999, border: "1.5px solid",
@@ -118,7 +120,7 @@ export default function BookingsPage() {
         </div>
 
         {loading ? (
-          <div style={{ textAlign: "center", padding: "4rem", color: "#888" }}>Loading bookings…</div>
+          <div role="status" aria-label="Loading bookings" style={{ textAlign: "center", padding: "4rem", color: "#888" }}>Loading bookings…</div>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: "center", padding: "4rem", background: "white", borderRadius: "1rem", border: "1px solid #dce5f4" }}>
             <BookOpen size={40} color="#bcc8e4" style={{ marginBottom: "1rem" }} />
@@ -186,8 +188,9 @@ export default function BookingsPage() {
                   {/* Refund form */}
                   {refundId === b._id && (
                     <div style={{ marginTop: "1rem", padding: "1rem", background: "#fff1f2", borderRadius: "0.75rem", border: "1px solid #fecdd3" }}>
-                      <p style={{ fontWeight: 700, color: "#be123c", fontSize: "0.875rem", marginBottom: "0.5rem" }}>Refund request reason</p>
+                      <label htmlFor={`refund-reason-${b._id}`} style={{ display: "block", fontWeight: 700, color: "#be123c", fontSize: "0.875rem", marginBottom: "0.5rem" }}>Refund request reason</label>
                       <textarea
+                        id={`refund-reason-${b._id}`}
                         value={refundReason}
                         onChange={e => setRefundReason(e.target.value)}
                         placeholder="Please describe why you are requesting a refund…"

@@ -131,7 +131,7 @@ function SafetyCasesContent() {
       </div>
 
       {/* Filter Tabs */}
-      <div style={{ display: "flex", gap: "0.4rem", marginBottom: "1.25rem" }}>
+      <div role="tablist" aria-label="Filter safety cases by status" style={{ display: "flex", gap: "0.4rem", marginBottom: "1.25rem" }}>
         {[
           { id: "all", label: `All Cases (${cases.length})` },
           { id: "open", label: "Open" },
@@ -140,6 +140,8 @@ function SafetyCasesContent() {
         ].map((f) => (
           <button
             key={f.id}
+            role="tab"
+            aria-selected={filterStatus === f.id}
             onClick={() => setFilterStatus(f.id)}
             style={{
               padding: "0.4rem 0.8rem",
@@ -248,9 +250,9 @@ function SafetyCasesContent() {
 
       {/* Case Resolution Modal */}
       {selectedCase && (
-        <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.5)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
+        <div role="dialog" aria-modal="true" aria-labelledby="safety-modal-title" style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.5)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
           <div style={{ backgroundColor: UI_COLORS.surface, borderRadius: "0.75rem", padding: "1.5rem", width: "100%", maxWidth: "520px", maxHeight: "90vh", overflowY: "auto" }}>
-            <h3 style={{ fontSize: "1.15rem", fontWeight: 800, margin: "0 0 0.5rem" }}>
+            <h3 id="safety-modal-title" style={{ fontSize: "1.15rem", fontWeight: 800, margin: "0 0 0.5rem" }}>
               Case #{selectedCase.caseId} Investigation
             </h3>
             <p style={{ color: TEXT_COLORS.muted, fontSize: "0.82rem", margin: "0 0 1rem" }}>
@@ -290,6 +292,7 @@ function SafetyCasesContent() {
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
               <button
                 onClick={() => setSelectedCase(null)}
+                aria-label="Close investigation modal"
                 style={{ padding: "0.5rem 1rem", backgroundColor: STATUS_COLORS.neutral.bg, border: "none", borderRadius: "0.4rem", fontWeight: 700, cursor: "pointer", fontSize: "0.82rem" }}
               >
                 Cancel

@@ -70,11 +70,11 @@ function ResolveModal({ booking, onClose, onDone }: { booking: DisputedBooking; 
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
+    <div role="dialog" aria-modal="true" aria-labelledby="dispute-modal-title" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
       <div style={{ background: "#fff", borderRadius: 16, padding: "1.5rem", maxWidth: 520, width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-          <h3 style={{ margin: 0, fontWeight: 800, color: C.primary, fontSize: "1rem" }}>⚖️ Resolve Dispute</h3>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: "1.25rem", cursor: "pointer", color: "#6b7280" }}>✕</button>
+          <h3 id="dispute-modal-title" style={{ margin: 0, fontWeight: 800, color: C.primary, fontSize: "1rem" }}>⚖️ Resolve Dispute</h3>
+          <button onClick={onClose} aria-label="Close dispute modal" style={{ background: "none", border: "none", fontSize: "1.25rem", cursor: "pointer", color: "#6b7280", minWidth: 44, minHeight: 44, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
         </div>
 
         <div style={{ background: "#f8fafc", borderRadius: 10, padding: "0.875rem 1rem", marginBottom: "1.25rem", fontSize: "0.82rem", color: C.primary }}>

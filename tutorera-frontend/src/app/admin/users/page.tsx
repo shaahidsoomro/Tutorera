@@ -104,7 +104,7 @@ export default function UsersPage() {
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
         <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
           <Search size={16} color={C.gray500} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or email..."
+          <input aria-label="Search users by name or email" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or email..."
             style={{ width: '100%', padding: '0.7rem 1rem 0.7rem 2.25rem', border: `1px solid ${C.border}`, borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box', backgroundColor: C.surface }}
             onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
             onBlur={e => (e.currentTarget.style.borderColor = C.border)} />
@@ -142,8 +142,8 @@ export default function UsersPage() {
         </div>
 
         {loading ? (
-          <div style={{ padding: '3rem', textAlign: 'center' }}>
-            <div style={{ width: '32px', height: '32px', border: `3px solid ${C.accent}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto' }} />
+          <div role="status" aria-label="Loading users" style={{ padding: '3rem', textAlign: 'center' }}>
+            <div aria-hidden="true" style={{ width: '32px', height: '32px', border: `3px solid ${C.accent}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto' }} />
             <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
           </div>
         ) : users.length === 0 ? (
@@ -261,7 +261,10 @@ export default function UsersPage() {
             <label style={{ display: "block", fontWeight: 700, color: C.primary, marginTop: 14 }}>Reason
               <textarea autoFocus required maxLength={1000} value={enforcementReason} onChange={(event) => setEnforcementReason(event.target.value)} style={{ display: "block", width: "100%", minHeight: 100, boxSizing: "border-box", marginTop: 6, padding: 10, border: `1px solid ${C.border}`, borderRadius: 6 }} />
             </label>
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20 }}><button type="button" onClick={() => setSelectedUser(null)}>Cancel</button><button type="submit" disabled={!enforcementReason.trim() || actionLoading === selectedUser._id}>{actionLoading === selectedUser._id ? "Saving…" : "Confirm"}</button></div>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20 }}>
+              <button type="button" onClick={() => setSelectedUser(null)} style={{ padding: "0.5rem 1.25rem", borderRadius: 6, border: `1px solid ${C.border}`, background: C.surface, color: C.primary, fontWeight: 700, cursor: "pointer", minHeight: 44 }}>Cancel</button>
+              <button type="submit" disabled={!enforcementReason.trim() || actionLoading === selectedUser._id} style={{ padding: "0.5rem 1.25rem", borderRadius: 6, border: "none", background: C.accent, color: "white", fontWeight: 700, cursor: "pointer", minHeight: 44 }}>{actionLoading === selectedUser._id ? "Saving…" : "Confirm"}</button>
+            </div>
           </form>
         </div>
       )}

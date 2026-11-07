@@ -152,6 +152,7 @@ export default function ReferralDashboardPage() {
               <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                 <input
                   readOnly
+                  aria-label="Your referral link"
                   value={data.referralLink}
                   style={{ flex: 1, minWidth: 220, border: "1.5px solid #dce5f4", borderRadius: 8, padding: "0.6rem 0.9rem", fontSize: "0.85rem", color: "#334155", background: "#f8fafc", outline: "none" }}
                 />
@@ -166,9 +167,12 @@ export default function ReferralDashboardPage() {
               <div style={{ marginTop: "0.75rem", display: "flex", gap: "0.5rem", alignItems: "center" }}>
                 <span style={{ fontSize: "0.82rem", color: "#64748b" }}>Or share your code:</span>
                 <code
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Copy referral code ${data.referralCode}`}
                   onClick={() => handleCopy(data.referralCode)}
+                  onKeyDown={e => (e.key === "Enter" || e.key === " ") && handleCopy(data.referralCode)}
                   style={{ background: "#f1f5f9", border: "1px solid #e2e8f0", borderRadius: 6, padding: "0.2rem 0.6rem", fontWeight: 700, fontSize: "0.9rem", cursor: "pointer", letterSpacing: "0.08em" }}
-                  title="Click to copy code"
                 >
                   {data.referralCode}
                 </code>
@@ -189,6 +193,7 @@ export default function ReferralDashboardPage() {
               </p>
               <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                 <input
+                  aria-label="Enter referral code"
                   value={applyCode}
                   onChange={e => setApplyCode(e.target.value.toUpperCase())}
                   placeholder="e.g. AHMED2F3A"

@@ -257,17 +257,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           const visibleItems = sec.items.filter((item) => hasPermission((user as any)?.adminRole, (user as any)?.adminPermissions, item.permission));
           if (visibleItems.length === 0) return null;
           return (
-            <div key={sec.title}>
-              <p style={{ fontSize: "0.68rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", color: "#64748b", margin: "0 0 0.35rem 0.6rem" }}>
+            <nav key={sec.title} aria-label={sec.title}>
+              <p aria-hidden="true" style={{ fontSize: "0.68rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", color: "#64748b", margin: "0 0 0.35rem 0.6rem" }}>
                 {sec.title}
               </p>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.15rem" }}>
+              <ul role="list" style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: "0.15rem" }}>
                 {visibleItems.map((item) => {
                   const isActive = pathname === item.href;
                   return (
+                    <li key={item.href}>
                     <Link
-                      key={item.href}
                       href={item.href}
+                      aria-current={isActive ? "page" : undefined}
                       onClick={() => setSidebarOpen(false)}
                       className={isActive ? "bg-blue-800/55" : "hover:bg-white/[0.06]"}
                       style={{
@@ -285,11 +286,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                       }}
                     >
                       <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-                        <span style={{ color: isActive ? "#60a5fa" : "#94a3b8" }}>{item.icon}</span>
+                        <span aria-hidden="true" style={{ color: isActive ? "#60a5fa" : "#94a3b8" }}>{item.icon}</span>
                         <span>{item.label}</span>
                       </div>
                       {item.badge && (
                         <span
+                          aria-label={item.badge}
                           style={{
                             fontSize: "0.65rem",
                             fontWeight: 800,
@@ -303,10 +305,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         </span>
                       )}
                     </Link>
+                    </li>
                   );
                 })}
-              </div>
-            </div>
+              </ul>
+            </nav>
           );
         })}
       </nav>
@@ -327,7 +330,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             await logout();
             router.replace("/");
           }}
-          title="Sign out of Admin Panel"
+          aria-label="Sign out of Admin Panel"
           style={{
             display: "flex",
             alignItems: "center",
@@ -341,7 +344,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             cursor: "pointer",
           }}
         >
-          <LogOut size={16} />
+          <LogOut size={16} aria-hidden="true" />
         </button>
       </div>
     </div>

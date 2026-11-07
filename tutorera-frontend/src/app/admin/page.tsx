@@ -360,8 +360,8 @@ export default function AdminControlTowerPage() {
         {/* Live Controls */}
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
           {/* Refresh Interval Selector */}
-          <div style={{ display: "flex", alignItems: "center", background: "rgba(255,255,255,0.1)", borderRadius: "0.5rem", padding: "0.2rem 0.4rem" }}>
-            <span style={{ fontSize: "0.72rem", color: STATUS_COLORS.info.border, padding: "0 0.4rem", fontWeight: 700 }}>Interval:</span>
+          <div role="group" aria-labelledby="refresh-interval-label" style={{ display: "flex", alignItems: "center", background: "rgba(255,255,255,0.1)", borderRadius: "0.5rem", padding: "0.2rem 0.4rem" }}>
+            <span id="refresh-interval-label" style={{ fontSize: "0.72rem", color: STATUS_COLORS.info.border, padding: "0 0.4rem", fontWeight: 700 }}>Interval:</span>
             {[
               { val: 0, label: "Off" },
               { val: 15, label: "15s" },
@@ -370,6 +370,7 @@ export default function AdminControlTowerPage() {
             ].map((option) => (
               <button
                 key={option.val}
+                aria-pressed={autoRefreshInterval === option.val}
                 onClick={() => setAutoRefreshInterval(option.val)}
                 style={{
                   border: "none",
@@ -706,7 +707,7 @@ export default function AdminControlTowerPage() {
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
-            <div style={{ display: "flex", gap: "0.25rem", background: STATUS_COLORS.neutral.bg, padding: "0.2rem", borderRadius: "0.5rem" }}>
+            <div role="tablist" aria-label="Filter at-risk requests" style={{ display: "flex", gap: "0.25rem", background: STATUS_COLORS.neutral.bg, padding: "0.2rem", borderRadius: "0.5rem" }}>
               {[
                 { id: "all", label: "All At-Risk" },
                 { id: "zero_offers", label: "Zero Offers" },
@@ -714,6 +715,8 @@ export default function AdminControlTowerPage() {
               ].map((tab) => (
                 <button
                   key={tab.id}
+                  role="tab"
+                  aria-selected={atRiskTab === tab.id}
                   onClick={() => setAtRiskTab(tab.id as any)}
                   style={{
                     padding: "0.3rem 0.65rem",

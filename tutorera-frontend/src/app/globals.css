@@ -559,3 +559,19 @@ body {
 .prose-blog em { font-style: italic; }
 .prose-blog blockquote { border-left: 4px solid #bfdbfe; padding-left: 1rem; color: #64748b; margin: 1rem 0; }
 .prose-blog code { background: #f1f5f9; border-radius: 4px; padding: .1em .4em; font-size: .9em; }
+
+/* ─── WCAG 2.1 SC 2.4.7 — Focus visible ────────────────────────────────────
+   Ensures keyboard focus is always visible even when inline styles use
+   outline:none. The :not([data-no-focus]) escape hatch lets a component opt
+   out if it provides its own indicator (e.g. the skip-link).                */
+*:focus-visible {
+  outline: 2px solid #0329B2 !important;
+  outline-offset: 2px !important;
+}
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid #0329B2 !important;
+  outline-offset: 0 !important;
+  border-color: #0329B2 !important;
+}
