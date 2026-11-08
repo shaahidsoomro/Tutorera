@@ -20,7 +20,7 @@ async function run() {
   const startedAt = Date.now();
   const uri = process.env.MONGO_URI || process.env.MONGODB_URI;
   if (!uri) throw new Error("MONGO_URI is required.");
-  await mongoose.connect(uri);
+  await mongoose.connect(uri, { autoIndex: false, autoCreate: false });
 
   try {
     // Count the same records that the write targets. Restricting this to
@@ -29,8 +29,14 @@ async function run() {
     const usersWithoutCurrency = await User.countDocuments({ referralCreditCurrency: { $exists: false } });
     const referralsWithoutCurrency = await Referral.countDocuments({ creditCurrency: { $exists: false } });
     const configsWithoutCurrency = await ReferralConfig.countDocuments({ currency: { $exists: false } });
+    const ambiguousUsers = await User.countDocuments({ referralCreditCurrency: { $exists: false }, countryCode: { $ne: "PK" } });
 
     if (apply) {
+      // Country alone does not establish the currency of a historical referral
+      // or configuration. Require manual reconciliation for ambiguous rows.
+      if (usersWithoutCurrency || referralsWithoutCurrency || configsWithoutCurrency) {
+        throw new Error(`Currency evidence required for ${usersWithoutCurrency} users, ${referralsWithoutCurrency} referrals and ${configsWithoutCurrency} configurations; ${ambiguousUsers} users are non-PK or unlocated.`);
+      }
       const stampedUsers = await User.updateMany(
         { referralCreditCurrency: { $exists: false } },
         { $set: { referralCreditCurrency: LEGACY_REFERRAL_CURRENCY } }
@@ -65,19 +71,12 @@ async function run() {
         usersWithBalanceMissingCurrency: usersWithoutCurrency,
         referralsMissingCurrency: referralsWithoutCurrency,
         configsMissingCurrency: configsWithoutCurrency,
+        ambiguousUsers,
       };
       console.log(JSON.stringify({ mode: "dry-run", ...report }, null, 2));
-
-      await recordMigrationRun({
-        name: MIGRATION_NAME,
-        status: "planned",
-        matched: usersWithoutCurrency + referralsWithoutCurrency + configsWithoutCurrency,
-        durationMs: Date.now() - startedAt,
-        report,
-      });
     }
   } catch (error) {
-    await recordMigrationRun({
+    if (apply) await recordMigrationRun({
       name: MIGRATION_NAME,
       status: "failed",
       durationMs: Date.now() - startedAt,

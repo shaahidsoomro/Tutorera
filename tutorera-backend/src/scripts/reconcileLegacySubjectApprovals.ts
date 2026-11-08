@@ -5,7 +5,6 @@
  */
 import dotenv from "dotenv";
 import mongoose from "mongoose";
-import connectDB from "../config/db";
 import TutorProfile from "../models/TutorProfile.model";
 import Subject from "../models/Subject.model";
 import TeachingEligibilityRule from "../models/TeachingEligibilityRule.model";
@@ -18,7 +17,8 @@ const normal = (value: string) => value.trim().toLowerCase();
 
 async function main() {
   if (commit && !confirmed) throw new Error("Refusing write: use --commit --confirm=LINK_LEGACY_SUBJECT_APPROVALS after reviewing the dry run.");
-  await connectDB();
+  if (!process.env.MONGO_URI) throw new Error("MONGO_URI is required");
+  await mongoose.connect(process.env.MONGO_URI, { autoIndex: false, autoCreate: false });
   if (mongoose.connection.readyState !== 1) throw new Error("Database connection is unavailable; no reconciliation was attempted.");
   const report = { mode: commit ? "commit" : "dry-run", scannedProfiles: 0, unlinkedApprovedEntries: 0, linked: 0, ambiguous: [] as string[], unmatched: [] as string[] };
   const subjects = await Subject.find().select("_id name").lean();
@@ -57,6 +57,6 @@ async function main() {
     }
   };
   try { if (session) await session.withTransaction(work); else await work(); console.log(JSON.stringify(report, null, 2)); }
-  finally { await session?.endSession(); process.exit(0); }
+  finally { await session?.endSession(); await mongoose.disconnect(); }
 }
 main().catch(error => { console.error("Legacy subject-approval reconciliation failed:", error); process.exit(1); });

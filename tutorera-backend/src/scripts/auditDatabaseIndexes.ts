@@ -16,6 +16,8 @@
 
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import { readdirSync } from "node:fs";
+import { join } from "node:path";
 dotenv.config();
 
 // Import all models so their schemas are registered and autoIndex metadata is
@@ -54,6 +56,25 @@ interface IndexInfo {
   unique?: boolean;
   sparse?: boolean;
   partialFilterExpression?: unknown;
+  expireAfterSeconds?: number;
+  weights?: Record<string, number>;
+}
+
+// MongoDB may simplify {$exists:true,$type:"string"} to {$type:"string"}.
+function normalizeFilter(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(normalizeFilter);
+  if (!value || typeof value !== "object") return value;
+  const input = value as Record<string, unknown>;
+  return Object.fromEntries(Object.keys(input).sort().filter(key => !(key === "$exists" && input[key] === true && "$type" in input)).map(key => [key, normalizeFilter(input[key])]));
+}
+
+function matchesIndex(index: IndexInfo, key: Record<string, unknown>, options: Record<string, unknown>): boolean {
+  const textFields = Object.entries(key).filter(([, type]) => type === "text").map(([name]) => name);
+  const keyMatches = normalizeKey(index.key) === normalizeKey(key) ||
+    (textFields.length === Object.keys(key).length && textFields.length > 0 && textFields.every(field => index.weights && field in index.weights));
+  return !!keyMatches && !!index.unique === !!options.unique && !!index.sparse === !!options.sparse &&
+    (index.expireAfterSeconds ?? null) === (options.expireAfterSeconds ?? null) &&
+    JSON.stringify(normalizeFilter(index.partialFilterExpression ?? null)) === JSON.stringify(normalizeFilter(options.partialFilterExpression ?? null));
 }
 
 function normalizeKey(key: Record<string, unknown>): string {
@@ -63,6 +84,10 @@ function normalizeKey(key: Record<string, unknown>): string {
 }
 
 async function main(): Promise<void> {
+  // Load every model from the same source/build tree as this script.
+  for (const file of readdirSync(join(__dirname, "../models")).filter(file => file.endsWith(`.model${__filename.endsWith(".ts") ? ".ts" : ".js"}`))) {
+    require(join(__dirname, "../models", file));
+  }
   await mongoose.connect(MONGO_URI as string, { autoIndex: false, autoCreate: false });
   const db = mongoose.connection.db!;
   let missingCount = 0;
@@ -77,8 +102,10 @@ async function main(): Promise<void> {
     let liveIndexes: IndexInfo[] = [];
     try {
       liveIndexes = await db.collection(collectionName).indexes() as IndexInfo[];
-    } catch {
-      console.warn(`  [WARN] Could not read indexes for ${collectionName} — collection may not exist yet`);
+    } catch (error) {
+      if ((error as { code?: number }).code !== 26) throw error;
+      console.warn(`  [MISSING] Collection ${collectionName}`);
+      missingCount++;
       continue;
     }
 
@@ -92,20 +119,15 @@ async function main(): Promise<void> {
     for (const [fields, opts] of schema.indexes()) {
       declaredIndexes.push({ key: fields as Record<string, unknown>, options: opts as Record<string, unknown> });
     }
-    // Path-level indexes (from { index: true } on individual fields)
-    schema.eachPath((pathName: string, schemaType: unknown) => {
-      const opts = (schemaType as { options?: { index?: boolean | Record<string, unknown>; unique?: boolean; sparse?: boolean } }).options;
-      if (opts?.index || opts?.unique) {
-        declaredIndexes.push({ key: { [pathName]: 1 } });
-      }
-    });
+    // schema.indexes() includes path-level declarations, preserving their
+    // actual types (for example 2dsphere) instead of inventing ascending keys.
 
     const missing: string[] = [];
     const extra: string[] = [];
 
     for (const idx of declaredIndexes) {
       const normalised = normalizeKey(idx.key);
-      if (!liveKeys.has(normalised) && normalised !== "_id:1") {
+      if (!liveIndexes.some(live => matchesIndex(live, idx.key, idx.options || {})) && normalised !== "_id:1") {
         missing.push(normalised);
       }
     }
@@ -138,7 +160,7 @@ async function main(): Promise<void> {
     console.log("✅ All declared indexes are present in the database.");
   } else {
     console.log(`❌ ${missingCount} declared index(es) are absent from the database.`);
-    console.log("   Run: mongoose.syncIndexes() per model, or apply missing indexes manually.");
+    console.log("   Review index options and existing data before applying changes; do not run syncIndexes blindly.");
   }
 
   await mongoose.disconnect();

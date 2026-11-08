@@ -5,7 +5,7 @@
  * report. Existing free-text subject and discipline snapshots are preserved.
  */
 import dotenv from "dotenv";
-import connectDB from "../config/db";
+import mongoose from "mongoose";
 import Subject from "../models/Subject.model";
 import SubjectCategory from "../models/SubjectCategory.model";
 import AcademicDiscipline from "../models/AcademicDiscipline.model";
@@ -30,8 +30,10 @@ const categoryCode = (name: string) => {
 };
 
 async function main() {
-  await connectDB();
-  const report = { mode: commit ? "commit" : "dry-run", categories: { create: 0 }, subjects: { create: 0, backfillCode: 0 }, disciplines: { create: 0 }, rules: { create: 0, unmappedSubjects: [] as string[] } };
+  if (!process.env.MONGO_URI) throw new Error("MONGO_URI is required");
+  // A preview must not implicitly create collections or indexes.
+  await mongoose.connect(process.env.MONGO_URI, { autoIndex: false, autoCreate: false });
+  const report = { mode: commit ? "commit" : "dry-run", categories: { create: 0 }, subjects: { create: 0, backfillCode: 0, backfillCategoryRef: 0 }, disciplines: { create: 0 }, rules: { create: 0, unmappedSubjects: [] as string[] } };
   const session = commit ? await Subject.startSession() : null;
 
   const work = async () => {
@@ -68,6 +70,16 @@ async function main() {
       }
     }
 
+    // Categories may be added after a subject already received its code.
+    // Fill only missing references and leave existing administrative choices intact.
+    for (const subject of existingSubjects) {
+      const category = subject.category && categories.get(normal(subject.category));
+      if (!subject.categoryRef && category) {
+        report.subjects.backfillCategoryRef++;
+        if (commit) await Subject.updateOne({ _id: subject._id, $or: [{ categoryRef: { $exists: false } }, { categoryRef: null }] }, { $set: { categoryRef: category._id } }, { session: session || undefined });
+      }
+    }
+
     const canonicalSubjects = await Subject.find().session(session).lean();
     const subjectByName = new Map(canonicalSubjects.map((subject) => [normal(subject.name), subject]));
     const maps = await DisciplineSubjectMap.find().lean();
@@ -96,7 +108,7 @@ async function main() {
     console.log(JSON.stringify(report, null, 2));
   } finally {
     await session?.endSession();
-    process.exit(0);
+    await mongoose.disconnect();
   }
 }
 

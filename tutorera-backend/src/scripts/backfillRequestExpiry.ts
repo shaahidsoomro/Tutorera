@@ -26,7 +26,7 @@ async function runBackfill() {
     process.exit(1);
   }
 
-  await mongoose.connect(mongoUri);
+  await mongoose.connect(mongoUri, { autoIndex: false, autoCreate: false });
   console.log(" Connected to MongoDB.\n");
 
   const now = new Date();
@@ -50,8 +50,8 @@ async function runBackfill() {
     if (!isCurrentlyActive) {
       skippedTerminal++;
       if (isApply) {
-        await Request.updateOne(
-          { _id: r._id },
+        const result = await Request.updateOne(
+          { _id: r._id, expiresAt: { $exists: false }, status: r.status },
           {
             $set: {
               publishedAt: baseDate,
@@ -61,7 +61,7 @@ async function runBackfill() {
             },
           }
         );
-        updatedCount++;
+        updatedCount += result.modifiedCount;
       }
       continue;
     }
@@ -69,8 +69,8 @@ async function runBackfill() {
     if (computedExpiresAt <= now) {
       willExpireNow++;
       if (isApply) {
-        await Request.updateOne(
-          { _id: r._id },
+        const result = await Request.updateOne(
+          { _id: r._id, expiresAt: { $exists: false }, status: r.status },
           {
             $set: {
               status: "expired",
@@ -82,13 +82,13 @@ async function runBackfill() {
             },
           }
         );
-        updatedCount++;
+        updatedCount += result.modifiedCount;
       }
     } else {
       willRemainActive++;
       if (isApply) {
-        await Request.updateOne(
-          { _id: r._id },
+        const result = await Request.updateOne(
+          { _id: r._id, expiresAt: { $exists: false }, status: r.status },
           {
             $set: {
               publishedAt: baseDate,
@@ -98,7 +98,7 @@ async function runBackfill() {
             },
           }
         );
-        updatedCount++;
+        updatedCount += result.modifiedCount;
       }
     }
   }

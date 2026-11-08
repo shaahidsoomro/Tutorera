@@ -1,24 +1,34 @@
 import "dotenv/config";
 import mongoose from "mongoose";
 import TutorProfile from "../models/TutorProfile.model";
-import { normalizeEducationLevels } from "../config/educationLevels";
+import { EDUCATION_LEVELS, normalizeEducationLevel } from "../config/educationLevels";
 
 /**
  * Idempotently repairs historic short level labels. Run before deploying the
  * document-review fix so legacy profiles do not block future admin actions.
  */
 async function main() {
-  if (!process.env.MONGODB_URI) throw new Error("MONGODB_URI is required");
-  await mongoose.connect(process.env.MONGODB_URI);
+  const uri = process.env.MONGO_URI || process.env.MONGODB_URI;
+  if (!uri) throw new Error("MONGO_URI is required");
+  const apply = process.argv.includes("--apply");
+  await mongoose.connect(uri, { autoIndex: false, autoCreate: false });
   const profiles = await TutorProfile.find({ levels: { $exists: true, $ne: [] } }).select("levels").lean();
+  let profilesWithOtherLabels = 0;
   const operations = profiles.flatMap((profile: any) => {
-    const normalized = normalizeEducationLevels(profile.levels);
+    let hasOtherLabels = false;
+    const normalized = profile.levels.map((level: string) => {
+      const candidate = normalizeEducationLevel(level);
+      if ((EDUCATION_LEVELS as readonly string[]).includes(candidate)) return candidate;
+      hasOtherLabels = true;
+      return level;
+    });
+    if (hasOtherLabels) profilesWithOtherLabels++;
     return JSON.stringify(normalized) === JSON.stringify(profile.levels)
       ? []
-      : [{ updateOne: { filter: { _id: profile._id }, update: { $set: { levels: normalized } } } }];
+      : [{ updateOne: { filter: { _id: profile._id, levels: profile.levels }, update: { $set: { levels: normalized } } } }];
   });
-  if (operations.length) await TutorProfile.bulkWrite(operations);
-  console.log(`Normalized education levels for ${operations.length} tutor profile(s).`);
+  const result = apply && operations.length ? await TutorProfile.bulkWrite(operations) : null;
+  console.log(JSON.stringify({ mode: apply ? "apply" : "dry-run", scanned: profiles.length, candidates: operations.length, profilesWithOtherLabels, modified: result?.modifiedCount || 0 }));
   await mongoose.disconnect();
 }
 
