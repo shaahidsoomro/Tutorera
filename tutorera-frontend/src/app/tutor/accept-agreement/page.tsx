@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/axios";
 import { showError, showSuccess } from "@/lib/toast";
+import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 import {
   FileText,
   ShieldCheck,
@@ -267,10 +268,11 @@ export default function AcceptTutorAgreementPage() {
 
   if (authLoading || loading) {
     return (
-      <main style={{ minHeight: "100vh", background: "#F8FAFC", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ textAlign: "center", padding: "40px" }}>
-          <div style={{ width: 44, height: 44, border: "4px solid #E2E8F0", borderTopColor: "#0284C7", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
-          <p style={{ color: "#475569", fontWeight: 600, fontSize: 15 }}>Loading Tutor Agreement & Verification Records…</p>
+      <main style={{ minHeight: "100vh", background: STATUS_COLORS.neutral.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div role="status" style={{ textAlign: "center", padding: "40px" }}>
+          <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+          <div aria-hidden="true" style={{ width: 44, height: 44, border: `4px solid ${UI_COLORS.border}`, borderTopColor: UI_COLORS.accent, borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
+          <p style={{ color: TEXT_COLORS.muted, fontWeight: 600, fontSize: 15 }}>Loading Tutor Agreement & Verification Records…</p>
         </div>
       </main>
     );
@@ -278,14 +280,14 @@ export default function AcceptTutorAgreementPage() {
 
   if (loadError || !agreementInfo?.agreement) {
     return (
-      <main style={{ minHeight: "100vh", background: "#F8FAFC", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-        <section role="alert" style={{ maxWidth: 560, background: "#FFFFFF", border: "1px solid #FCA5A5", borderRadius: 16, padding: 28, boxShadow: "0 12px 30px rgba(15, 23, 42, 0.08)" }}>
-          <AlertCircle size={30} color="#B91C1C" aria-hidden="true" />
-          <h1 style={{ color: "#0F172A", fontSize: 22, margin: "14px 0 8px" }}>The agreement could not be opened</h1>
-          <p style={{ color: "#475569", lineHeight: 1.55, margin: 0 }}>{loadError || "A current agreement is not available yet."}</p>
+      <main style={{ minHeight: "100vh", background: STATUS_COLORS.neutral.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+        <section role="alert" style={{ maxWidth: 560, background: "#FFFFFF", border: `1px solid ${STATUS_COLORS.danger.border}`, borderRadius: 16, padding: 28, boxShadow: "0 12px 30px rgba(15, 23, 42, 0.08)" }}>
+          <AlertCircle size={30} color={STATUS_COLORS.danger.color} aria-hidden="true" />
+          <h1 style={{ color: TEXT_COLORS.body, fontSize: 22, margin: "14px 0 8px" }}>The agreement could not be opened</h1>
+          <p style={{ color: TEXT_COLORS.muted, lineHeight: 1.55, margin: 0 }}>{loadError || "A current agreement is not available yet."}</p>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 22 }}>
-            <button type="button" onClick={() => window.location.reload()} style={{ border: 0, borderRadius: 9, padding: "10px 16px", background: "#0329B2", color: "#FFFFFF", fontWeight: 700, cursor: "pointer" }}>Try again</button>
-            <Link href="/tutor/application-status" style={{ border: "1px solid #CBD5E1", borderRadius: 9, padding: "10px 16px", color: "#0F172A", fontWeight: 700, textDecoration: "none" }}>View application status</Link>
+            <button type="button" onClick={() => window.location.reload()} style={{ minHeight: 44, border: 0, borderRadius: 9, padding: "10px 16px", background: UI_COLORS.accent, color: "#FFFFFF", fontWeight: 700, cursor: "pointer" }}>Try again</button>
+            <Link href="/tutor/application-status" style={{ display: "inline-flex", alignItems: "center", minHeight: 44, boxSizing: "border-box", border: "1px solid #CBD5E1", borderRadius: 9, padding: "10px 16px", color: TEXT_COLORS.body, fontWeight: 700, textDecoration: "none" }}>View application status</Link>
           </div>
         </section>
       </main>
@@ -302,12 +304,12 @@ export default function AcceptTutorAgreementPage() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <Link
             href="/tutor/application-status"
-            style={{ color: "#0284C7", fontWeight: 700, fontSize: 13, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}
+            style={{ color: UI_COLORS.accent, fontWeight: 700, fontSize: 13, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}
           >
             ← Back to Application Status
           </Link>
-          <span style={{ fontSize: 12, color: "#64748B", fontWeight: 600 }}>
-            Jurisdiction: <strong style={{ color: "#0F172A" }}>Pakistan (ETO 2002)</strong>
+          <span style={{ fontSize: 12, color: TEXT_COLORS.muted, fontWeight: 600 }}>
+            Jurisdiction: <strong style={{ color: TEXT_COLORS.body }}>Pakistan (ETO 2002)</strong>
           </span>
         </div>
 
@@ -316,7 +318,7 @@ export default function AcceptTutorAgreementPage() {
           <div
             style={{
               background: "#FFFFFF",
-              border: "2px solid #10B981",
+              border: `2px solid ${STATUS_COLORS.success.color}`,
               borderRadius: 16,
               padding: "32px 28px",
               marginBottom: 28,
@@ -329,8 +331,8 @@ export default function AcceptTutorAgreementPage() {
                   width: 52,
                   height: 52,
                   borderRadius: "50%",
-                  background: "#ECFDF5",
-                  color: "#059669",
+                  background: STATUS_COLORS.success.bg,
+                  color: STATUS_COLORS.success.color,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -343,8 +345,8 @@ export default function AcceptTutorAgreementPage() {
                 <span
                   style={{
                     display: "inline-block",
-                    background: "#D1FAE5",
-                    color: "#065F46",
+                    background: STATUS_COLORS.success.border,
+                    color: STATUS_COLORS.success.color,
                     fontSize: 11,
                     fontWeight: 800,
                     letterSpacing: "0.06em",
@@ -356,18 +358,18 @@ export default function AcceptTutorAgreementPage() {
                 >
                   Active &amp; Legally Binding Contract
                 </span>
-                <h2 style={{ fontSize: 22, fontWeight: 800, color: "#0F172A", margin: "0 0 6px" }}>
+                <h2 style={{ fontSize: 22, fontWeight: 800, color: TEXT_COLORS.body, margin: "0 0 6px" }}>
                   Tutor Marketplace Agreement Executed
                 </h2>
-                <p style={{ fontSize: 14, color: "#475569", lineHeight: 1.5, margin: "0 0 16px" }}>
+                <p style={{ fontSize: 14, color: TEXT_COLORS.muted, lineHeight: 1.5, margin: "0 0 16px" }}>
                   Congratulations! Your explicit electronic contract has been accepted and recorded. Your tutor profile is now fully activated and eligible to bid on student requests and appear in TUTORERA's verified public directory.
                 </p>
 
                 {/* Audit Evidence Grid */}
                 <div
                   style={{
-                    background: "#F8FAFC",
-                    border: "1px solid #E2E8F0",
+                    background: STATUS_COLORS.neutral.bg,
+                    border: `1px solid ${UI_COLORS.border}`,
                     borderRadius: 10,
                     padding: "16px",
                     display: "grid",
@@ -378,16 +380,16 @@ export default function AcceptTutorAgreementPage() {
                   }}
                 >
                   <div>
-                    <span style={{ color: "#64748B", display: "block" }}>Contract Version:</span>
-                    <strong style={{ color: "#0F172A" }}>{executedRecord.agreementVersion}</strong>
+                    <span style={{ color: TEXT_COLORS.muted, display: "block" }}>Contract Version:</span>
+                    <strong style={{ color: TEXT_COLORS.body }}>{executedRecord.agreementVersion}</strong>
                   </div>
                   <div>
-                    <span style={{ color: "#64748B", display: "block" }}>Executed By:</span>
-                    <strong style={{ color: "#0F172A" }}>{executedRecord.electronicSignature}</strong>
+                    <span style={{ color: TEXT_COLORS.muted, display: "block" }}>Executed By:</span>
+                    <strong style={{ color: TEXT_COLORS.body }}>{executedRecord.electronicSignature}</strong>
                   </div>
                   <div>
-                    <span style={{ color: "#64748B", display: "block" }}>Execution Timestamp:</span>
-                    <strong style={{ color: "#0F172A" }}>
+                    <span style={{ color: TEXT_COLORS.muted, display: "block" }}>Execution Timestamp:</span>
+                    <strong style={{ color: TEXT_COLORS.body }}>
                       {new Date(executedRecord.acceptedAt).toLocaleString("en-PK", {
                         day: "numeric",
                         month: "short",
@@ -399,8 +401,8 @@ export default function AcceptTutorAgreementPage() {
                     </strong>
                   </div>
                   <div style={{ gridColumn: "1 / -1", wordBreak: "break-all" }}>
-                    <span style={{ color: "#64748B", display: "block" }}>Cryptographic SHA-256 Digest:</span>
-                    <code style={{ color: "#0369A1", background: "#E0F2FE", padding: "2px 6px", borderRadius: 4, fontSize: 11 }}>
+                    <span style={{ color: TEXT_COLORS.muted, display: "block" }}>Cryptographic SHA-256 Digest:</span>
+                    <code style={{ color: UI_COLORS.accent, background: STATUS_COLORS.info.bg, padding: "2px 6px", borderRadius: 4, fontSize: 11 }}>
                       {executedRecord.agreementHash}
                     </code>
                   </div>
@@ -413,7 +415,7 @@ export default function AcceptTutorAgreementPage() {
                     onClick={() => handleDownloadPdf(executedRecord.acceptanceId)}
                     disabled={downloadingPdf}
                     style={{
-                      background: "#0284C7",
+                      background: UI_COLORS.accent,
                       color: "#FFFFFF",
                       border: "none",
                       borderRadius: 10,
@@ -432,7 +434,7 @@ export default function AcceptTutorAgreementPage() {
                   <Link
                     href="/dashboard"
                     style={{
-                      background: "#0F172A",
+                      background: TEXT_COLORS.body,
                       color: "#FFFFFF",
                       borderRadius: 10,
                       padding: "11px 20px",
@@ -450,7 +452,7 @@ export default function AcceptTutorAgreementPage() {
                     href="/profile"
                     style={{
                       background: "#FFFFFF",
-                      color: "#334155",
+                      color: TEXT_COLORS.secondary,
                       border: "1px solid #CBD5E1",
                       borderRadius: 10,
                       padding: "11px 18px",
@@ -482,14 +484,14 @@ export default function AcceptTutorAgreementPage() {
           }}
         >
           {/* Header */}
-          <div style={{ borderBottom: "1px solid #E2E8F0", paddingBottom: 24, marginBottom: 28 }}>
+          <div style={{ borderBottom: `1px solid ${UI_COLORS.border}`, paddingBottom: 24, marginBottom: 28 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
               <div>
                 <span
                   style={{
                     display: "inline-block",
-                    background: "#EEF2FF",
-                    color: "#4338CA",
+                    background: STATUS_COLORS.info.bg,
+                    color: STATUS_COLORS.info.color,
                     fontSize: 11,
                     fontWeight: 800,
                     letterSpacing: "0.08em",
@@ -501,18 +503,18 @@ export default function AcceptTutorAgreementPage() {
                 >
                   Version {agreement?.version || "TTA-2026.1"} · Electronic Contracting
                 </span>
-                <h1 style={{ fontSize: 26, fontWeight: 900, color: "#0F172A", margin: "4px 0 8px", letterSpacing: "-0.02em" }}>
+                <h1 style={{ fontSize: 26, fontWeight: 900, color: TEXT_COLORS.body, margin: "4px 0 8px", letterSpacing: "-0.02em" }}>
                   {agreement?.title || "Tutor Marketplace & Independent Tutor Agreement"}
                 </h1>
-                <p style={{ fontSize: 14, color: "#475569", margin: 0, lineHeight: 1.5 }}>
+                <p style={{ fontSize: 14, color: TEXT_COLORS.muted, margin: 0, lineHeight: 1.5 }}>
                   Please review all clauses, operating rules, safeguarding requirements, and fee schedules carefully before signing electronically.
                 </p>
               </div>
 
               <div
                 style={{
-                  background: "#F8FAFC",
-                  border: "1px solid #E2E8F0",
+                  background: STATUS_COLORS.neutral.bg,
+                  border: `1px solid ${UI_COLORS.border}`,
                   borderRadius: 10,
                   padding: "10px 14px",
                   fontSize: 12,
@@ -520,8 +522,8 @@ export default function AcceptTutorAgreementPage() {
                   minWidth: 180,
                 }}
               >
-                <div style={{ color: "#64748B" }}>Effective Date:</div>
-                <div style={{ fontWeight: 700, color: "#0F172A" }}>
+                <div style={{ color: TEXT_COLORS.muted }}>Effective Date:</div>
+                <div style={{ fontWeight: 700, color: TEXT_COLORS.body }}>
                   {agreement?.effectiveDate
                     ? new Date(agreement.effectiveDate).toLocaleDateString("en-PK", {
                         day: "numeric",
@@ -537,30 +539,30 @@ export default function AcceptTutorAgreementPage() {
           {/* Legal Contracting Parties Box */}
           <div
             style={{
-              background: "#F8FAFC",
-              border: "1px solid #E2E8F0",
+              background: STATUS_COLORS.neutral.bg,
+              border: `1px solid ${UI_COLORS.border}`,
               borderRadius: 12,
               padding: "18px 20px",
               marginBottom: 24,
             }}
           >
-            <h3 style={{ fontSize: 13, fontWeight: 800, textTransform: "uppercase", color: "#64748B", margin: "0 0 12px", letterSpacing: "0.05em", display: "flex", alignItems: "center", gap: 6 }}>
-              <Scale size={16} color="#0284C7" /> Contracting Parties &amp; Legal Entities
+            <h3 style={{ fontSize: 13, fontWeight: 800, textTransform: "uppercase", color: TEXT_COLORS.muted, margin: "0 0 12px", letterSpacing: "0.05em", display: "flex", alignItems: "center", gap: 6 }}>
+              <Scale size={16} color={UI_COLORS.accent} /> Contracting Parties &amp; Legal Entities
             </h3>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16, fontSize: 13 }}>
               <div>
-                <span style={{ color: "#64748B", display: "block", fontSize: 11 }}>Platform Operator:</span>
-                <strong style={{ color: "#0F172A", display: "block" }}>{company?.legalName || "MENTISERA (SMC-Private) Limited"}</strong>
-                <span style={{ color: "#475569" }}>Trading as: {company?.tradingName || "TUTORERA®"}</span>
+                <span style={{ color: TEXT_COLORS.muted, display: "block", fontSize: 11 }}>Platform Operator:</span>
+                <strong style={{ color: TEXT_COLORS.body, display: "block" }}>{company?.legalName || "MENTISERA (SMC-Private) Limited"}</strong>
+                <span style={{ color: TEXT_COLORS.muted }}>Trading as: {company?.tradingName || "TUTORERA®"}</span>
                 <br />
-                <span style={{ color: "#64748B", fontSize: 12 }}>{company?.address || "Islamabad, Pakistan"} · {company?.email || "hello@mentisera.pk"}</span>
+                <span style={{ color: TEXT_COLORS.muted, fontSize: 12 }}>{company?.address || "Islamabad, Pakistan"} · {company?.email || "hello@mentisera.pk"}</span>
               </div>
               <div>
-                <span style={{ color: "#64748B", display: "block", fontSize: 11 }}>Independent Tutor:</span>
-                <strong style={{ color: "#0F172A", display: "block" }}>{verifiedName}</strong>
-                <span style={{ color: "#475569" }}>Account Email: {user?.email}</span>
+                <span style={{ color: TEXT_COLORS.muted, display: "block", fontSize: 11 }}>Independent Tutor:</span>
+                <strong style={{ color: TEXT_COLORS.body, display: "block" }}>{verifiedName}</strong>
+                <span style={{ color: TEXT_COLORS.muted }}>Account Email: {user?.email}</span>
                 <br />
-                <span style={{ color: "#64748B", fontSize: 12 }}>Application ID: {agreementInfo?.applicationId || "Verified"}</span>
+                <span style={{ color: TEXT_COLORS.muted, fontSize: 12 }}>Application ID: {agreementInfo?.applicationId || "Verified"}</span>
               </div>
             </div>
           </div>
@@ -568,23 +570,23 @@ export default function AcceptTutorAgreementPage() {
           {/* Transparent Fee Disclosure Card */}
           <div
             style={{
-              background: "#F0FDF4",
-              border: "1px solid #BBF7D0",
+              background: STATUS_COLORS.success.bg,
+              border: `1px solid ${STATUS_COLORS.success.border}`,
               borderRadius: 12,
               padding: "18px 20px",
               marginBottom: 28,
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-              <Building2 size={18} color="#15803D" />
-              <h3 style={{ fontSize: 14, fontWeight: 800, color: "#166534", margin: 0 }}>
+              <Building2 size={18} color={STATUS_COLORS.success.color} />
+              <h3 style={{ fontSize: 14, fontWeight: 800, color: STATUS_COLORS.success.color, margin: 0 }}>
                 Transparent Marketplace Fee &amp; Commission Disclosure
               </h3>
             </div>
-            <p style={{ fontSize: 13, color: "#15803D", margin: "0 0 10px", lineHeight: 1.5 }}>
+            <p style={{ fontSize: 13, color: STATUS_COLORS.success.color, margin: "0 0 10px", lineHeight: 1.5 }}>
               Under TUTORERA's standard commission structure, the platform deducts a standard <strong>{agreementInfo?.feeSchedule?.marketplaceFeePercent ?? 20}% platform fee</strong> on completed tutoring bookings to cover matchmaking, secure payment processing, dispute resolution, and continuous verification services.
             </p>
-            <div style={{ display: "flex", gap: 16, flexWrap: "wrap", fontSize: 12, color: "#166534" }}>
+            <div style={{ display: "flex", gap: 16, flexWrap: "wrap", fontSize: 12, color: STATUS_COLORS.success.color }}>
               <span>✓ Payouts processed every Monday via Bank Transfer / Raast</span>
               <span>✓ No hidden charges or registration sign-up fees</span>
               <span>✓ Direct earnings statements generated with each booking</span>
@@ -594,10 +596,10 @@ export default function AcceptTutorAgreementPage() {
           {/* Full Agreement Text Reader */}
           <div style={{ marginBottom: 28 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 800, color: "#0F172A", margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
-                <FileText size={18} color="#0284C7" /> Master Agreement Terms &amp; Conditions
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: TEXT_COLORS.body, margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
+                <FileText size={18} color={UI_COLORS.accent} /> Master Agreement Terms &amp; Conditions
               </h3>
-              <span style={{ fontSize: 12, color: "#64748B" }}>Scroll through all clauses below</span>
+              <span style={{ fontSize: 12, color: TEXT_COLORS.muted }}>Scroll through all clauses below</span>
             </div>
 
             <div
@@ -610,7 +612,7 @@ export default function AcceptTutorAgreementPage() {
                 background: "#FAFAFA",
                 fontSize: 13,
                 lineHeight: 1.7,
-                color: "#334155",
+                color: TEXT_COLORS.secondary,
                 whiteSpace: "pre-wrap",
                 fontFamily: "system-ui, -apple-system, sans-serif",
               }}
@@ -619,8 +621,8 @@ export default function AcceptTutorAgreementPage() {
 
               {/* Pakistan Schedule Display */}
               {agreement?.countrySchedule && (
-                <div style={{ marginTop: 24, paddingTop: 18, borderTop: "2px solid #E2E8F0" }}>
-                  <h4 style={{ fontSize: 15, fontWeight: 800, color: "#0F172A", margin: "0 0 10px" }}>
+                <div style={{ marginTop: 24, paddingTop: 18, borderTop: `2px solid ${UI_COLORS.border}` }}>
+                  <h4 style={{ fontSize: 15, fontWeight: 800, color: TEXT_COLORS.body, margin: "0 0 10px" }}>
                     Schedule PK — Pakistan Specific Legal Provisions
                   </h4>
                   <p>{agreement.countrySchedule}</p>
@@ -630,14 +632,14 @@ export default function AcceptTutorAgreementPage() {
           </div>
 
           {/* 6 Mandatory Consents (Un-prechecked) */}
-          <div style={{ borderTop: "1px solid #E2E8F0", paddingTop: 28, marginBottom: 28 }}>
+          <div style={{ borderTop: `1px solid ${UI_COLORS.border}`, paddingTop: 28, marginBottom: 28 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-              <ShieldCheck size={20} color="#0284C7" />
-              <h3 style={{ fontSize: 16, fontWeight: 800, color: "#0F172A", margin: 0 }}>
+              <ShieldCheck size={20} color={UI_COLORS.accent} />
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: TEXT_COLORS.body, margin: 0 }}>
                 Mandatory Declarations &amp; Consents
               </h3>
             </div>
-            <p style={{ fontSize: 13, color: "#64748B", margin: "0 0 18px" }}>
+            <p style={{ fontSize: 13, color: TEXT_COLORS.muted, margin: "0 0 18px" }}>
               All 6 declarations are mandatory. You must review and confirm each statement individually:
             </p>
 
@@ -653,8 +655,8 @@ export default function AcceptTutorAgreementPage() {
                       alignItems: "flex-start",
                       padding: "14px 16px",
                       borderRadius: 10,
-                      background: isChecked ? "#F0F9FF" : "#F8FAFC",
-                      border: `1px solid ${isChecked ? "#BAE6FD" : "#E2E8F0"}`,
+                      background: isChecked ? STATUS_COLORS.info.bg : STATUS_COLORS.neutral.bg,
+                      border: `1px solid ${isChecked ? STATUS_COLORS.info.border : UI_COLORS.border}`,
                       cursor: "pointer",
                       transition: "all 0.15s ease",
                     }}
@@ -667,16 +669,16 @@ export default function AcceptTutorAgreementPage() {
                         marginTop: 3,
                         width: 18,
                         height: 18,
-                        accentColor: "#0284C7",
+                        accentColor: UI_COLORS.accent,
                         cursor: "pointer",
                         flexShrink: 0,
                       }}
                     />
                     <div>
-                      <span style={{ display: "block", fontSize: 13, fontWeight: 700, color: isChecked ? "#0369A1" : "#0F172A", marginBottom: 3 }}>
+                      <span style={{ display: "block", fontSize: 13, fontWeight: 700, color: isChecked ? UI_COLORS.accent : TEXT_COLORS.body, marginBottom: 3 }}>
                         {index + 1}. {item.label}
                       </span>
-                      <span style={{ display: "block", fontSize: 12, color: "#475569", lineHeight: 1.5 }}>
+                      <span style={{ display: "block", fontSize: 12, color: TEXT_COLORS.muted, lineHeight: 1.5 }}>
                         {item.description}
                       </span>
                     </div>
@@ -689,7 +691,7 @@ export default function AcceptTutorAgreementPage() {
           {/* Typed Electronic Signature Section */}
           <div
             style={{
-              background: "#F8FAFC",
+              background: STATUS_COLORS.neutral.bg,
               border: "1px solid #CBD5E1",
               borderRadius: 12,
               padding: "24px 22px",
@@ -697,17 +699,17 @@ export default function AcceptTutorAgreementPage() {
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-              <Lock size={18} color="#0284C7" />
-              <h3 style={{ fontSize: 15, fontWeight: 800, color: "#0F172A", margin: 0 }}>
+              <Lock size={18} color={UI_COLORS.accent} />
+              <h3 style={{ fontSize: 15, fontWeight: 800, color: TEXT_COLORS.body, margin: 0 }}>
                 Electronic Signature (Electronic Transactions Ordinance, 2002)
               </h3>
             </div>
-            <p style={{ fontSize: 13, color: "#475569", margin: "0 0 16px", lineHeight: 1.5 }}>
+            <p style={{ fontSize: 13, color: TEXT_COLORS.muted, margin: "0 0 16px", lineHeight: 1.5 }}>
               To execute this agreement, please type your full legal name exactly as verified on your national identity document / CNIC (<strong>{verifiedName}</strong>).
             </p>
 
             <div style={{ marginBottom: 12 }}>
-              <label htmlFor="electronicSignature" style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 6 }}>
+              <label htmlFor="electronicSignature" style={{ display: "block", fontSize: 12, fontWeight: 700, color: TEXT_COLORS.secondary, marginBottom: 6 }}>
                 Full Legal Name Signature:
               </label>
               <input
@@ -720,10 +722,10 @@ export default function AcceptTutorAgreementPage() {
                   width: "100%",
                   padding: "12px 14px",
                   borderRadius: 8,
-                  border: `2px solid ${signatureMatches ? "#10B981" : signature.length > 0 ? "#F87171" : "#CBD5E1"}`,
+                  border: `2px solid ${signatureMatches ? STATUS_COLORS.success.color : signature.length > 0 ? "#F87171" : "#CBD5E1"}`,
                   fontSize: 15,
                   fontWeight: 600,
-                  color: "#0F172A",
+                  color: TEXT_COLORS.body,
                   background: "#FFFFFF",
                   outline: "none",
                   boxSizing: "border-box",
@@ -732,17 +734,17 @@ export default function AcceptTutorAgreementPage() {
             </div>
 
             {/* Signature Validation Feedback */}
-            <div style={{ fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
+            <div aria-live="polite" style={{ fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
               {signatureMatches ? (
-                <span style={{ color: "#059669", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <span style={{ color: STATUS_COLORS.success.color, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 4 }}>
                   <CheckCircle2 size={15} /> Signature matches verified identity record ("{verifiedName}").
                 </span>
               ) : signature.length > 0 ? (
-                <span style={{ color: "#DC2626", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <span style={{ color: TEXT_COLORS.danger, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 4 }}>
                   <AlertCircle size={15} /> Signature must match your verified legal name: "{verifiedName}".
                 </span>
               ) : (
-                <span style={{ color: "#64748B" }}>
+                <span style={{ color: TEXT_COLORS.muted }}>
                   Expected signature format: <strong>{verifiedName}</strong>
                 </span>
               )}
@@ -760,12 +762,12 @@ export default function AcceptTutorAgreementPage() {
                 padding: "16px 24px",
                 border: "none",
                 borderRadius: 10,
-                background: canSubmit ? "linear-gradient(135deg, #0284C7 0%, #0369A1 100%)" : "#94A3B8",
+                background: canSubmit ? UI_COLORS.accentGradient : "#94A3B8",
                 color: "#FFFFFF",
                 fontSize: 15,
                 fontWeight: 800,
                 cursor: canSubmit ? "pointer" : "not-allowed",
-                boxShadow: canSubmit ? "0 4px 12px rgba(2, 132, 199, 0.3)" : "none",
+                boxShadow: canSubmit ? "0 4px 12px rgba(3, 41, 178, 0.3)" : "none",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -783,7 +785,7 @@ export default function AcceptTutorAgreementPage() {
               )}
             </button>
 
-            <div style={{ textAlign: "center", fontSize: 12, color: "#64748B" }}>
+            <div style={{ textAlign: "center", fontSize: 12, color: TEXT_COLORS.muted }}>
               By executing, an immutable contract record, audit log, and cryptographic hash will be certified under Pakistan law.
             </div>
           </div>
