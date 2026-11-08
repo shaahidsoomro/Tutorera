@@ -20,7 +20,7 @@ export async function reserveOffer(requestId: Types.ObjectId, offer: InstanceTyp
       );
       if (!locked.matchedCount) throw { statusCode: 409, message: "This request has already been matched with another tutor." };
       const updated = await Bid.updateOne(
-        { _id: offer._id, request: requestId, status: { $in: ACTIVE_OFFER_STATES }, amount: offer.amount, expiresAt: { $eq: offer.expiresAt, $gt: new Date() } },
+        { _id: offer._id, request: requestId, status: { $in: ACTIVE_OFFER_STATES }, amount: offer.amount, expiresAt: offer.expiresAt },
         parentApproval ? { $inc: { __v: 1 } } : { $set: { status: "payment_pending", paymentReservationId: reservationId, paymentOutcomeUnknown: false, ...(feeQuote ? { feeQuote } : {}), ...(startCheckout ? { checkoutStartedAt: new Date() } : {}), paymentPendingExpiresAt: new Date(Date.now() + PAYMENT_HOLD_MINUTES * 60 * 1000) } },
         { session },
       );
