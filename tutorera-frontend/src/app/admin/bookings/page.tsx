@@ -2,7 +2,6 @@
 import api from "@/lib/axios";
 import BookingMeetingPanel from "@/components/Dashboard/BookingMeetingPanel";
 import { UI_COLORS } from "@/lib/brand";
-import { TOTAL_FEE_PERCENT } from "@/lib/site";
 import { showError } from "@/lib/toast";
 import { useEffect,useState } from "react";
 
@@ -10,11 +9,13 @@ const C = UI_COLORS;
 
 interface Booking {
   _id: string;
-  student: { name: string; email: string; phone: string; };
-  tutor: { name: string; email: string; phone: string; };
+  student: { name: string; email: string; phone: string; } | null;
+  tutor: { name: string; email: string; phone: string; } | null;
   amount: number;
-  platformFee: number;
-  tutorPayout: number;
+  studentTotal?: number;
+  platformFee?: number;
+  tutorPayout?: number;
+  currency?: string;
   schedule: string;
   teachingMode: string;
   status: string;
@@ -23,7 +24,10 @@ interface Booking {
   createdAt: string;
 }
 
-const PLATFORM_FEE_PERCENT = TOTAL_FEE_PERCENT;
+function storedAmount(value: number | undefined, currency: string | undefined): string {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "Unavailable — needs review";
+  return `${currency || "Currency unavailable"} ${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+}
 
 export default function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -38,12 +42,6 @@ export default function BookingsPage() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [filter]);
-
-  const calculateFees = (amount: number) => {
-    const platformFee = Math.round(amount * PLATFORM_FEE_PERCENT / 100);
-    const tutorPayout = amount - platformFee;
-    return { platformFee, tutorPayout };
-  };
 
   const statusColors: Record<string, { bg: string; color: string }> = {
     upcoming: { bg: '#EEF5FF', color: '#0329B2' },
@@ -100,7 +98,6 @@ export default function BookingsPage() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {bookings.map(booking => {
-            const { platformFee, tutorPayout } = calculateFees(booking.amount);
             return (
               <div key={booking._id} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.5rem', border: '1px solid #e5e7eb' }}>
                 <BookingMeetingPanel bookingId={booking._id} role="admin" teachingMode={booking.teachingMode} status={booking.status} paymentStatus={booking.paymentStatus} />
@@ -109,10 +106,10 @@ export default function BookingsPage() {
                   {/* Student + Tutor */}
                   <div>
                     <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.5rem', textTransform: 'uppercase', fontWeight: '600' }}>Student → Tutor</p>
-                    <p style={{ fontSize: '0.9rem', fontWeight: '700', color: C.primary }}>{booking.student?.name}</p>
+                    <p style={{ fontSize: '0.9rem', fontWeight: '700', color: C.primary }}>{booking.student?.name || 'Student account unavailable — needs review'}</p>
                     <p style={{ fontSize: '0.8rem', color: C.gray500 }}>{booking.student?.email}</p>
                     <p style={{ fontSize: '0.8rem', color: '#9ca3af', margin: '0.25rem 0' }}>↓</p>
-                    <p style={{ fontSize: '0.9rem', fontWeight: '700', color: C.primary }}>{booking.tutor?.name}</p>
+                    <p style={{ fontSize: '0.9rem', fontWeight: '700', color: C.primary }}>{booking.tutor?.name || 'Tutor account unavailable — needs review'}</p>
                     <p style={{ fontSize: '0.8rem', color: C.gray500 }}>{booking.tutor?.email}</p>
                   </div>
 
@@ -122,15 +119,15 @@ export default function BookingsPage() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span style={{ fontSize: '0.8rem', color: C.gray500 }}>Total Amount</span>
-                        <span style={{ fontSize: '0.8rem', fontWeight: '700', color: C.primary }}>Rs. {booking.amount?.toLocaleString()}</span>
+                        <span style={{ fontSize: '0.8rem', fontWeight: '700', color: C.primary }}>{storedAmount(booking.studentTotal, booking.currency)}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: '0.8rem', color: C.gray500 }}>Platform Fee ({PLATFORM_FEE_PERCENT}%)</span>
-                        <span style={{ fontSize: '0.8rem', fontWeight: '600', color: '#d97706' }}>Rs. {platformFee.toLocaleString()}</span>
+                        <span style={{ fontSize: '0.8rem', color: C.gray500 }}>Stored platform fee</span>
+                        <span style={{ fontSize: '0.8rem', fontWeight: '600', color: '#d97706' }}>{storedAmount(booking.platformFee, booking.currency)}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #e5e7eb', paddingTop: '0.35rem' }}>
                         <span style={{ fontSize: '0.8rem', color: C.gray500 }}>Tutor Payout</span>
-                        <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#16a34a' }}>Rs. {tutorPayout.toLocaleString()}</span>
+                        <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#16a34a' }}>{storedAmount(booking.tutorPayout, booking.currency)}</span>
                       </div>
                     </div>
                   </div>

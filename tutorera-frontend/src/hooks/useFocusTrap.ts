@@ -15,9 +15,10 @@ export function useFocusTrap(isOpen: boolean, onClose: () => void) {
         previouslyFocused.current = document.activeElement as HTMLElement;
 
         const container = containerRef.current;
-        const focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-        const focusableEls = container?.querySelectorAll<HTMLElement>(focusableSelector);
-        focusableEls?.[0]?.focus();
+        const focusableSelector = 'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])';
+        const focusable = () => Array.from(container?.querySelectorAll<HTMLElement>(focusableSelector) || [])
+            .filter(element => !element.hidden && element.getClientRects().length > 0);
+        focusable()[0]?.focus();
 
         const handleKeyDown = (e: KeyboardEvent) => {
         if (e.key === "Escape") {
@@ -25,11 +26,15 @@ export function useFocusTrap(isOpen: boolean, onClose: () => void) {
             return;
         }
 
-        if (e.key === "Tab" && focusableEls && focusableEls.length > 0) {
+        const focusableEls = focusable();
+        if (e.key === "Tab" && focusableEls.length > 0) {
             const first = focusableEls[0];
             const last = focusableEls[focusableEls.length - 1];
 
-            if (e.shiftKey && document.activeElement === first) {
+            if (!container?.contains(document.activeElement)) {
+            e.preventDefault();
+            (e.shiftKey ? last : first).focus();
+            } else if (e.shiftKey && document.activeElement === first) {
             e.preventDefault();
             last.focus();
             } else if (!e.shiftKey && document.activeElement === last) {

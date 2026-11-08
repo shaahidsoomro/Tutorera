@@ -43,4 +43,17 @@ describe("school catalogue marketplace integration", () => {
    await SchoolOffering.updateOne({_id:id}, {$set:{status:"inactive"}}); expect((await put([id])).status).toBe(422);
    const after = await request(app).get("/api/v1/requests").set("Authorization", `Bearer ${token(tutor.id)}`); expect(after.body.requests).toHaveLength(1);
  });
+ it("never ranks tutors without approval for the requested subject and level", async () => {
+   jest.spyOn(MatchingService, "getActiveConfig").mockResolvedValue({ thresholds: { good: 70 } } as any);
+   jest.spyOn(MatchingService as any, "primeTutorCalendars").mockResolvedValue(undefined);
+   const score = jest.spyOn(MatchingService, "calculateMatchScore").mockResolvedValue({ score: 80, tier: "great", scoreBreakdown: {}, reasons: [], isColdStartExploration: false } as any);
+   const tuition = { subject: "Mathematics", level: "Matric (9th & 10th)" } as any;
+   const approved = { _id: "approved", subjectEligibility: [{ subject: "Mathematics", status: "approved", levels: [tuition.level] }] } as any;
+   const wrongLevel = { _id: "wrong-level", subjectEligibility: [{ subject: "Mathematics", status: "approved", levels: ["University / Degree"] }] } as any;
+   const pending = { _id: "pending", subjectEligibility: [{ subject: "Mathematics", status: "pending", levels: [tuition.level] }] } as any;
+   const ranked = await MatchingService.rankTutors(tuition, [approved, wrongLevel, pending]);
+   expect(ranked).toHaveLength(1);
+   expect(ranked[0].tutorProfile).toBe(approved);
+   expect(score).toHaveBeenCalledTimes(1);
+ });
 });

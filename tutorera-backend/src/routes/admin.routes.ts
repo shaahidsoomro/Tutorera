@@ -39,6 +39,7 @@ import {
   updateRefundRequestStatus,
   recordExternalRefundTransfer,
   verifyExternalRefundTransfer,
+  voidExternalRefundEvidence,
 } from "../controllers/refundRequest.controller";
 import { getAllReferrals, getReferralConfigAdmin, updateReferralConfigAdmin, exportReferralsAdmin, flagReferralFraud } from "../controllers/referral.controller";
 import { getAllStudentRatings, getStudentRatings } from "../controllers/studentRating.controller";
@@ -223,6 +224,7 @@ router.get("/refund-requests", requirePermission("claims.read"), getAllRefundReq
 router.patch("/refund-requests/:id", requirePermission("claims.manage"), updateRefundRequestStatus);
 router.post("/refund-requests/:id/external-transfer", requirePermission("payment.refund"), recordExternalRefundTransfer);
 router.post("/refund-requests/:id/external-verify", requirePermission("payment.refund"), verifyExternalRefundTransfer);
+router.post("/refund-requests/:id/external-evidence/void", requirePermission("payment.refund"), voidExternalRefundEvidence);
 router.get("/referrals", requirePermission("growth.read"), getAllReferrals);
 router.get("/referrals/export", requirePermission("growth.read"), exportReferralsAdmin);
 router.patch("/referrals/:id/fraud", requirePermission("growth.manage"), flagReferralFraud);

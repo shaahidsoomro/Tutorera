@@ -3,7 +3,6 @@
 import { useState } from "react";
 import api from "@/lib/axios";
 import { DashRequest } from "@/types/dashboard";
-import { GST_ON_PLATFORM_FEE_PERCENT, PLATFORM_FEE_PERCENT } from "@/lib/site";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 import { DashCard } from "./ui";
@@ -25,12 +24,9 @@ export default function PlaceBidModal({ request, onClose, onSuccess }: Props) {
   const currency = request.currency || "Market currency";
 
   const value = Number(amount) || 0;
-  const fee = Math.round((value * PLATFORM_FEE_PERCENT) / 100);
-  const tax = Math.round((fee * GST_ON_PLATFORM_FEE_PERCENT) / 100);
-  const net = value - fee - tax;
 
   async function submit() {
-    if (!value) {
+    if (!Number.isFinite(value) || value <= 0) {
       setError("Enter a valid offer amount.");
       return;
     }
@@ -80,11 +76,12 @@ export default function PlaceBidModal({ request, onClose, onSuccess }: Props) {
             )}
           </DashCard>
 
-          {error && <div className={styles.error}>{error}</div>}
+          {error && <div className={styles.error} role="alert">{error}</div>}
 
           <div className={styles.field}>
-            <label className={styles.label}>Your offer ({currency}/{request.pricingUnit || "hour"})</label>
+            <label className={styles.label} htmlFor="offer-amount">Your offer ({currency}/{request.pricingUnit || "hour"})</label>
             <input
+              id="offer-amount"
               className={styles.input}
               type="number"
               min="1"
@@ -95,13 +92,14 @@ export default function PlaceBidModal({ request, onClose, onSuccess }: Props) {
           </div>
 
           <div className={styles.field}>
-            <label className={styles.label}>Availability</label>
-            <input className={styles.input} value={availability} onChange={(e) => setAvailability(e.target.value)} placeholder="Mon, Wed, Fri after 5 PM" />
+            <label className={styles.label} htmlFor="offer-availability">Availability</label>
+            <input id="offer-availability" className={styles.input} value={availability} onChange={(e) => setAvailability(e.target.value)} placeholder="Mon, Wed, Fri after 5 PM" />
           </div>
 
           <div className={styles.field}>
-            <label className={styles.label}>Message</label>
+            <label className={styles.label} htmlFor="offer-message">Message</label>
             <textarea
+              id="offer-message"
               className={styles.textarea}
               rows={4}
               value={message}
@@ -116,11 +114,8 @@ export default function PlaceBidModal({ request, onClose, onSuccess }: Props) {
           </div>
 
           <DashCard padding="sm" style={{ background: STATUS_COLORS.warning.bg, boxShadow: "none", fontSize: 13, lineHeight: 1.7 }}>
-            <strong>Estimated earnings</strong><br />
-            Agreed rate: {currency} {value.toLocaleString()}<br />
-            TUTORERA fee ({PLATFORM_FEE_PERCENT}%): {currency} {fee.toLocaleString()}<br />
-            Tax ({GST_ON_PLATFORM_FEE_PERCENT}% of fee): {currency} {tax.toLocaleString()}<br />
-            <strong>Estimated net: {currency} {net.toLocaleString()}</strong>
+            <strong>Fees and earnings</strong><br />
+            Your proposed rate is {currency} {value.toLocaleString()}. The final fee, applicable tax and tutor earnings are calculated using the market policy when an offer is accepted; this screen does not yet provide a market-specific quote.
           </DashCard>
         </div>
 

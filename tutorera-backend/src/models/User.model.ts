@@ -178,4 +178,6 @@ userSchema.pre("validate", function () {
   }
 });
 
+userSchema.index({ createdAt: -1 });
+
 export default mongoose.model<IUser>("User", userSchema);

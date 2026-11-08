@@ -668,6 +668,9 @@ export class MatchingService {
     const config = await this.getActiveConfig();
     await this.primeTutorCalendars(tutors, request);
     const scoredPromises = tutors.map(async (t) => {
+      // A zero compatibility score is still a result, so it must not enter
+      // fallback notification lists when the subject or level is unapproved.
+      if (!checkSubjectEligibility(t, request.subject, request.level).eligible) return null;
       const match = await this.calculateMatchScore(request, t, config);
       if (!match) return null;
 
@@ -794,6 +797,8 @@ export class MatchingService {
       .lean();
 
     const scoredPromises = candidateRequests.map(async (reqDoc) => {
+      // Invitations affect ranking, but never override teaching approval.
+      if (!checkSubjectEligibility(tutor, reqDoc.subject, reqDoc.level).eligible) return null;
       const match = await this.calculateMatchScore(reqDoc as any, tutor, config);
       const isInvited = Boolean(options.tutorUserId && (reqDoc as unknown as { invitedTutors?: { toString(): string }[] }).invitedTutors?.some((id) => id.toString() === options.tutorUserId));
       if (!match || (!isInvited && match.score < config.thresholds.notificationMinimum)) return null;

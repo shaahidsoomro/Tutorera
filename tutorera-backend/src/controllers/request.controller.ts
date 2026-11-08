@@ -45,6 +45,30 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+/** Informational quote only; acceptance recalculates and freezes the policy. */
+export const previewOfferFees = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!mongoose.isValidObjectId(req.params.id)) { res.status(400).json({ success: false, message: "Invalid request." }); return; }
+  const amount = req.body?.amount;
+  if (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0 || amount > 1_000_000_000) {
+    res.status(422).json({ success: false, message: "Enter a valid offer amount." }); return;
+  }
+  const request = await Request.findById(req.params.id).select("countryCode currency status expiresAt isDirect targetTutor allowCounterOffers budget").lean();
+  if (!request || (request.isDirect && String(request.targetTutor) !== String(req.user?._id))) { res.status(404).json({ success: false, message: "Request not found." }); return; }
+  if (!["open", "published", "receiving_offers", "negotiating"].includes(request.status) || (request.expiresAt && request.expiresAt <= new Date())) {
+    res.status(409).json({ success: false, message: "This request is not accepting offers." }); return;
+  }
+  if (request.allowCounterOffers === false && amount !== request.budget) { res.status(422).json({ success: false, message: "This request only accepts the proposed rate." }); return; }
+  if (!request.currency || !/^[A-Z]{3}$/.test(request.currency) || !request.countryCode) { res.status(409).json({ success: false, code: "QUOTE_CURRENCY_UNAVAILABLE", message: "A fee preview is unavailable until the request market and currency are confirmed." }); return; }
+  try {
+    const quote = await resolveMarketplaceFees(amount, request.countryCode);
+    if (quote.currency !== request.currency) { res.status(409).json({ success: false, code: "QUOTE_CURRENCY_MISMATCH", message: "A fee preview is unavailable for this currency. Contact support before accepting a booking." }); return; }
+    res.json({ success: true, quote: { currency: request.currency, subtotal: quote.subtotal, tutorFee: quote.tutorFee, tax: quote.tax, tutorNet: quote.tutorNet } });
+  } catch (error) {
+    const err = error as { statusCode?: number; message?: string };
+    res.status(err.statusCode || 500).json({ success: false, message: err.statusCode ? err.message : "Fee preview is unavailable." });
+  }
+};
+
 // @desc    Create tuition request
 // @route   POST /api/requests
 // @access  Private (student)

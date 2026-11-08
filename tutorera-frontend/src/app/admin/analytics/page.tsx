@@ -17,9 +17,8 @@ interface Overview {
   newUsersThisWeek: number;
   newUsersThisMonth: number;
   totalBookings: number;
-  revenueThisMonth: number;
-  platformFeeThisMonth: number;
-  pendingPayouts: number;
+  financialByCurrency: Record<string, { revenueThisMonth: number; platformFeeThisMonth: number; pendingPayouts: number; missingAmounts: number }>;
+  missingCurrencyRecords: number;
 }
 
 interface SignupPoint {
@@ -38,12 +37,12 @@ interface BookingStatus {
 interface TopTutor {
   name: string;
   count: number;
-  revenue: number;
 }
 
 interface RecentPayment {
   _id: string;
-  amount: number;
+  studentTotal?: number;
+  currency?: string;
   status: string;
   createdAt: string;
   student: { name: string };
@@ -101,6 +100,10 @@ export default function AnalyticsPage() {
   }, []);
 
   const ov = data?.overview;
+  const financialTotals = (key: "revenueThisMonth" | "platformFeeThisMonth" | "pendingPayouts") => {
+    const entries = Object.entries(ov?.financialByCurrency || {});
+    return entries.length ? entries.map(([currency, values]) => `${currency} ${values[key].toLocaleString(undefined, { maximumFractionDigits: 2 })}`).join(" · ") : "No recorded amounts";
+  };
 
   // Map signupTrend to "Week 1" ... "Week 8" labels matching Quizzera
   const chartData = (data?.signupTrend ?? []).map((d, i) => ({
@@ -145,9 +148,9 @@ export default function AnalyticsPage() {
           { label: 'Total Users',         value: ov?.totalUsers,           sub: `+${ov?.newUsersThisMonth ?? 0} this month`,  color: C.accent, bg: C.accentLight, border: STATUS_COLORS.info.border },
           { label: 'New This Week',        value: ov?.newUsersThisWeek,     sub: 'registered users',                           color: C.success, bg: STATUS_COLORS.success.bg, border: STATUS_COLORS.success.border },
           { label: 'Total Bookings',       value: ov?.totalBookings,        sub: 'all time',                                   color: C.purple, bg: STATUS_COLORS.purple.bg, border: STATUS_COLORS.purple.border },
-          { label: 'Revenue This Month',   value: `Rs. ${(ov?.revenueThisMonth ?? 0).toLocaleString()}`,  sub: 'confirmed payments', color: STATUS_COLORS.warning.color, bg: STATUS_COLORS.warning.bg, border: STATUS_COLORS.warning.border },
-          { label: 'Platform Fee MTD',     value: `Rs. ${(ov?.platformFeeThisMonth ?? 0).toLocaleString()}`, sub: '20% + 3% GST',  color: C.accent, bg: C.accentLight, border: STATUS_COLORS.info.border },
-          { label: 'Pending Payouts',      value: `Rs. ${(ov?.pendingPayouts ?? 0).toLocaleString()}`,    sub: 'owed to tutors',      color: C.error, bg: STATUS_COLORS.danger.bg, border: STATUS_COLORS.danger.border },
+          { label: 'Confirmed Booking Totals', value: financialTotals('revenueThisMonth'), sub: 'bookings created this month, by currency', color: STATUS_COLORS.warning.color, bg: STATUS_COLORS.warning.bg, border: STATUS_COLORS.warning.border },
+          { label: 'Platform Fees', value: financialTotals('platformFeeThisMonth'), sub: 'confirmed bookings created this month', color: C.accent, bg: C.accentLight, border: STATUS_COLORS.info.border },
+          { label: 'Pending Payouts',      value: financialTotals('pendingPayouts'), sub: 'stored payouts by currency', color: C.error, bg: STATUS_COLORS.danger.bg, border: STATUS_COLORS.danger.border },
         ].map(card => (
           <div key={card.label} style={{ backgroundColor: 'white', borderRadius: '0.75rem', padding: '1.25rem', border: `1px solid ${C.border}`, borderTop: `3px solid ${card.color}` }}>
             <p style={{ fontSize: '0.72rem', fontWeight: '700', color: card.color, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>{card.label}</p>
@@ -156,6 +159,10 @@ export default function AnalyticsPage() {
           </div>
         ))}
       </div>
+
+      {((ov?.missingCurrencyRecords || 0) > 0 || Object.values(ov?.financialByCurrency || {}).some(value => value.missingAmounts > 0)) && (
+        <p role="status" style={{ color: TEXT_COLORS.body, margin: '0 0 1.5rem' }}>Some financial entries have missing currency or amounts. Totals include only recorded values and require reconciliation.</p>
+      )}
 
       {/* Charts Row */}
       <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }} className="analytics-chart-row">
@@ -255,9 +262,6 @@ export default function AnalyticsPage() {
                     <p style={{ fontSize: '0.875rem', fontWeight: '600', color: C.primary, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {tutor.name}
                     </p>
-                    <p style={{ fontSize: '0.72rem', color: C.gray500, margin: 0 }}>
-                      Rs. {tutor.revenue.toLocaleString()} earned
-                    </p>
                   </div>
                   <span style={{ fontSize: '0.8rem', fontWeight: '700', color: C.accent, backgroundColor: C.accentLight, padding: '0.2rem 0.6rem', borderRadius: '999px', flexShrink: 0 }}>
                     {tutor.count} {tutor.count === 1 ? 'booking' : 'bookings'}
@@ -292,7 +296,7 @@ export default function AnalyticsPage() {
                     </p>
                   </div>
                   <span style={{ fontSize: '0.875rem', fontWeight: '800', color: C.success, flexShrink: 0 }}>
-                    Rs. {(payment.amount || 0).toLocaleString()}
+                    {typeof payment.studentTotal === 'number' ? `${payment.currency || 'Currency unavailable'} ${payment.studentTotal.toLocaleString()}` : 'Amount unavailable'}
                   </span>
                 </div>
               ))}

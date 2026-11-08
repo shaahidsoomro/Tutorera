@@ -6,8 +6,9 @@ import ParentProfile from "../models/ParentProfile.model";
 import User from "../models/User.model";
 import { Types } from "mongoose";
 import Booking from "../models/Booking.model";
-import { assertParentBookingPolicy } from "../services/parentBookingPolicy.service";
+import { assertParentBookingPolicy, ParentBookingPolicyError } from "../services/parentBookingPolicy.service";
 import PaymentLedger from "../models/PaymentLedger.model";
+import RefundRequest from "../models/RefundRequest.model";
 import mongoose from "mongoose";
 import BookedSlot from "../models/BookedSlot.model";
 import { syncStudentTutorRelationship } from "../services/relationship.service";
@@ -519,7 +520,9 @@ export const getAllBookings = async (req: AuthRequest, res: Response): Promise<v
     .populate("tutor", "name email phone")
     .sort("-createdAt")
     .skip(skip)
-    .limit(limitNum);
+    .limit(limitNum)
+    // Avoid applying schema defaults to missing historical financial fields.
+    .lean();
 
   res.status(200).json({ success: true, total, page: pageNum, bookings });
 };
@@ -545,19 +548,23 @@ export const updatePaymentStatus = async (
     res.status(409).json({ success: false, code: "INDEPENDENT_PAYOUT_VERIFICATION_REQUIRED", message: "Only an independent finance reviewer can verify a documented external transfer." });
     return;
   }
-  const requiredPermission = paymentStatus !== undefined ? "payment.manage" : payoutStatus === "approved" ? "payout.approve" : "payout.process";
-  if (!hasPermission(req.user?.adminRole, req.user?.adminPermissions, requiredPermission)) {
-    res.status(403).json({ success: false, code: "PERMISSION_DENIED", message: `You do not have permission to ${paymentStatus !== undefined ? "change payment state" : "process payouts"}.` });
+  const needsPaymentPermission = paymentStatus !== undefined || paymentNote !== undefined;
+  const needsPayoutPermission = payoutStatus !== undefined || payoutNote !== undefined || payoutSettlementReference !== undefined || payoutSettlementMethod !== undefined || payoutEvidenceReference !== undefined || !needsPaymentPermission;
+  const payoutPermission = payoutStatus === "approved" ? "payout.approve" : "payout.process";
+  if ((needsPaymentPermission && !hasPermission(req.user?.adminRole, req.user?.adminPermissions, "payment.manage")) ||
+      (needsPayoutPermission && !hasPermission(req.user?.adminRole, req.user?.adminPermissions, payoutPermission))) {
+    res.status(403).json({ success: false, code: "PERMISSION_DENIED", message: "You do not have permission for every requested financial action." });
     return;
   }
 
-  const booking = await Booking.findById(req.params.id)
+  let booking = await Booking.findById(req.params.id)
     .populate("student", "name")
     .populate("tutor", "name");
   if (!booking) {
     res.status(404).json({ success: false, message: "Booking not found" });
     return;
   }
+  const previousFinancialState = { status: booking.status, paymentStatus: booking.paymentStatus, payoutStatus: booking.payoutStatus };
 
   const paymentTransitions: Record<string, string[]> = {
     pending: ["received", "failed", "disputed"], received: ["confirmed", "failed", "disputed"],
@@ -586,19 +593,10 @@ export const updatePaymentStatus = async (
     return;
   }
 
-  if (paymentStatus === "confirmed" && booking.request && booking.bid) {
-    try {
-      await assertParentBookingPolicy({ student: (booking.student as any)._id || booking.student, request: booking.request,
-        bid: booking.bid, amount: booking.studentTotal, currency: booking.currency || "PKR" });
-    } catch (err: any) {
-      res.status(err.statusCode || 409).json({ success: false, code: err.code || "PARENT_POLICY_BLOCKED", message: err.message });
-      return;
-    }
-  }
-
   // Update only fields that are provided
   if (paymentStatus !== undefined) booking.paymentStatus = paymentStatus;
-  if (paymentStatus === "confirmed") booking.paymentConfirmedAt = new Date();
+  // Keep the original confirmation time when a dispute is later resolved.
+  if (paymentStatus === "confirmed" && !booking.paymentConfirmedAt) booking.paymentConfirmedAt = new Date();
   if (paymentNote !== undefined) booking.paymentNote = paymentNote;
   if (payoutStatus !== undefined) {
     booking.payoutStatus = payoutStatus;
@@ -619,20 +617,71 @@ export const updatePaymentStatus = async (
   // Handle booking status change from admin
   // Booking lifecycle changes use the dedicated status endpoint.
 
-  // ← ADD: Auto-calculate fees with new 23% when payment confirmed
-  await booking.save();
+  // Apply only if none of the state used by the checks changed meanwhile.
+  const changes = booking.$getChanges().$set || {};
+  const session = await mongoose.startSession();
+  const transactionResult: { booking: typeof booking | null } = { booking: null };
+  try {
+    await session.withTransaction(async () => {
+      if (payoutStatus === "approved" || payoutStatus === "processing") {
+        const refundInReview = await RefundRequest.exists({ booking: booking!._id, status: "approved", settlementReference: { $exists: true } }).session(session);
+        if (refundInReview) throw Object.assign(new Error("An external refund is awaiting review; the tutor payout must remain held."), { code: "REFUND_RECONCILIATION_PENDING" });
+      }
+      if (paymentStatus === "confirmed") {
+        const student = booking!.student as any;
+        if (!student) throw new ParentBookingPolicyError("STUDENT_ACCOUNT_UNAVAILABLE", "The student account is unavailable. Finance must reconcile the booking before payment confirmation.");
+        if (booking!.request && booking!.bid) {
+          await assertParentBookingPolicy({ student: student._id || student, request: booking!.request, bid: booking!.bid,
+            amount: booking!.studentTotal, currency: booking!.currency || "PKR", session });
+        } else {
+          // Legacy bookings without these links cannot prove a minor's exact
+          // guardian approval or spending authorization; do not infer it.
+          const account = await User.findById(student._id || student).select("role isMinor").session(session);
+          if (!account || !["student", "parent"].includes(account.role)) throw new ParentBookingPolicyError("STUDENT_ACCOUNT_UNAVAILABLE", "The student account is unavailable. Finance must reconcile the booking before payment confirmation.");
+          if (account.role === "student" && account.isMinor) throw new ParentBookingPolicyError("PARENT_POLICY_RECONCILIATION_REQUIRED", "This legacy booking is missing the request or offer needed to verify guardian approval.");
+        }
+      }
+      const updatedBooking = await Booking.findOneAndUpdate(
+        { _id: booking!._id, ...previousFinancialState },
+        { $set: changes },
+        { returnDocument: "after", runValidators: true, session },
+      ).populate("student", "name").populate("tutor", "name");
+      if (!updatedBooking) throw Object.assign(new Error("Financial state changed"), { code: "FINANCIAL_STATE_CHANGED" });
+      transactionResult.booking = updatedBooking;
+      await logAudit({
+        action: "booking_financial_state_changed",
+        actor: req.user?.name || "Admin",
+        actorId: req.user?._id?.toString(),
+        entity: "Booking",
+        targetId: updatedBooking._id.toString(),
+        metadata: { previousPaymentStatus: previousFinancialState.paymentStatus, paymentStatus: updatedBooking.paymentStatus,
+          previousPayoutStatus: previousFinancialState.payoutStatus, payoutStatus: updatedBooking.payoutStatus,
+          reason: paymentNote || payoutNote },
+      }, session);
+      if (paymentStatus === "confirmed") await logAudit({
+        action: "payment_confirmed", actor: req.user?.name || "Admin", actorId: req.user?._id?.toString(),
+        entity: "Booking", targetId: updatedBooking._id.toString(), metadata: { amount: updatedBooking.amount },
+      }, session);
+    });
+  } catch (error) {
+    if ((error as { code?: string }).code === "REFUND_RECONCILIATION_PENDING") {
+      res.status(409).json({ success: false, code: "REFUND_RECONCILIATION_PENDING", message: (error as Error).message });
+      return;
+    }
+    if (error instanceof ParentBookingPolicyError) {
+      res.status(error.statusCode).json({ success: false, code: error.code, message: error.message });
+      return;
+    }
+    if ((error as { code?: string }).code === "FINANCIAL_STATE_CHANGED") {
+      res.status(409).json({ success: false, code: "FINANCIAL_STATE_CHANGED", message: "The booking changed while you were reviewing it. Refresh and try again." });
+      return;
+    }
+    throw error;
+  } finally { await session.endSession(); }
+  if (!transactionResult.booking) throw new Error("Financial update did not complete");
+  booking = transactionResult.booking;
 
   if (paymentStatus === "confirmed") {
-    await logAudit({
-      action: "payment_confirmed",
-      actor: req.user?.name || "Admin",
-      actorId: req.user?._id?.toString(),
-      entity: "Booking",
-      targetId: booking._id.toString(),
-      targetName: `${(booking.student as any)?.name || "Student"} → ${(booking.tutor as any)?.name || "Tutor"}`,
-      metadata: { amount: booking.amount },
-    });
-
     try {
       const studentUser = await User.findById(booking.student).select("email");
       if (studentUser) {
@@ -736,6 +785,9 @@ export const verifyExternalPayout = async (req: AuthRequest, res: Response): Pro
   if (!hasPermission(req.user?.adminRole, req.user?.adminPermissions, "payout.process")) {
     res.status(403).json({ success: false, code: "PERMISSION_DENIED" }); return;
   }
+  if (!actor) {
+    res.status(403).json({ success: false, code: "REVIEWER_ID_REQUIRED", message: "An identifiable finance reviewer is required." }); return;
+  }
   const { settlementReference, verificationEvidence, note } = req.body || {};
   if (typeof settlementReference !== "string" || settlementReference.trim().length < 8 ||
       typeof verificationEvidence !== "string" || verificationEvidence.trim().length < 8 ||
@@ -762,13 +814,15 @@ export const verifyExternalPayout = async (req: AuthRequest, res: Response): Pro
     await session.withTransaction(async () => {
       const changed = await Booking.findOneAndUpdate(
         { _id: booking._id, status: "completed", paymentStatus: "confirmed", payoutStatus: "processing",
-          payoutSettlementReference: settlementReference.trim(), payoutInitiatedBy: { $ne: actor } },
+          payoutSettlementReference: settlementReference.trim(), payoutInitiatedBy: booking.payoutInitiatedBy },
         { $set: { payoutStatus: "paid", payoutPaidAt: new Date(), payoutVerifiedBy: actor,
           payoutNote: `Manually reconciled external transfer; ${note.trim().slice(0, 250)}`,
           payoutEvidenceReference: verificationEvidence.trim().slice(0, 300) } },
         { new: true, session }
       );
       if (!changed) throw Object.assign(new Error("Payout was already reconciled or changed."), { statusCode: 409 });
+      const priorEvent = await PaymentLedger.exists({ provider: "external_transfer", providerEventId: `payout-${changed._id}` }).session(session);
+      if (priorEvent) throw Object.assign(new Error("A payout ledger event already exists; reconcile it before retrying."), { statusCode: 409 });
       await PaymentLedger.findOneAndUpdate(
         { provider: "external_transfer", providerEventId: `payout-${changed._id}` },
         { $setOnInsert: {
@@ -784,6 +838,9 @@ export const verifyExternalPayout = async (req: AuthRequest, res: Response): Pro
             verificationMode: "two_person_external_statement_review", note: note.trim().slice(0, 250) },
         } }, { upsert: true, new: true, session }
       );
+      await logAudit({ action: "external_payout_verified", actor: req.user?.name || "Finance", actorId: actor.toString(),
+        entity: "Booking", targetId: changed._id.toString(),
+        metadata: { reference: settlementReference.trim(), reviewer: actor.toString(), evidence: verificationEvidence.trim() } }, session);
       claimedId = changed._id.toString();
     });
   } catch (err: any) {
@@ -793,9 +850,6 @@ export const verifyExternalPayout = async (req: AuthRequest, res: Response): Pro
   if (!claimedId) { res.status(409).json({ success: false, code: "PAYOUT_RECONCILIATION_FAILED" }); return; }
   const claimed = await Booking.findById(claimedId);
   if (!claimed) { res.status(409).json({ success: false, code: "PAYOUT_RECONCILIATION_FAILED" }); return; }
-  await logAudit({ action: "external_payout_verified", actor: req.user?.name || "Finance", actorId: actor?.toString(),
-    entity: "Booking", targetId: claimed._id.toString(),
-    metadata: { reference: settlementReference.trim(), reviewer: actor?.toString(), evidence: verificationEvidence.trim() } });
   res.status(200).json({ success: true, message: "External transfer independently reconciled; payout recorded as paid.", booking: claimed });
 };
 
@@ -957,6 +1011,9 @@ export const getAnalytics = async (req: AuthRequest, res: Response): Promise<voi
   const weekStart   = new Date(now); weekStart.setDate(now.getDate() - 7);
   const monthStart  = new Date(now.getFullYear(), now.getMonth(), 1);
   const eightWeeksAgo = new Date(now); eightWeeksAgo.setDate(now.getDate() - 56);
+  const weekBoundaries = Array.from({ length: 9 }, (_, index) => {
+    const boundary = new Date(now); boundary.setDate(now.getDate() - (8 - index) * 7); return boundary;
+  });
 
   // ── Parallel fetches ──
   const [
@@ -964,36 +1021,70 @@ export const getAnalytics = async (req: AuthRequest, res: Response): Promise<voi
     newUsersThisWeek,
     newUsersThisMonth,
     totalBookings,
-    allBookings,
-    monthBookings,
-    recentSignups,
-    pendingPayoutBookings,
+    bookingGroups,
+    topTutors,
+    monthFinancialGroups,
+    signupGroups,
+    pendingPayoutGroups,
   ] = await Promise.all([
     User.countDocuments(),
     User.countDocuments({ createdAt: { $gte: weekStart } }),
     User.countDocuments({ createdAt: { $gte: monthStart } }),
     Booking.countDocuments(),
-    Booking.find()
-      .select("status paymentStatus amount platformFee tutorPayout tutor createdAt")
-      .populate("tutor", "name"),
-    Booking.find({ createdAt: { $gte: monthStart }, paymentStatus: "confirmed" })
-      .select("amount platformFee tutorPayout"),
-    User.find({ createdAt: { $gte: eightWeeksAgo } }).select("createdAt"),
-    Booking.find({ paymentStatus: "confirmed", payoutStatus: "pending" }).select("tutorPayout"),
+    Booking.aggregate<{ _id: string; count: number }>([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
+    Booking.aggregate<{ name: string; count: number }>([
+      { $match: { tutor: { $type: "objectId" } } },
+      { $group: { _id: "$tutor", count: { $sum: 1 } } },
+      { $lookup: { from: User.collection.name, localField: "_id", foreignField: "_id", as: "tutor" } },
+      { $unwind: "$tutor" },
+      { $sort: { count: -1, _id: 1 } },
+      { $limit: 5 },
+      { $project: { _id: 0, name: "$tutor.name", count: 1 } },
+    ]),
+    Booking.aggregate<{ _id: string | null; records: number; revenue: number; fee: number; missingAmounts: number }>([
+      { $match: { createdAt: { $gte: monthStart }, paymentStatus: "confirmed" } },
+      { $group: { _id: "$currency", records: { $sum: 1 },
+        revenue: { $sum: { $cond: [{ $isNumber: "$studentTotal" }, "$studentTotal", 0] } },
+        fee: { $sum: { $cond: [{ $isNumber: "$platformFee" }, "$platformFee", 0] } },
+        missingAmounts: { $sum: { $add: [{ $cond: [{ $isNumber: "$studentTotal" }, 0, 1] }, { $cond: [{ $isNumber: "$platformFee" }, 0, 1] }] } },
+      } },
+    ]),
+    User.aggregate<{ _id: Date; count: number }>([
+      { $match: { createdAt: { $gte: eightWeeksAgo, $lt: now } } },
+      { $bucket: { groupBy: "$createdAt", boundaries: weekBoundaries, output: { count: { $sum: 1 } } } },
+    ]),
+    Booking.aggregate<{ _id: string | null; records: number; total: number; missingAmounts: number }>([
+      { $match: { paymentStatus: "confirmed", payoutStatus: "pending" } },
+      { $group: { _id: "$currency", records: { $sum: 1 },
+        total: { $sum: { $cond: [{ $isNumber: "$tutorPayout" }, "$tutorPayout", 0] } },
+        missingAmounts: { $sum: { $cond: [{ $isNumber: "$tutorPayout" }, 0, 1] } },
+      } },
+    ]),
   ]);
 
   // ── Revenue ──
-  const revenueThisMonth     = monthBookings.reduce((sum, b) => sum + (b.amount || 0), 0);
-  const platformFeeThisMonth = monthBookings.reduce((sum, b) => sum + (b.platformFee || 0), 0);
-  const pendingPayouts       = pendingPayoutBookings.reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
+  const financialByCurrency: Record<string, { revenueThisMonth: number; platformFeeThisMonth: number; pendingPayouts: number; missingAmounts: number }> = {};
+  let missingCurrencyRecords = 0;
+  const bucket = (currency: string | null, records: number) => {
+    if (!currency || !/^[A-Z]{3}$/.test(currency)) { missingCurrencyRecords += records; return null; }
+    return financialByCurrency[currency] ||= { revenueThisMonth: 0, platformFeeThisMonth: 0, pendingPayouts: 0, missingAmounts: 0 };
+  };
+  for (const group of monthFinancialGroups) {
+    const entry = bucket(group._id, group.records); if (!entry) continue;
+    entry.revenueThisMonth += group.revenue; entry.platformFeeThisMonth += group.fee; entry.missingAmounts += group.missingAmounts;
+  }
+  for (const group of pendingPayoutGroups) {
+    const entry = bucket(group._id, group.records); if (!entry) continue;
+    entry.pendingPayouts += group.total; entry.missingAmounts += group.missingAmounts;
+  }
 
   // ── Plan breakdown ──
   // ── Booking status breakdown ──
   const bookingStatusBreakdown = {
-    upcoming:  allBookings.filter(b => b.status === "upcoming").length,
-    ongoing:   allBookings.filter(b => b.status === "ongoing").length,
-    completed: allBookings.filter(b => b.status === "completed").length,
-    cancelled: allBookings.filter(b => b.status === "cancelled").length,
+    upcoming:  bookingGroups.find(b => b._id === "upcoming")?.count || 0,
+    ongoing:   bookingGroups.find(b => b._id === "ongoing")?.count || 0,
+    completed: bookingGroups.find(b => b._id === "completed")?.count || 0,
+    cancelled: bookingGroups.find(b => b._id === "cancelled")?.count || 0,
   };
 
   // ── Signup trend — last 8 weeks ──
@@ -1001,10 +1092,7 @@ export const getAnalytics = async (req: AuthRequest, res: Response): Promise<voi
   for (let i = 7; i >= 0; i--) {
     const weekEnd   = new Date(now); weekEnd.setDate(now.getDate() - i * 7);
     const weekBegin = new Date(weekEnd); weekBegin.setDate(weekEnd.getDate() - 7);
-    const count = recentSignups.filter(u => {
-      const d = new Date(u.createdAt as unknown as string);
-      return d >= weekBegin && d < weekEnd;
-    }).length;
+    const count = signupGroups.find(group => group._id.getTime() === weekBegin.getTime())?.count || 0;
     signupTrend.push({
       week:  `W${8 - i}`,
       label: weekEnd.toLocaleDateString("en-PK", { month: "short", day: "numeric" }),
@@ -1013,26 +1101,13 @@ export const getAnalytics = async (req: AuthRequest, res: Response): Promise<voi
   }
 
   // ── Top 5 tutors by bookings ──
-  const tutorMap: Record<string, { name: string; count: number; revenue: number }> = {};
-  allBookings.forEach(b => {
-    if (!b.tutor) return;
-    const tutor = b.tutor as unknown as { _id: { toString(): string }; name: string };
-    const id = tutor._id.toString();
-    if (!tutorMap[id]) tutorMap[id] = { name: tutor.name, count: 0, revenue: 0 };
-    tutorMap[id].count++;
-    tutorMap[id].revenue += b.amount || 0;
-  });
-  const topTutors = Object.values(tutorMap)
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
-
   // ── Recent confirmed payments ──
   const recentPayments = await Booking.find({ paymentStatus: "confirmed" })
     .populate("student", "name")
     .populate("tutor", "name")
     .sort("-updatedAt")
     .limit(5)
-    .select("amount student tutor status createdAt");
+    .select("studentTotal currency student tutor status createdAt").lean();
 
   res.status(200).json({
     success: true,
@@ -1041,9 +1116,8 @@ export const getAnalytics = async (req: AuthRequest, res: Response): Promise<voi
       newUsersThisWeek,
       newUsersThisMonth,
       totalBookings,
-      revenueThisMonth,
-      platformFeeThisMonth,
-      pendingPayouts,
+      financialByCurrency,
+      missingCurrencyRecords,
     },
     signupTrend,
     bookingStatusBreakdown,

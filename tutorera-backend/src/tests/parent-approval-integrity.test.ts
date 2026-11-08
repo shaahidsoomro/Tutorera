@@ -9,6 +9,7 @@ import ParentBookingApproval from "../models/ParentBookingApproval.model";
 import Booking from "../models/Booking.model";
 import { assertParentBookingPolicy, ParentBookingPolicyError } from "../services/parentBookingPolicy.service";
 import { resolveMarketplaceFees } from "../services/pricing.service";
+import { Types } from "mongoose";
 
 jest.mock("../utils/sendEmail", () => jest.fn().mockResolvedValue(undefined));
 beforeAll(() => { process.env.JWT_SECRET = "test-secret-at-least-16-chars"; });
@@ -74,6 +75,10 @@ function decision(agent: Awaited<ReturnType<typeof makeFixture>>["agent"], id: s
 }
 
 describe("Phase 4 Fix 4 — exact guardian consent and spending safeguards", () => {
+  it("fails closed when the booking account no longer exists", async () => {
+    await expect(assertParentBookingPolicy({ student: new Types.ObjectId(), bid: new Types.ObjectId(), request: new Types.ObjectId(), amount: 100, currency: "PKR" }))
+      .rejects.toMatchObject({ code: "STUDENT_ACCOUNT_UNAVAILABLE" });
+  });
   it("accepts the unchanged payable total even when the checkout fee quote is not yet stored on the bid", async () => {
     const fixture = await makeFixture();
     const approval = await queueApproval(fixture);

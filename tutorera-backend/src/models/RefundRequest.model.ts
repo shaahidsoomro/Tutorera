@@ -24,6 +24,7 @@ export interface IRefundRequest extends Document {
   settlementEvidenceReference?: string;
   settlementInitiatedBy?: Types.ObjectId;
   settlementVerifiedBy?: Types.ObjectId;
+  voidedSettlements?: Array<{ reference?: string; method?: string; originalEvidence?: string; initiatedBy?: Types.ObjectId; reviewedBy?: Types.ObjectId; reviewEvidence?: string; reason?: string; reviewedAt?: Date }>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -49,6 +50,7 @@ const refundRequestSchema = new Schema<IRefundRequest>(
     settlementEvidenceReference: { type: String, trim: true },
     settlementInitiatedBy: { type: Schema.Types.ObjectId, ref: "User" },
     settlementVerifiedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    voidedSettlements: [{ reference: String, method: String, originalEvidence: String, initiatedBy: { type: Schema.Types.ObjectId, ref: "User" }, reviewedBy: { type: Schema.Types.ObjectId, ref: "User" }, reviewEvidence: String, reason: String, reviewedAt: Date }],
   },
   { timestamps: true }
 );

@@ -157,5 +157,7 @@ const bookingSchema = new Schema<IBooking>(
 
 bookingSchema.index({ tutor: 1, payoutStatus: 1, payoutPaidAt: -1 });
 bookingSchema.index({ countryCode: 1, currency: 1, createdAt: -1 });
+bookingSchema.index({ paymentStatus: 1, createdAt: -1 });
+bookingSchema.index({ paymentStatus: 1, payoutStatus: 1 });
 
 export default mongoose.model<IBooking>("Booking", bookingSchema);

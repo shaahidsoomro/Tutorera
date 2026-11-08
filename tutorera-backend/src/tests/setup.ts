@@ -15,6 +15,7 @@ process.env.NODE_ENV = "test";
 // real (single-node) replica set in memory so transactional code under test
 // behaves exactly like it does against Atlas in production.
 let replSet: MongoMemoryReplSet;
+let isolatedTestDb: mongoose.mongo.Db | undefined;
 
 beforeAll(async () => {
   // mongodb-memory-server v10 uses MONGOMS_MD5_CHECK; the older
@@ -29,11 +30,16 @@ beforeAll(async () => {
   });
   const uri = replSet.getUri();
   await mongoose.connect(uri);
+  isolatedTestDb = mongoose.connection.db;
 }, 120000);
 
 afterEach(async () => {
   // Reset all collections between tests so one test's data never leaks into
   // another — each test should be able to run in isolation, in any order.
+  // Refuse destructive cleanup if application code replaced the connection.
+  if (!isolatedTestDb || mongoose.connection.db !== isolatedTestDb || !["127.0.0.1", "localhost", "::1"].includes(mongoose.connection.host)) {
+    throw new Error("Refusing test cleanup outside the isolated MongoDB instance");
+  }
   const collections = mongoose.connection.collections;
   for (const key of Object.keys(collections)) {
     await collections[key].deleteMany({});

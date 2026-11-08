@@ -30,7 +30,9 @@ const bookedSlotSchema = new Schema<IBookedSlot>(
 
 // Prevent double booking — same tutor, same date, same startTime
 bookedSlotSchema.index({ tutor: 1, date: 1, startTime: 1 }, { unique: true });
-bookedSlotSchema.index({ tutor: 1, startAt: 1 }, { unique: true, sparse: true });
+// A compound sparse index still includes legacy slots when `tutor` exists but
+// `startAt` does not. Restrict this constraint to normalized UTC instants.
+bookedSlotSchema.index({ tutor: 1, startAt: 1 }, { unique: true, partialFilterExpression: { startAt: { $type: "date" } } });
 bookedSlotSchema.index({ tutor: 1, startAt: 1, endAt: 1 });
 
 export default mongoose.model<IBookedSlot>("BookedSlot", bookedSlotSchema);

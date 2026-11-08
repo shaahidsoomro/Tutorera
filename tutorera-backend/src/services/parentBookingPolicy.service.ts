@@ -36,6 +36,9 @@ export async function assertParentBookingPolicy(args: {
   // Consent-confirmed links are authoritative. Never trust a parent ID supplied
   // by the checkout browser, and never rely on a denormalized Booking.parent.
   const studentRecord = await User.findById(student).select("role isMinor parentConsentVerified parentGuardianEmail").session(session || null);
+  if (!studentRecord || !["student", "parent"].includes(studentRecord.role)) {
+    throw new ParentBookingPolicyError("STUDENT_ACCOUNT_UNAVAILABLE", "The student account is unavailable. Finance must reconcile the booking before payment confirmation.", 409);
+  }
   const supervisedMinor = studentRecord?.role === "student" && studentRecord.isMinor === true;
   if (supervisedMinor && !studentRecord?.parentConsentVerified) {
     throw new ParentBookingPolicyError("GUARDIAN_CONSENT_REQUIRED",
