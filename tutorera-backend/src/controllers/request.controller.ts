@@ -60,12 +60,15 @@ export const previewOfferFees = async (req: AuthRequest, res: Response): Promise
   if (request.allowCounterOffers === false && amount !== request.budget) { res.status(422).json({ success: false, message: "This request only accepts the proposed rate." }); return; }
   if (!request.currency || !/^[A-Z]{3}$/.test(request.currency) || !request.countryCode) { res.status(409).json({ success: false, code: "QUOTE_CURRENCY_UNAVAILABLE", message: "A fee preview is unavailable until the request market and currency are confirmed." }); return; }
   try {
-    const quote = await resolveMarketplaceFees(amount, request.countryCode);
-    if (quote.currency !== request.currency) { res.status(409).json({ success: false, code: "QUOTE_CURRENCY_MISMATCH", message: "A fee preview is unavailable for this currency. Contact support before accepting a booking." }); return; }
+    const quote = await resolveMarketplaceFees(amount, request.countryCode, request.currency);
     res.json({ success: true, quote: { currency: request.currency, subtotal: quote.subtotal, tutorFee: quote.tutorFee, tax: quote.tax, tutorNet: quote.tutorNet } });
   } catch (error) {
-    const err = error as { statusCode?: number; message?: string };
-    res.status(err.statusCode || 500).json({ success: false, message: err.statusCode ? err.message : "Fee preview is unavailable." });
+    const err = error as { statusCode?: number; code?: string; message?: string };
+    res.status(err.statusCode || 500).json({
+      success: false,
+      code: err.statusCode ? err.code : undefined,
+      message: err.statusCode ? err.message : "Fee preview is unavailable.",
+    });
   }
 };
 
@@ -872,7 +875,7 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
   // launch /payments/booking/:id/checkout without a UI contract change.
   if (isDirectTutorAccept) {
     let feeQuote: MarketplaceFeeQuote;
-    try { feeQuote = await resolveMarketplaceFees(bid.amount, request.countryCode || "PK"); }
+    try { feeQuote = await resolveMarketplaceFees(bid.amount, request.countryCode || "PK", bid.currency || request.currency); }
     catch (err: any) { res.status(err?.statusCode || 422).json({ success: false, message: err.message || "Fee quote unavailable" }); return; }
 
     const session = await mongoose.startSession();
@@ -935,7 +938,7 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
   // Quote and freeze the active admin fee policy before initiating checkout.
   // A later configuration edit must not alter the settled booking fee.
   let feeQuote: MarketplaceFeeQuote;
-  try { feeQuote = await resolveMarketplaceFees(bid.amount, request.countryCode || "PK"); }
+  try { feeQuote = await resolveMarketplaceFees(bid.amount, request.countryCode || "PK", bid.currency || request.currency); }
   catch (error: any) { res.status(error?.statusCode || 422).json({ success: false, message: error?.message || "Unable to calculate booking fees." }); return; }
 
   const checkoutStudent = await User.findById(request.student).select("name email phone");
@@ -1052,7 +1055,7 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
         tutor: bid.tutor,
       }).session(session);
 
-      const fees = bid.feeQuote || await resolveMarketplaceFees(bid.amount, request.countryCode || "PK");
+      const fees = bid.feeQuote || await resolveMarketplaceFees(bid.amount, request.countryCode || "PK", bid.currency || request.currency);
       await assertParentBookingPolicy({
         student: request.student, request: request._id, bid: bid._id,
         amount: fees.studentTotal, currency: bid.currency || request.currency || "PKR", session,

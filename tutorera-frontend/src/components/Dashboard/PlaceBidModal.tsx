@@ -86,7 +86,7 @@ export default function PlaceBidModal({ request, onClose, onSuccess }: Props) {
 
         <div className={styles.modalBody}>
           <DashCard padding="sm" style={{ background: UI_COLORS.gray50, boxShadow: "none" }}>
-            <strong>{request.subject} · {request.level}</strong>
+            <strong>{request.subject} - {request.level}</strong>
             <p>Student proposed {currency} {request.budget.toLocaleString()}/{request.pricingUnit || "hour"}</p>
             {!request.allowCounterOffers && (
               <p style={{ fontSize: 12, color: TEXT_COLORS.muted }}>
@@ -127,7 +127,7 @@ export default function PlaceBidModal({ request, onClose, onSuccess }: Props) {
             />
             {Boolean(message && /(\+92|0092|92)?[\s\-]?3[0-9]{2}[\s\-]?[0-9]{7}|\b\d[\d\s\-]{8,12}\d\b|whatsapp|whatsap|watsapp|wa\.me|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/i.test(message)) && (
               <p style={{ fontSize: 12, color: STATUS_COLORS.warning.color, background: STATUS_COLORS.warning.bg, padding: "6px 10px", borderRadius: 6, margin: "6px 0 0", border: `1px solid ${STATUS_COLORS.warning.border}` }}>
-                ⚠️ <strong>Safety Warning:</strong> Sharing phone numbers, WhatsApp, or emails violates platform rules and will flag your offer for moderation.
+                <strong>Safety warning:</strong> Sharing phone numbers, WhatsApp, or emails violates platform rules and will flag your offer for moderation.
               </p>
             )}
           </div>
@@ -144,7 +144,7 @@ export default function PlaceBidModal({ request, onClose, onSuccess }: Props) {
                   <span style={{ fontSize: 12, color: TEXT_COLORS.muted }}>The market policy is recalculated and fixed when the offer is accepted.</span>
                 </>
               ) : (
-                <span>{quoteNote || `Your proposed rate is ${currency} ${value.toLocaleString()}. Calculating fees…`}</span>
+                <span>{quoteNote || `Your proposed rate is ${currency} ${value.toLocaleString()}. Calculating fees...`}</span>
               )}
             </div>
           </DashCard>

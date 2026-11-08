@@ -220,7 +220,7 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
     }
 
     await assertTutorCanOffer(request, offer.tutor as Types.ObjectId);
-    const feeQuote = await resolveMarketplaceFees(offer.amount, request.countryCode || "PK");
+    const feeQuote = await resolveMarketplaceFees(offer.amount, request.countryCode || "PK", offer.currency || request.currency);
 
     // Optional promo code discount applied to studentTotal before checkout
     let promoDiscount = 0;
@@ -363,7 +363,7 @@ export const retryOfferPayment = async (req: AuthRequest, res: Response): Promis
   if (request.status !== "awaiting_payment" || request.acceptedOffer?.toString() !== offer._id.toString() || !offer.paymentReservationId) { res.status(409).json({ success: false, code: "PAYMENT_RESERVATION_CHANGED", message: "This payment reservation needs review before another checkout can start." }); return; }
 
   // Reuse the originally quoted rates on retry (never recalculate a new fee).
-  const feeQuote = offer.feeQuote || await resolveMarketplaceFees(offer.amount, request.countryCode || "PK");
+  const feeQuote = offer.feeQuote || await resolveMarketplaceFees(offer.amount, request.countryCode || "PK", offer.currency || request.currency);
   offer.feeQuote = feeQuote;
   try {
     await assertParentBookingPolicy({ student: request.student, request: request._id, bid: offer._id,

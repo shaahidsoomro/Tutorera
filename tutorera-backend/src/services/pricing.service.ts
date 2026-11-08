@@ -36,7 +36,11 @@ export interface FeeBreakdown {
 // Applies approved FeeConfig rates. Historical bookings retain fee snapshots;
 // country TaxConfig describes regulatory classification but must never silently
 // override an explicit pricing policy or substitute for legal tax validation.
-export async function resolveMarketplaceFees(amount: number, countryCode = "PK"): Promise<MarketplaceFeeQuote> {
+export async function resolveMarketplaceFees(
+  amount: number,
+  countryCode = "PK",
+  expectedCurrency?: string,
+): Promise<MarketplaceFeeQuote> {
   if (!Number.isFinite(amount) || amount <= 0) {
     throw Object.assign(new Error("A positive tuition amount is required."), { statusCode: 422 });
   }
@@ -46,7 +50,9 @@ export async function resolveMarketplaceFees(amount: number, countryCode = "PK")
   if (!config) {
     // Existing production rates until an admin actively publishes a version.
     const fallback = calculateMarketplaceFees(amount);
-    return { ...fallback, currency: MARKETPLACE_FEES.currency, feeConfig: { ...MARKETPLACE_FEES, version: "legacy-2026-08-30", countryCode: code } };
+    const quote = { ...fallback, currency: MARKETPLACE_FEES.currency, feeConfig: { ...MARKETPLACE_FEES, version: "legacy-2026-08-30", countryCode: code } };
+    assertQuoteCurrency(quote, expectedCurrency);
+    return quote;
   }
   const cap = config.maximumFee;
   const charge = (rate: number) => Math.min(cap, Math.max(config.minimumFee, Math.round(amount * rate / 100)));
@@ -57,7 +63,7 @@ export async function resolveMarketplaceFees(amount: number, countryCode = "PK")
   if (tutorNet < 0) {
     throw Object.assign(new Error("Configured tutor fee and tax exceed the agreed amount."), { statusCode: 422 });
   }
-  return {
+  const quote = {
     subtotal: amount, studentFee, tutorFee, tax,
     studentTotal: amount + studentFee, tutorNet,
     currency: config.currency,
@@ -66,10 +72,28 @@ export async function resolveMarketplaceFees(amount: number, countryCode = "PK")
       minimumFee: config.minimumFee, maximumFee: config.maximumFee, taxPercent: config.taxPercent,
       effectiveDate: config.effectiveDate },
   };
+  assertQuoteCurrency(quote, expectedCurrency);
+  return quote;
+}
+
+/**
+ * Rates, caps and minimums are denominated in a FeeConfig's currency. Never
+ * apply them to an offer in another currency: that would produce a
+ * plausible-looking but false amount. Booking and checkout callers therefore
+ * pass their authoritative request currency; reporting callers may omit it.
+ */
+function assertQuoteCurrency(quote: MarketplaceFeeQuote, expectedCurrency?: string): void {
+  const expected = expectedCurrency?.trim().toUpperCase();
+  if (expected && quote.currency?.toUpperCase() !== expected) {
+    throw Object.assign(
+      new Error(`No active fee policy is configured for ${expected} in this market.`),
+      { statusCode: 409, code: "FEE_CURRENCY_MISMATCH" },
+    );
+  }
 }
 
 export async function calculateFees(amount: number, currency: string, countryCode = "PK", mode: "online" | "in-person" | "both" = "online"): Promise<FeeBreakdown> {
-  const quote = await resolveMarketplaceFees(amount, countryCode);
+  const quote = await resolveMarketplaceFees(amount, countryCode, currency);
   const cfg = quote.feeConfig;
   const taxCfg = await TaxConfig.findOne({ countryCode: countryCode.toUpperCase(), isActive: true }).lean();
   let amountUSD: number | undefined;

@@ -48,6 +48,7 @@ describe("POST /requests/:id/fee-preview", () => {
     const { tutor, request } = await setup({ currency: "USD" });
     const res = await call(tutor._id, request._id, 1000);
     expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: "FEE_CURRENCY_MISMATCH" }));
   });
 
   it("does not reveal another tutor's direct request", async () => {

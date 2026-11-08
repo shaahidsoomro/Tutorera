@@ -332,22 +332,28 @@ export const decideBookingApproval = async (req: AuthRequest, res: Response): Pr
   // Bid.feeQuote may not exist. Use the admin fee policy in that case, just
   // as the acceptance workflow does. Never quietly approve the raw bid rate
   // in place of the total the student will actually be charged.
+  const currentCurrency = (bid.currency || request.currency || "").toUpperCase();
+  if (request.currency && request.currency.toUpperCase() !== currentCurrency) {
+    res.status(409).json({ success: false, code: "PARENT_APPROVAL_QUOTE_CHANGED",
+      message: "This offer's final amount or currency has changed. Request a new guardian approval." });
+    return;
+  }
   let currentTotal: number;
   try {
     currentTotal = bid.feeQuote?.studentTotal ??
-      (await resolveMarketplaceFees(bid.amount, request.countryCode || "PK")).studentTotal;
+      (await resolveMarketplaceFees(bid.amount, request.countryCode || "PK", currentCurrency)).studentTotal;
   } catch {
     res.status(422).json({ success: false, code: "PARENT_APPROVAL_QUOTE_UNAVAILABLE",
       message: "The current checkout total cannot be verified. Try again later." });
     return;
   }
-  const currentCurrency = (bid.currency || request.currency || "").toUpperCase();
   // A previously stored checkout quote belongs to one specific bid subtotal.
   // Do not let changing Bid.amount while leaving feeQuote untouched satisfy
   // the parent's old approval.
   const storedQuoteIsStale = !!bid.feeQuote &&
     (!Number.isFinite(bid.feeQuote.subtotal) ||
-      Math.round(bid.feeQuote.subtotal * 100) !== Math.round(bid.amount * 100));
+      Math.round(bid.feeQuote.subtotal * 100) !== Math.round(bid.amount * 100) ||
+      (!!bid.feeQuote.currency && bid.feeQuote.currency.toUpperCase() !== currentCurrency));
   if (bid.request?.toString() !== approval.request.toString() ||
       storedQuoteIsStale ||
       !Number.isFinite(currentTotal) ||
