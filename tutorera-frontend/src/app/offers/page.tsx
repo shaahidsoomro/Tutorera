@@ -114,6 +114,7 @@ function OffersContent() {
   const [promoState, setPromoState] = useState<{ code: string; discountAmount: number; finalAmount: number; description: string } | null>(null);
   const [promoError, setPromoError] = useState("");
   const [promoChecking, setPromoChecking] = useState(false);
+  const [showAcceptConfirm, setShowAcceptConfirm] = useState<Offer | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -248,8 +249,15 @@ function OffersContent() {
   }
 
   function requestAccept(o: Offer) {
+    setShowAcceptConfirm(o);
+  }
+
+  function confirmAccept(o: Offer) {
     setStartingPayment(true);
-    action(o, "accept").finally(() => setStartingPayment(false));
+    action(o, "accept").finally(() => {
+      setStartingPayment(false);
+      setShowAcceptConfirm(null);
+    });
   }
 
   async function toggleShortlist(o: Offer) {
@@ -714,6 +722,73 @@ function OffersContent() {
               </article>
             );
           })}
+        </div>
+      )}
+
+      {showAcceptConfirm && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "1rem" }}>
+          <div style={{ background: "white", borderRadius: "0.75rem", boxShadow: "0 20px 25px rgba(0,0,0,0.1)", maxWidth: 500, width: "100%", maxHeight: "90vh", overflow: "auto" }}>
+            <div style={{ padding: "1.5rem", borderBottom: "1px solid #e2e8f0" }}>
+              <h2 style={{ fontSize: "1.25rem", fontWeight: 800, color: "#021550", margin: 0 }}>Confirm Booking</h2>
+              <p style={{ color: "#64748b", marginTop: "0.5rem", fontSize: "0.9rem" }}>Review terms before accepting this offer</p>
+            </div>
+
+            <div style={{ padding: "1.5rem", display: "grid", gap: "1.25rem" }}>
+              <div>
+                <strong style={{ fontSize: "0.95rem", color: "#021550" }}>Rate Agreement</strong>
+                <p style={{ margin: "0.5rem 0 0", color: "#475569", fontSize: "0.9rem" }}>
+                  Final agreed rate: <strong>{showAcceptConfirm.currency || showAcceptConfirm.request.currency} {showAcceptConfirm.amount.toLocaleString()}</strong> per {showAcceptConfirm.pricingUnit}
+                </p>
+              </div>
+
+              <div style={{ background: "#f8fafc", padding: "1rem", borderRadius: "0.5rem", border: "1px solid #e2e8f0" }}>
+                <strong style={{ fontSize: "0.9rem", color: "#021550", display: "block", marginBottom: "0.5rem" }}>📋 Cancellation Policy</strong>
+                <ul style={{ margin: 0, paddingLeft: "1.25rem", fontSize: "0.85rem", color: "#475569", lineHeight: 1.6 }}>
+                  <li>Cancel up to 24 hours before session: Full refund</li>
+                  <li>Cancel 1-24 hours before: 50% refund</li>
+                  <li>No-show or cancel within 1 hour: No refund</li>
+                </ul>
+                <a href="/cancellation-policy" target="_blank" rel="noopener noreferrer" style={{ display: "inline-block", marginTop: "0.5rem", color: "#0329b2", fontSize: "0.85rem", fontWeight: 600, textDecoration: "none" }}>
+                  View full policy →
+                </a>
+              </div>
+
+              <div style={{ background: "#fef2f2", padding: "1rem", borderRadius: "0.5rem", border: "1px solid #fecaca" }}>
+                <strong style={{ fontSize: "0.9rem", color: "#991b1b", display: "block", marginBottom: "0.5rem" }}>💰 First Session Guarantee</strong>
+                <p style={{ margin: 0, fontSize: "0.85rem", color: "#7f1d1d", lineHeight: 1.6 }}>
+                  If you're not satisfied with the first session, you can get a full refund or switch tutors at no extra cost within 48 hours.
+                </p>
+                <a href="/first-session-guarantee" target="_blank" rel="noopener noreferrer" style={{ display: "inline-block", marginTop: "0.5rem", color: "#dc2626", fontSize: "0.85rem", fontWeight: 600, textDecoration: "none" }}>
+                  Learn more →
+                </a>
+              </div>
+
+              <div style={{ background: "#eff6ff", padding: "1rem", borderRadius: "0.5rem", border: "1px solid #bfdbfe" }}>
+                <strong style={{ fontSize: "0.9rem", color: "#1e40af", display: "block", marginBottom: "0.5rem" }}>✓ By accepting this offer, you:</strong>
+                <ul style={{ margin: 0, paddingLeft: "1.25rem", fontSize: "0.85rem", color: "#1e3a8a", lineHeight: 1.6 }}>
+                  <li>Agree to the cancellation policy above</li>
+                  <li>Confirm receipt of the first session guarantee</li>
+                  <li>Will proceed to payment for {showAcceptConfirm.currency || showAcceptConfirm.request.currency} {showAcceptConfirm.amount.toLocaleString()}</li>
+                </ul>
+              </div>
+            </div>
+
+            <div style={{ padding: "1.5rem", borderTop: "1px solid #e2e8f0", display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setShowAcceptConfirm(null)}
+                style={{ padding: "0.75rem 1.5rem", background: "white", border: "1.5px solid #cbd5e1", borderRadius: "0.5rem", fontWeight: 600, fontSize: "0.9rem", cursor: "pointer", color: "#475569" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => confirmAccept(showAcceptConfirm)}
+                disabled={startingPayment}
+                style={{ padding: "0.75rem 1.5rem", background: "#10b981", border: "none", borderRadius: "0.5rem", fontWeight: 600, fontSize: "0.9rem", cursor: startingPayment ? "not-allowed" : "pointer", color: "white", opacity: startingPayment ? 0.6 : 1 }}
+              >
+                {startingPayment ? "Processing…" : "Accept & Pay"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

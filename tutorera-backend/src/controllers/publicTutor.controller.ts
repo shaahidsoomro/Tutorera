@@ -34,12 +34,17 @@ export const getPublicTutorById = async (req: AuthRequest, res: Response): Promi
     );
   }
 
+  const profileObj = profile.toObject();
   res.status(200).json({
     success: true,
     profile: {
-      ...profile.toObject(),
+      ...profileObj,
       averageResponseMinutes: responseMinutes,
       responseTimeFormatted: formatResponseTime(responseMinutes),
+      verificationBadges: {
+        degreeVerified: profileObj.degreeVerificationStatus === "approved",
+        policeVerified: profileObj.policeVerificationStatus === "approved",
+      },
     },
   });
 };
@@ -47,7 +52,7 @@ export const getPublicTutorById = async (req: AuthRequest, res: Response): Promi
 export const getPublicTutors = async (req: AuthRequest, res: Response): Promise<void> => {
   const {
     search, subject, level, country, countryCode, city, teachingMode, currency,
-    minPrice, maxPrice, minRating, language, curriculum,
+    minPrice, maxPrice, minRating, language, curriculum, verifiedOnly,
     page = "1", limit = "10", sort = "-averageRating", matchRequestId,
   } = req.query;
 
@@ -85,6 +90,7 @@ export const getPublicTutors = async (req: AuthRequest, res: Response): Promise<
     ...(maxPrice ? { $lte: Number(maxPrice) } : {}),
   };
   if (minRating) filter.averageRating = { $gte: Number(minRating) };
+  if (verifiedOnly === "true") filter.degreeVerificationStatus = "approved";
 
   const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
   const limitNum = Math.min(100, Math.max(1, parseInt(limit as string, 10) || 10));
@@ -92,7 +98,7 @@ export const getPublicTutors = async (req: AuthRequest, res: Response): Promise<
 
   const total = await TutorProfile.countDocuments(filter);
   const tutors = await TutorProfile.find(filter)
-    .select("user fullName city countryName countryCode subjects levels hourlyRate currency teachingMode averageRating totalReviews averageResponseMinutes lastActiveAt updatedAt isVerified verificationStatus marketplaceEligible")
+    .select("user fullName city countryName countryCode subjects levels hourlyRate currency teachingMode averageRating totalReviews averageResponseMinutes lastActiveAt updatedAt isVerified verificationStatus degreeVerificationStatus policeVerificationStatus marketplaceEligible")
     .populate("user", "name email avatar city countryCode countryName timezone currency")
     .sort(sort as string)
     .skip(skip)
@@ -101,6 +107,10 @@ export const getPublicTutors = async (req: AuthRequest, res: Response): Promise<
   const tutorsWithResponse = tutors.map((t) => {
     const obj = t.toObject() as any;
     obj.responseTimeFormatted = formatResponseTime(obj.averageResponseMinutes || 0);
+    obj.verificationBadges = {
+      degreeVerified: obj.degreeVerificationStatus === "approved",
+      policeVerified: obj.policeVerificationStatus === "approved",
+    };
     return obj;
   });
 
