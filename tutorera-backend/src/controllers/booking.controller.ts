@@ -40,9 +40,11 @@ export const getMyBookings = async (req: AuthRequest, res: Response): Promise<vo
   .populate("student", "name avatar")
   .populate("tutor", "name avatar")
   .populate("request", "subject level status")
+  .select("_id student tutor request amount finalAgreedRate currency pricingUnit status paymentStatus createdAt schedule teachingMode sessionCount")
   .sort("-createdAt")
   .skip(skip)
-  .limit(limitNum);
+  .limit(limitNum)
+  .lean();
 
   // Attach a computed real next-occurrence date/time alongside the raw
   // schedule string. Bookings created before this fix have no structured
@@ -117,6 +119,19 @@ export const updateBookingStatus = async (req: AuthRequest, res: Response): Prom
     return;
   }
 
+  if (isParent && status === "cancelled") {
+    const studentExists = await User.exists({ _id: booking.student, role: "student" });
+    if (!studentExists) {
+      res.status(403).json({ success: false, code: "STUDENT_NOT_FOUND", message: "Cannot modify booking for invalid student." });
+      return;
+    }
+    const parentAuthorized = await ParentProfile.exists({ user: req.user._id, "children.studentUser": booking.student });
+    if (!parentAuthorized) {
+      res.status(403).json({ success: false, code: "GUARDIAN_NOT_AUTHORIZED", message: "You are not an authorized guardian for this student." });
+      return;
+    }
+  }
+
   if (booking.status !== "upcoming") {
     res.status(400).json({
       success: false,
@@ -127,6 +142,33 @@ export const updateBookingStatus = async (req: AuthRequest, res: Response): Prom
 
   if (status === "ongoing" && booking.paymentStatus !== "confirmed") {
     res.status(409).json({ success: false, code: "PAYMENT_REQUIRED", message: "The student must complete verified payment before starting a lesson." });
+    return;
+  }
+
+  if (!booking.bid || !booking.request) {
+    res.status(409).json({ success: false, code: "DATA_INTEGRITY_ERROR", message: "This booking is missing critical references. Contact support to resolve." });
+    return;
+  }
+
+  const VALID_PAYMENT_TRANSITIONS: Record<string, string[]> = {
+    pending: ["confirmed", "failed"],
+    failed: ["confirmed"],
+    confirmed: ["refunded", "partially_refunded", "disputed"],
+    refunded: [],
+    partially_refunded: ["refunded"],
+    disputed: ["confirmed", "refunded"],
+    received: ["confirmed"],
+    chargeback: ["disputed"],
+  };
+
+  const currentPaymentStatus = booking.paymentStatus || "pending";
+  const allowedNextStates = VALID_PAYMENT_TRANSITIONS[currentPaymentStatus] || [];
+  if (status === "cancelled" && !["pending", "failed"].includes(currentPaymentStatus)) {
+    res.status(409).json({
+      success: false,
+      code: "INVALID_PAYMENT_STATE_FOR_CANCELLATION",
+      message: `Cannot cancel a booking with payment status "${currentPaymentStatus}". Contact support if you need to refund this booking.`
+    });
     return;
   }
   const direct = status === "cancelled" && ["pending", "failed"].includes(booking.paymentStatus) && booking.request
@@ -282,7 +324,9 @@ export const proposeReschedule = async (req: AuthRequest, res: Response): Promis
     res.status(400).json({ success: false, message: "Invalid date values." });
     return;
   }
-  if (start <= new Date()) {
+
+  const now = new Date();
+  if (start <= now) {
     res.status(400).json({ success: false, message: "The proposed start time must be in the future." });
     return;
   }
@@ -290,8 +334,22 @@ export const proposeReschedule = async (req: AuthRequest, res: Response): Promis
     res.status(400).json({ success: false, message: "End time must be after start time." });
     return;
   }
-  if ((end.getTime() - start.getTime()) > 8 * 60 * 60 * 1000) {
+
+  const durationMs = end.getTime() - start.getTime();
+  const MIN_SESSION_MS = 15 * 60 * 1000;
+  const MAX_SESSION_MS = 8 * 60 * 60 * 1000;
+  if (durationMs < MIN_SESSION_MS) {
+    res.status(400).json({ success: false, message: "Session must be at least 15 minutes." });
+    return;
+  }
+  if (durationMs > MAX_SESSION_MS) {
     res.status(400).json({ success: false, message: "Session cannot exceed 8 hours." });
+    return;
+  }
+
+  const SIX_MONTHS_MS = 180 * 24 * 60 * 60 * 1000;
+  if (start.getTime() - now.getTime() > SIX_MONTHS_MS) {
+    res.status(400).json({ success: false, message: "Reschedule cannot be more than 6 months in the future." });
     return;
   }
 

@@ -70,6 +70,22 @@ export const getOfferHistory = async (req: AuthRequest, res: Response): Promise<
 };
 
 export const counterOffer = async (req: AuthRequest, res: Response): Promise<void> => {
+  const amount = typeof req.body.amount === "number" ? req.body.amount : NaN;
+  const message = typeof req.body.message === "string" ? req.body.message.trim() : "";
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    res.status(400).json({ success: false, code: "INVALID_AMOUNT", message: "Counter-offer amount must be a positive number." });
+    return;
+  }
+  if (amount > 999999) {
+    res.status(400).json({ success: false, code: "AMOUNT_EXCEEDS_LIMIT", message: "Counter-offer amount exceeds maximum allowed (999,999)." });
+    return;
+  }
+  if (message.length > 500) {
+    res.status(400).json({ success: false, code: "MESSAGE_TOO_LONG", message: "Message must be 500 characters or less." });
+    return;
+  }
+
   const session = await mongoose.startSession(); let negotiation: any; let savedOffer: any; let recipient = ""; let role: "student" | "tutor" = "student"; let finalCounterOffer = false;
   try { await session.withTransaction(async () => {
     const offer = await Bid.findById(req.params.id).session(session); if (!offer) throw { statusCode: 404, message: "Offer not found." };
@@ -77,6 +93,12 @@ export const counterOffer = async (req: AuthRequest, res: Response): Promise<voi
     try { await assertMarketFeature(request.countryCode, "negotiation"); } catch (error: any) { throw { statusCode: error.statusCode || 422, code: error.code, message: error.message }; }
     if (!(ACTIVE_REQUEST_STATES as readonly string[]).includes(request.status) || !(ACTIVE_OFFER_STATES as readonly string[]).includes(offer.status)) throw { statusCode: 409, message: "Negotiation is closed." };
     if (offer.expiresAt.getTime() <= Date.now()) { offer.status = "expired"; await offer.save({ session }); throw { statusCode: 410, message: "This offer has expired." }; }
+
+    const MIN_AMOUNT = offer.initialStudentRate * 0.25;
+    const MAX_AMOUNT = offer.initialStudentRate * 4;
+    if (amount < MIN_AMOUNT || amount > MAX_AMOUNT) {
+      throw { statusCode: 422, code: "AMOUNT_OUT_OF_RANGE", message: `Counter-offer must be between ${offer.currency} ${MIN_AMOUNT.toLocaleString()} and ${offer.currency} ${MAX_AMOUNT.toLocaleString()}.` };
+    }
     const userId = req.user?._id?.toString(); const isStudent = request.student.toString() === userId; const isTutor = offer.tutor.toString() === userId;
     if (!isStudent && !isTutor) throw { statusCode: 403, message: "Not authorized." };
     await assertTutorCanOffer(request, offer.tutor as Types.ObjectId, session);
