@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import api from "@/lib/axios";
 import { DashRequest } from "@/types/dashboard";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
@@ -24,6 +24,24 @@ export default function PlaceBidModal({ request, onClose, onSuccess }: Props) {
   const currency = request.currency || "Market currency";
 
   const value = Number(amount) || 0;
+  const [quote, setQuote] = useState<{ currency: string; subtotal: number; tutorFee: number; tax: number; tutorNet: number } | null>(null);
+  const [quoteNote, setQuoteNote] = useState("");
+  const [sentWarning, setSentWarning] = useState("");
+
+  useEffect(() => {
+    if (!Number.isFinite(value) || value <= 0) { setQuote(null); setQuoteNote(""); return; }
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      api.post(`/requests/${request._id}/fee-preview`, { amount: value })
+        .then((res) => { if (!cancelled) { setQuote(res.data.quote); setQuoteNote(""); } })
+        .catch((e: unknown) => {
+          if (cancelled) return;
+          setQuote(null);
+          setQuoteNote((e as { response?: { data?: { message?: string } } }).response?.data?.message || "A fee preview is unavailable right now.");
+        });
+    }, 400);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [value, request._id]);
 
   async function submit() {
     if (!Number.isFinite(value) || value <= 0) {
@@ -46,7 +64,8 @@ export default function PlaceBidModal({ request, onClose, onSuccess }: Props) {
       // currency/budget (e.g. a number sized for a different currency) -
       // surface that before closing so the tutor can catch a mistake.
       if (res.data?.warning) {
-        window.alert(res.data.warning);
+        setSentWarning(res.data.warning);
+        return;
       }
       onSuccess();
       onClose();
@@ -62,7 +81,7 @@ export default function PlaceBidModal({ request, onClose, onSuccess }: Props) {
       <div ref={ref} className={styles.modal}>
         <div className={styles.modalHeader}>
           <h2 className={styles.modalTitle}>Send Tutor Offer</h2>
-          <button className={styles.closeBtn} onClick={onClose}>x</button>
+          <button className={styles.closeBtn} onClick={onClose} aria-label="Close offer dialog">x</button>
         </div>
 
         <div className={styles.modalBody}>
@@ -114,16 +133,40 @@ export default function PlaceBidModal({ request, onClose, onSuccess }: Props) {
           </div>
 
           <DashCard padding="sm" style={{ background: STATUS_COLORS.warning.bg, boxShadow: "none", fontSize: 13, lineHeight: 1.7 }}>
-            <strong>Fees and earnings</strong><br />
-            Your proposed rate is {currency} {value.toLocaleString()}. The final fee, applicable tax and tutor earnings are calculated using the market policy when an offer is accepted; this screen does not yet provide a market-specific quote.
+            <strong>Estimated fees and earnings</strong>
+            <div aria-live="polite">
+              {quote ? (
+                <>
+                  Agreed rate: {quote.currency} {quote.subtotal.toLocaleString()}<br />
+                  TUTORERA fee: {quote.currency} {quote.tutorFee.toLocaleString()}<br />
+                  Tax on fee: {quote.currency} {quote.tax.toLocaleString()}<br />
+                  <strong>Estimated net: {quote.currency} {quote.tutorNet.toLocaleString()}</strong><br />
+                  <span style={{ fontSize: 12, color: TEXT_COLORS.muted }}>The market policy is recalculated and fixed when the offer is accepted.</span>
+                </>
+              ) : (
+                <span>{quoteNote || `Your proposed rate is ${currency} ${value.toLocaleString()}. Calculating fees…`}</span>
+              )}
+            </div>
           </DashCard>
+
+          {sentWarning && (
+            <p role="alert" style={{ fontSize: 13, color: STATUS_COLORS.warning.color, background: STATUS_COLORS.warning.bg, border: `1px solid ${STATUS_COLORS.warning.border}`, padding: "8px 10px", borderRadius: 6, margin: 0 }}>
+              <strong>Offer sent, but please check the amount:</strong> {sentWarning}
+            </p>
+          )}
         </div>
 
         <div className={styles.modalFooter}>
-          <button className={styles.cancelBtn} onClick={onClose}>Pass</button>
-          <button className={styles.submitBtn} disabled={loading} onClick={submit}>
-            {loading ? "Sending..." : value === request.budget ? `Accept ${currency} ${value.toLocaleString()}` : "Send Counter Offer"}
-          </button>
+          {sentWarning ? (
+            <button className={styles.submitBtn} onClick={() => { onSuccess(); onClose(); }}>Done</button>
+          ) : (
+            <>
+              <button className={styles.cancelBtn} onClick={onClose}>Pass</button>
+              <button className={styles.submitBtn} disabled={loading} onClick={submit}>
+                {loading ? "Sending..." : value === request.budget ? `Accept ${currency} ${value.toLocaleString()}` : "Send Counter Offer"}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

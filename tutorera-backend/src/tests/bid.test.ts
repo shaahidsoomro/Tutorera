@@ -8,6 +8,7 @@ import User from "../models/User.model";
 import Request from "../models/Request.model";
 import Bid from "../models/Bid.model";
 import Booking from "../models/Booking.model";
+import TutorProfile from "../models/TutorProfile.model";
 import { acceptBid, rejectBid } from "../controllers/request.controller";
 import { AuthRequest } from "../types";
 import { Response } from "express";
@@ -154,8 +155,11 @@ describe("BE-01: cross-request bid substitution", () => {
   });
 
   it("acceptBid succeeds for a legitimately matching request/bid pair", async () => {
-    const student = await User.create({ name: "Student C", email: "c@test.com", password: "password123", role: "student" });
+    // Checkout needs a contact phone for the payment provider.
+    const student = await User.create({ name: "Student C", email: "c@test.com", password: "password123", role: "student", phone: "03001234567" });
     const tutor = await User.create({ name: "Tutor C", email: "tutorC@test.com", password: "password123", role: "tutor" });
+    // Accepting an offer re-checks that the tutor is approved for the subject.
+    await TutorProfile.create({ user: tutor._id, subjectEligibility: [{ subject: "English", levels: ["Matric"], status: "approved" }] });
 
     const request = await Request.create({
       student: student._id,

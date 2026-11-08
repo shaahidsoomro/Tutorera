@@ -10,6 +10,7 @@ import {
   closeRequest,
   initiateAcceptBid,
   inviteTutorToRequest,
+  previewOfferFees,
 } from "../controllers/request.controller";
 import { protect, optionalAuth, authorize } from "../middlewares/auth.middleware";
 import { validate, createRequestSchema, placeBidSchema, createDirectBookingRequestSchema } from "../validators/request.validator";
@@ -34,6 +35,7 @@ router.patch("/:id/cancel", protect, authorize("student", "parent"), cancelReque
 router.patch("/:id/close", protect, authorize("student", "parent"), closeRequest);
 router.post("/:id/extend", protect, authorize("student", "parent"), extendRequest);
 router.post("/:id/repost", protect, authorize("student", "parent"), repostRequest);
+router.post("/:id/fee-preview", protect, authorize("tutor"), previewOfferFees);
 router.post("/:id/bids", protect, authorize("tutor"), validate(placeBidSchema), placeBid);
 router.get("/:id/bids", protect, authorize("student", "parent"), getBidsForRequest);
 router.patch("/:id/bids/:bidId/accept", protect, initiateAcceptBid);
