@@ -1,5 +1,7 @@
+/* eslint-disable @typescript-eslint/no-namespace */
+/// <reference types="node" />
 import "dotenv/config";
-import mongoose from "mongoose";
+import mongoose, { ConnectOptions } from "mongoose";
 import MarketConfig from "../models/MarketConfig.model";
 import PaymentLedger from "../models/PaymentLedger.model";
 import PaymentCheckoutIntent from "../models/PaymentCheckoutIntent.model";
@@ -21,7 +23,7 @@ async function run() {
   const startedAt = Date.now();
   const uri = process.env.MONGO_URI || process.env.MONGODB_URI;
   if (!uri) throw new Error("MONGO_URI is required.");
-  await mongoose.connect(uri, { autoIndex: false, autoCreate: false });
+  await mongoose.connect(uri, { autoIndex: false, autoCreate: false } as ConnectOptions);
 
   try {
     const [marketConfigs, pendingLedgerRows, pendingIntents, historicalLedgerRows] = await Promise.all([
