@@ -195,6 +195,8 @@ export default function AdminReferralsPage() {
   const [filter, setFilter] = useState<"all" | "pending" | "credited" | "reversed" | "fraud_hold">("all");
   const [fraudOnly, setFraudOnly] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [fraudTargetId, setFraudTargetId] = useState<string | null>(null);
+  const [fraudReasonInput, setFraudReasonInput] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -238,9 +240,17 @@ export default function AdminReferralsPage() {
     }
   };
 
-  const handleFlagFraud = async (id: string, fraudFlag: boolean) => {
-    const fraudReason = fraudFlag ? prompt("Enter fraud reason:") : "";
-    if (fraudFlag && !fraudReason) return;
+  const handleFlagFraud = (id: string, fraudFlag: boolean) => {
+    if (fraudFlag) {
+      setFraudReasonInput("");
+      setFraudTargetId(id);
+      return;
+    }
+    void submitFraudFlag(id, false, "");
+  };
+
+  const submitFraudFlag = async (id: string, fraudFlag: boolean, fraudReason: string) => {
+    setFraudTargetId(null);
     try {
       await api.patch(`/admin/referrals/${id}/fraud`, { fraudFlag, fraudReason });
       showSuccess(fraudFlag ? "Referral flagged as fraud" : "Fraud flag removed");
@@ -259,6 +269,30 @@ export default function AdminReferralsPage() {
 
   return (
     <div style={{ padding: "2rem" }}>
+      {fraudTargetId && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="fraud-dialog-title"
+          onClick={(e) => { if (e.target === e.currentTarget) setFraudTargetId(null); }}
+          onKeyDown={(e) => { if (e.key === "Escape") setFraudTargetId(null); }}
+          style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.4)", padding: "1rem" }}
+        >
+          <div style={{ backgroundColor: C.surface, borderRadius: "0.75rem", border: `1px solid ${C.border}`, padding: "1.5rem", width: "100%", maxWidth: 440 }}>
+            <h2 id="fraud-dialog-title" style={{ fontSize: "1rem", fontWeight: 800, color: TEXT_COLORS.body, margin: "0 0 0.75rem" }}>Flag referral as fraud</h2>
+            <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, color: TEXT_COLORS.secondary }}>
+              Fraud reason
+              <textarea autoFocus rows={3} maxLength={500} value={fraudReasonInput} onChange={(e) => setFraudReasonInput(e.target.value)}
+                style={{ display: "block", width: "100%", marginTop: "0.3rem", padding: "0.5rem 0.75rem", borderRadius: "0.5rem", border: `1px solid ${C.border}`, fontSize: "0.875rem", boxSizing: "border-box", resize: "vertical" }} />
+            </label>
+            <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end", marginTop: "1rem" }}>
+              <button type="button" onClick={() => setFraudTargetId(null)} style={{ padding: "0.5rem 1rem", minHeight: 44, borderRadius: "0.4rem", border: `1px solid ${C.border}`, background: C.surface, color: TEXT_COLORS.secondary, fontWeight: 700, cursor: "pointer" }}>Cancel</button>
+              <button type="button" disabled={!fraudReasonInput.trim()} onClick={() => void submitFraudFlag(fraudTargetId, true, fraudReasonInput.trim())}
+                style={{ padding: "0.5rem 1.1rem", minHeight: 44, borderRadius: "0.4rem", border: "none", background: STATUS_COLORS.danger.color, color: "#fff", fontWeight: 700, cursor: fraudReasonInput.trim() ? "pointer" : "not-allowed", opacity: fraudReasonInput.trim() ? 1 : 0.6 }}>Flag as fraud</button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
         <div>

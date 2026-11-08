@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, RefreshCw, Search, X } from "lucide-react";
 import api from "@/lib/axios";
-import { showError } from "@/lib/toast";
+import { showError, showSuccess } from "@/lib/toast";
 import PayoutReportDownload from "@/components/Finance/PayoutReportDownload";
 import { useAuth } from "@/context/AuthContext";
 import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
@@ -97,11 +97,11 @@ export default function TutorsDirectoryPage() {
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!uploadFile && uploadDocType !== "videoIntro") {
-      alert("Please select a file to upload.");
+      showError("Please select a file to upload.");
       return;
     }
     if (!uploadFile && uploadDocType === "videoIntro" && !uploadVideoUrl.trim()) {
-      alert("Please select a video file or provide a video URL.");
+      showError("Please select a video file or provide a video URL.");
       return;
     }
 
@@ -119,13 +119,13 @@ export default function TutorsDirectoryPage() {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      alert("Document uploaded and approved successfully");
+      showSuccess("Document uploaded and approved successfully");
       setUploadModalOpen(false);
       setUploadFile(null);
       setUploadVideoUrl("");
       if (selectedTutorId) await openTutor360(selectedTutorId);
     } catch (err: any) {
-      alert(err?.response?.data?.message || "Failed to upload document");
+      showError(err, "Failed to upload document");
     } finally {
       setUploadSubmitting(false);
     }
