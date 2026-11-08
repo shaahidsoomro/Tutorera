@@ -69,39 +69,45 @@ export default function PayoutsPage() {
   // This workflow never moves money. Finance first approves a completed
   // session; records details of a transfer made OUTSIDE TUTORERA; a different
   // reviewer independently reconciles the statement before 'paid'.
-  const handlePayoutAction = async (booking: Booking) => {
-    const bookingId = booking._id;
-    const state = booking.payoutStatus;
+  const [modalBooking, setModalBooking] = useState<Booking | null>(null);
+  const [fMethod, setFMethod] = useState("");
+  const [fRef, setFRef] = useState("");
+  const [fEvidence, setFEvidence] = useState("");
+  const [fNote, setFNote] = useState("");
+
+  const handlePayoutAction = (booking: Booking) => {
+    setFMethod(""); setFRef(""); setFEvidence(""); setFNote("");
+    setModalBooking(booking);
+  };
+
+  const modalState = modalBooking?.payoutStatus;
+  const modalIsApprove = modalState === "pending" || modalState === "failed" || modalState === "held";
+  const modalValid = modalIsApprove
+    || (modalState === "approved" && fMethod.trim().length > 0 && fRef.trim().length >= 8 && fEvidence.trim().length >= 8)
+    || (modalState === "processing" && fRef.trim().length >= 8 && fEvidence.trim().length >= 8 && fNote.trim().length >= 12);
+
+  const submitPayoutAction = async () => {
+    if (!modalBooking || !modalValid) return;
+    const bookingId = modalBooking._id;
+    const state = modalBooking.payoutStatus;
+    setModalBooking(null);
     setActionLoading(bookingId);
     try {
       if (state === "pending" || state === "failed" || state === "held") {
-        if (!confirm("Approve this completed, fully paid booking for external transfer? No money will be moved by TUTORERA.")) return;
         await api.patch(`/admin/bookings/${bookingId}/payment`, {
           payoutStatus: "approved", payoutNote: "Finance approved external payout after eligibility review",
         });
         showSuccess("Payout approved; no funds transferred.");
       } else if (state === "approved") {
-        const method = window.prompt("External transfer method (e.g. bank transfer):");
-        if (!method) return;
-        const reference = window.prompt("External bank/wallet transaction reference (at least 8 characters):");
-        if (!reference) return;
-        const evidence = window.prompt("Receipt or statement reference (at least 8 characters):");
-        if (!evidence) return;
         await api.patch(`/admin/bookings/${bookingId}/payment`, {
           payoutStatus: "processing", payoutNote: "External transfer recorded; independent verification still pending",
-          payoutSettlementMethod: method, payoutSettlementReference: reference,
-          payoutEvidenceReference: evidence,
+          payoutSettlementMethod: fMethod.trim(), payoutSettlementReference: fRef.trim(),
+          payoutEvidenceReference: fEvidence.trim(),
         });
         showSuccess("Transfer evidence recorded. A different finance reviewer must reconcile it.");
       } else if (state === "processing") {
-        const reference = window.prompt("Re-enter the recorded external transfer reference:");
-        if (!reference) return;
-        const evidence = window.prompt("Independent bank statement or settlement evidence reference:");
-        if (!evidence) return;
-        const note = window.prompt("Describe the independent verification (at least 12 characters):");
-        if (!note) return;
         await api.post(`/admin/bookings/${bookingId}/payout/verify`, {
-          settlementReference: reference, verificationEvidence: evidence, note,
+          settlementReference: fRef.trim(), verificationEvidence: fEvidence.trim(), note: fNote.trim(),
         });
         showSuccess("External payout independently verified and recorded.");
       } else return;
@@ -112,6 +118,9 @@ export default function PayoutsPage() {
       setActionLoading(null);
     }
   };
+
+  const fieldStyle: React.CSSProperties = { display: "block", width: "100%", marginTop: "0.3rem", padding: "0.5rem 0.75rem", borderRadius: "0.5rem", border: `1px solid ${C.border}`, fontSize: "0.875rem", boxSizing: "border-box" };
+  const labelStyle: React.CSSProperties = { display: "block", fontSize: "0.82rem", fontWeight: 700, color: C.primary, marginBottom: "0.75rem" };
 
   const actionLabel = (status: string) => status === "approved" ? "Record transfer evidence"
     : status === "processing" ? "Verify external transfer" : status === "pending" || status === "failed" || status === "held" ? "Approve payout" : "";
@@ -124,6 +133,49 @@ export default function PayoutsPage() {
 
   return (
     <div style={{ padding: '2rem' }}>
+
+      {modalBooking && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="payout-modal-title"
+          onClick={(e) => { if (e.target === e.currentTarget) setModalBooking(null); }}
+          onKeyDown={(e) => { if (e.key === "Escape") setModalBooking(null); }}
+          style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.4)", padding: "1rem" }}
+        >
+          <div style={{ backgroundColor: "white", borderRadius: "0.75rem", border: `1px solid ${C.border}`, padding: "1.5rem", width: "100%", maxWidth: 480 }}>
+            <h2 id="payout-modal-title" style={{ fontSize: "1rem", fontWeight: 800, color: C.primary, margin: "0 0 0.3rem" }}>
+              {actionLabel(modalBooking.payoutStatus)}
+            </h2>
+            <p style={{ fontSize: "0.82rem", color: C.gray500, margin: "0 0 1rem" }}>
+              {modalBooking.tutor?.name} · {modalBooking.currency || "PKR"} {(modalBooking.tutorPayout || 0).toLocaleString()}
+            </p>
+            {modalIsApprove && (
+              <p style={{ fontSize: "0.85rem", color: "#92400e", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "0.4rem", padding: "0.6rem 0.75rem", margin: 0 }}>
+                Approve this completed, fully paid booking for external transfer? No money will be moved by TUTORERA.
+              </p>
+            )}
+            {modalState === "approved" && (
+              <>
+                <label style={labelStyle}>External transfer method<input autoFocus value={fMethod} onChange={e => setFMethod(e.target.value)} style={fieldStyle} placeholder="e.g. bank transfer" /></label>
+                <label style={labelStyle}>Bank/wallet transaction reference (≥8 chars)<input value={fRef} onChange={e => setFRef(e.target.value)} style={fieldStyle} /></label>
+                <label style={labelStyle}>Receipt or statement reference (≥8 chars)<input value={fEvidence} onChange={e => setFEvidence(e.target.value)} style={fieldStyle} /></label>
+              </>
+            )}
+            {modalState === "processing" && (
+              <>
+                <label style={labelStyle}>Re-enter recorded transfer reference (≥8 chars)<input autoFocus value={fRef} onChange={e => setFRef(e.target.value)} style={fieldStyle} /></label>
+                <label style={labelStyle}>Independent statement/evidence reference (≥8 chars)<input value={fEvidence} onChange={e => setFEvidence(e.target.value)} style={fieldStyle} /></label>
+                <label style={labelStyle}>Describe the independent verification (≥12 chars)<textarea value={fNote} onChange={e => setFNote(e.target.value)} rows={3} maxLength={500} style={{ ...fieldStyle, resize: "vertical" }} /></label>
+              </>
+            )}
+            <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end", marginTop: "1rem" }}>
+              <button type="button" onClick={() => setModalBooking(null)} style={{ padding: "0.5rem 1rem", minHeight: 44, borderRadius: "0.4rem", border: `1px solid ${C.border}`, background: "white", color: C.primary, fontWeight: 700, cursor: "pointer" }}>Cancel</button>
+              <button type="button" disabled={!modalValid} onClick={() => void submitPayoutAction()} style={{ padding: "0.5rem 1.1rem", minHeight: 44, borderRadius: "0.4rem", border: "none", background: C.accent, color: "white", fontWeight: 700, cursor: modalValid ? "pointer" : "not-allowed", opacity: modalValid ? 1 : 0.6 }}>Confirm</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div style={{ marginBottom: '2rem' }}>

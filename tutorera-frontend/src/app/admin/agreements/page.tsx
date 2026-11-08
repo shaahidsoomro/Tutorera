@@ -62,6 +62,8 @@ export default function AdminLegalAgreementsPage() {
   const [draftContent, setDraftContent] = useState("");
   const [draftSchedule, setDraftSchedule] = useState("");
   const [submittingDraft, setSubmittingDraft] = useState(false);
+  const [publishConfirm, setPublishConfirm] = useState<{ id: string; version: string } | null>(null);
+  const [confirmScheduleReplace, setConfirmScheduleReplace] = useState(false);
 
   // PDF download loading
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
@@ -158,9 +160,7 @@ export default function AdminLegalAgreementsPage() {
   };
 
   const handlePublishAgreement = async (id: string, version: string) => {
-    if (!window.confirm(`Are you sure you want to publish Version ${version}? This will make it the legally binding contract for all new and re-accepted tutors.`)) {
-      return;
-    }
+    setPublishConfirm(null);
     try {
       await api.post(`/admin/legal/agreements/${id}/publish`, {
         markReacceptance: false,
@@ -423,7 +423,7 @@ export default function AdminLegalAgreementsPage() {
                         {item.status === "draft" && (
                           <button
                             type="button"
-                            onClick={() => handlePublishAgreement(item._id, item.version)}
+                            onClick={() => setPublishConfirm({ id: item._id, version: item.version })}
                             style={{
                               background: STATUS_COLORS.success.color,
                               color: "#FFFFFF",
@@ -447,6 +447,29 @@ export default function AdminLegalAgreementsPage() {
           </div>
         )}
       </section>
+
+      {publishConfirm && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="publish-confirm-title"
+          onClick={(e) => { if (e.target === e.currentTarget) setPublishConfirm(null); }}
+          style={{ position: "fixed", inset: 0, zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.4)", padding: 16 }}
+        >
+          <div style={{ backgroundColor: UI_COLORS.surface, borderRadius: "0.75rem", border: `1px solid ${UI_COLORS.border}`, padding: 24, width: "100%", maxWidth: 460 }}>
+            <h2 id="publish-confirm-title" style={{ fontSize: 16, fontWeight: 800, color: TEXT_COLORS.primary, margin: "0 0 8px" }}>
+              Publish Version {publishConfirm.version}?
+            </h2>
+            <p style={{ fontSize: 13, color: TEXT_COLORS.secondary, margin: "0 0 16px", lineHeight: 1.5 }}>
+              This will make it the legally binding contract for all new and re-accepted tutors.
+            </p>
+            <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+              <button type="button" autoFocus onClick={() => setPublishConfirm(null)} style={{ padding: "8px 16px", minHeight: 44, borderRadius: 6, border: `1px solid ${UI_COLORS.border}`, background: UI_COLORS.surface, color: TEXT_COLORS.secondary, fontWeight: 700, cursor: "pointer" }}>Cancel</button>
+              <button type="button" onClick={() => void handlePublishAgreement(publishConfirm.id, publishConfirm.version)} style={{ padding: "8px 16px", minHeight: 44, borderRadius: 6, border: "none", background: STATUS_COLORS.success.color, color: "#FFFFFF", fontWeight: 700, cursor: "pointer" }}>Publish</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Agreement View Modal */}
       {showPreviewModal && selectedAgreement && (
@@ -626,7 +649,7 @@ export default function AdminLegalAgreementsPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        if (draftSchedule.trim() && !window.confirm("Replace the current Country Schedule text with the existing jurisdiction facts on file for this country?")) return;
+                        if (draftSchedule.trim()) { setConfirmScheduleReplace(true); return; }
                         setDraftSchedule(formatScheduleDraft(draftCountry));
                       }}
                       style={{ fontSize: 11, fontWeight: 700, color: UI_COLORS.accent, background: "none", border: "none", cursor: "pointer", padding: 0 }}
@@ -635,6 +658,13 @@ export default function AdminLegalAgreementsPage() {
                     </button>
                   )}
                 </div>
+                {confirmScheduleReplace && (
+                  <div role="alert" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, fontSize: 12, color: STATUS_COLORS.warning.color, background: STATUS_COLORS.warning.bg, border: `1px solid ${STATUS_COLORS.warning.border}`, borderRadius: 6, padding: "6px 10px", marginBottom: 6 }}>
+                    <span style={{ flex: 1 }}>Replace the current Country Schedule text with the jurisdiction facts on file?</span>
+                    <button type="button" onClick={() => { setDraftSchedule(formatScheduleDraft(draftCountry)); setConfirmScheduleReplace(false); }} style={{ fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 4, border: "none", background: UI_COLORS.accent, color: "#FFFFFF", cursor: "pointer" }}>Replace</button>
+                    <button type="button" onClick={() => setConfirmScheduleReplace(false)} style={{ fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 4, border: `1px solid ${UI_COLORS.border}`, background: UI_COLORS.surface, color: TEXT_COLORS.secondary, cursor: "pointer" }}>Keep current</button>
+                  </div>
+                )}
                 <p style={{ fontSize: 11, color: TEXT_COLORS.muted, margin: "0 0 6px" }}>
                   Governing law, dispute forum, and consumer/privacy/tax facts already on file at /legal/country/{draftCountry.toLowerCase()} can be pulled in as a starting point - this is jurisdictional reference data, not reviewed contract language, so review before publishing.
                 </p>
