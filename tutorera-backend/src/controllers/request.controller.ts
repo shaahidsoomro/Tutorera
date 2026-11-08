@@ -1041,6 +1041,10 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
         throw bookingTransitionError("BOOKING_REQUEST_UNAVAILABLE", "The request was cancelled or changed before payment settled.");
       }
 
+      if (request.isDirect && bid.paymentPendingExpiresAt && bid.paymentPendingExpiresAt.getTime() <= Date.now()) {
+        throw bookingTransitionError("BOOKING_HOLD_EXPIRED", "The direct-booking payment reservation expired before payment settled. This payment needs reconciliation.");
+      }
+
       request.status = "closed";
       await request.save({ session });
 

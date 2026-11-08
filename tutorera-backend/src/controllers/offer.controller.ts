@@ -181,8 +181,13 @@ export const renewOffer = async (req: AuthRequest, res: Response): Promise<void>
 //          finalizeBidAcceptance (request.controller.ts) once payment is
 //          confirmed via webhook. This is the REAL accept path the live
 //          "Accept" button on the Offers page calls.
+//
+//          RACE CONDITION PREVENTION: Lock the request and offer status
+//          atomically before proceeding. Prevents two concurrent tutors from
+//          both passing validation and attempting dual acceptance.
 export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void> => {
   const offerId = new Types.ObjectId(req.params.id as string);
+  const session = await mongoose.startSession();
 
   try {
     const offer = await Bid.findById(offerId);
@@ -190,7 +195,18 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
 
     await releaseExpiredPaymentHold(offer.request as Types.ObjectId);
 
-    const request = await Request.findOne({ _id: offer.request, status: { $in: [...ACTIVE_REQUEST_STATES] } });
+    let request: InstanceType<typeof Request> | null;
+    await session.withTransaction(async () => {
+      request = await Request.findOne({ _id: offer.request, status: { $in: [...ACTIVE_REQUEST_STATES] } }).session(session);
+      if (!request) throw { statusCode: 409, message: "This request has already been matched with another tutor." };
+
+      const lockedRequest = await Request.findOneAndUpdate(
+        { _id: request._id, status: { $in: [...ACTIVE_REQUEST_STATES] } },
+        { $inc: { __v: 1 } },
+        { session, returnDocument: "before" }
+      );
+      if (!lockedRequest) throw { statusCode: 409, message: "This request was just matched with another tutor." };
+    });
     if (!request) { res.status(409).json({ success: false, message: "This request has already been matched with another tutor." }); return; }
 
     try {
@@ -337,6 +353,8 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
     }
   } catch (error: any) {
     res.status(error.statusCode || 500).json({ success: false, code: error.code, message: error.message || "Unable to accept offer." });
+  } finally {
+    await session.endSession();
   }
 };
 

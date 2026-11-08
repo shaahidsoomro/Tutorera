@@ -184,10 +184,10 @@ export const updateRefundRequestStatus = async (req: AuthRequest, res: Response)
   try {
     await session.withTransaction(async () => {
       const changed = await RefundRequest.findOneAndUpdate({ _id: current._id, status: "pending" },
-        { $set: { status, adminNote: adminNote.trim() } }, { returnDocument: "after", runValidators: true, session });
+        { $set: { status, adminNote: adminNote.trim(), approvedBy: req.user?._id, approvedAt: new Date() } }, { returnDocument: "after", runValidators: true, session });
       if (!changed) throw Object.assign(new Error("Refund decision already recorded."), { statusCode: 409 });
       await logAudit({ action: "refund_decision_recorded", actor: req.user?.name || "Admin", actorId: req.user?._id?.toString(),
-        entity: "RefundRequest", targetId: current._id.toString(), metadata: { status, reason: adminNote.trim() } }, session);
+        entity: "RefundRequest", targetId: current._id.toString(), metadata: { status, reason: adminNote.trim(), approvalEnforcesDutySeparation: true } }, session);
     });
   } catch (error) {
     if ((error as { statusCode?: number }).statusCode === 409) { res.status(409).json({ success: false, code: "REFUND_ALREADY_REVIEWED", message: "The refund decision has already been recorded." }); return; }
@@ -251,6 +251,8 @@ function validReference(value: unknown, min = 8): value is string {
 // Phase 3 supports only documented, EXTERNALLY executed refunds. TUTORERA
 // does not have a refund execution/lookup adapter for Rapid Gateway. Recording
 // evidence here is an auditable operator claim; it never moves money.
+// DUTY SEPARATION: The admin who approved the refund cannot record the settlement
+// (prevents fraud where one person approves and then falsifies settlement evidence).
 export const recordExternalRefundTransfer = async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.user?._id) { res.status(403).json({ success: false, code: "INITIATOR_ID_REQUIRED" }); return; }
   const { settlementReference, settlementMethod, evidenceReference } = req.body || {};
@@ -259,6 +261,10 @@ export const recordExternalRefundTransfer = async (req: AuthRequest, res: Respon
   }
   const refund = await RefundRequest.findOne({ _id: req.params.id, status: "approved", settlementReference: { $exists: false } });
   if (!refund) { res.status(409).json({ success: false, code: "REFUND_NOT_APPROVED", message: "Refund is not approved or settlement evidence has already been recorded." }); return; }
+
+  if (refund.approvedBy && refund.approvedBy.toString() === req.user._id.toString()) {
+    res.status(403).json({ success: false, code: "DUTY_SEPARATION_REQUIRED", message: "The admin who approved this refund cannot record the settlement. A different admin must record the transfer evidence to prevent fraud." }); return;
+  }
   const booking = await Booking.findById(refund.booking);
   if (!booking || booking.paymentStatus !== "confirmed" || Math.abs(refund.amount - booking.studentTotal) > 0.01) {
     res.status(409).json({ success: false, code: "REFUND_AMOUNT_MISMATCH", message: "Only the exact original confirmed student payment can be reconciled via this workflow." }); return;
