@@ -210,9 +210,10 @@ describe("subjectEligibility.service", () => {
 
   it("does not allow an already approved subject request to be approved or rejected again", async () => {
     const { profile } = await makeTutor();
-    await requestSubjectEligibility(profile, "Computer Science");
+    await requestSubjectEligibility(profile, "Computer Science", { discipline: "Fixture Science" });
     profile.subjectEligibility![0].evidence = [{ url: "https://example.test/evidence.pdf", label: "Degree evidence", uploadedAt: new Date() }];
-    expect((await approveSubjectEligibility(profile, "Computer Science", ["O-Level"], { name: "Admin" }, "Evidence reviewed.")).success).toBe(true);
+    const approval = await approveSubjectEligibility(profile, "Computer Science", ["O-Level"], { name: "Admin" }, "Evidence reviewed.");
+    expect(approval.success).toBe(true);
     const duplicateApproval = await approveSubjectEligibility(profile, "Computer Science", ["A-Level"], { name: "Admin" }, "Second review.");
     const rejection = await rejectSubjectEligibility(profile, "Computer Science", "Changed mind", { name: "Admin" });
     expect(duplicateApproval.success).toBe(false);
