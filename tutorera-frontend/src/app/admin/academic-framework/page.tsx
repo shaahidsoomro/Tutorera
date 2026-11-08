@@ -27,7 +27,7 @@ export default function AcademicFrameworkPage() {
     setSeedResult(null);
     setSeedError(null);
     try {
-      const { data } = await api.post("/admin/academic/categories/seed");
+      const { data } = await api.post("/admin/academic-framework/categories/seed");
       setSeedResult(data.results);
       void load();
     } catch {
