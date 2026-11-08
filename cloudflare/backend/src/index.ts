@@ -11,6 +11,7 @@ interface Env {
   BACKEND: DurableObjectNamespace<TutoreraBackend>;
   MONGO_URI: string;
   ENABLE_SCHEDULED_JOBS: string;
+  MAINTENANCE_MODE?: string;
   PREVIEW_AUTH_TOKEN?: string;
   PREVIEW_READ_ONLY?: string;
 }
@@ -25,6 +26,13 @@ export class TutoreraBackend extends DurableObject<Env> {
   private initializing?: Promise<NativeRuntime>;
 
   private runtime(): Promise<NativeRuntime> {
+    // Worker bindings are exposed on `env`, whereas the existing Express
+    // application correctly reads its configuration from process.env. Populate
+    // only string bindings before importing that application so validation and
+    // provider modules see the same values in a Durable Object as in Node.
+    for (const [key, value] of Object.entries(this.env)) {
+      if (typeof value === "string") process.env[key] = value;
+    }
     // Existing dependencies initialize timers/random identifiers on import.
     // Evaluate them inside this DO's request context, never Worker global scope.
     this.initializing ??= import("../../../tutorera-backend/src/runtime/cloudflareBackend").then((backend) => {
@@ -136,6 +144,15 @@ export default {
         return new Response("Private preview", { status: 401, headers: { "X-Robots-Tag": "noindex, nofollow", "Cache-Control": "no-store" } });
       }
     }
+    // Used only for controlled data cutovers. Keep health checks and ordinary
+    // reads available, but fence every state-changing request before it can
+    // reach Express/MongoDB so a source-to-target copy cannot lose writes.
+    if (env.MAINTENANCE_MODE === "true" && !["GET", "HEAD", "OPTIONS"].includes(request.method)) {
+      return Response.json({ success: false, code: "MAINTENANCE", message: "TUTORERA is briefly undergoing scheduled maintenance. Please try again shortly." }, {
+        status: 503,
+        headers: { "Retry-After": "120", "Cache-Control": "no-store" },
+      });
+    }
     if (isInternalPath(request)) return new Response("Not found", { status: 404 });
     if (env.PREVIEW_READ_ONLY === "true" && (request.method !== "GET" || !["/health/live", "/health/ready", "/api/v1/auth/me", "/api/v1/geo/countries"].includes(new URL(request.url).pathname))) {
       return new Response("Preview operation disabled", { status: 403, headers: { "X-Robots-Tag": "noindex, nofollow", "Cache-Control": "no-store" } });
@@ -149,8 +166,15 @@ export default {
         return new Response(response.body, { status: response.status, headers });
       }
       return response;
-    } catch {
-      console.error("backend_unavailable");
+    } catch (error) {
+      const failure = error as { name?: string; code?: string; message?: string };
+      console.error("backend_unavailable", {
+        name: failure.name,
+        code: failure.code,
+        // Never log a connection string. The driver error message is retained
+        // only when it does not contain an URI credential delimiter.
+        message: failure.message?.includes("@") ? "redacted connection failure" : failure.message,
+      });
       return Response.json({ success: false, message: "Service temporarily unavailable" }, {
         status: 503, headers: { "Retry-After": "30", "Cache-Control": "no-store" },
       });

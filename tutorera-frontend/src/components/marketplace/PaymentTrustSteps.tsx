@@ -10,7 +10,7 @@ export interface PaymentTrustStep {
 }
 
 // Reflects TUTORERA's actual booking flow (commission-based checkout via the
-// Switch gateway, protected by the existing First-Session Guarantee policy) -
+// RapidPay gateway, protected by the existing First-Session Guarantee policy) -
 // not an escrow/hold-and-release mechanism, which doesn't exist in this system.
 // Copy is placeholder pending final marketing language.
 export const PAYMENT_TRUST_STEPS: PaymentTrustStep[] = [

@@ -98,7 +98,7 @@ function PaymentsContent() {
       <div style={{ marginBottom: '1.5rem' }}>
         <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: TEXT_COLORS.body, margin: 0 }}>Payment Management</h1>
         <p style={{ color: TEXT_COLORS.muted, fontSize: '0.85rem', margin: '0.2rem 0 0' }}>
-          Review recorded student payments. Switch checkout is available only for enabled market-and-currency combinations; payout settlement is managed separately.
+          Review recorded student payments. RapidPay checkout is available only for enabled market-and-currency combinations; payout settlement is managed separately.
         </p>
       </div>
 

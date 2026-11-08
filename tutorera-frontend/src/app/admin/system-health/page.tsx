@@ -61,7 +61,6 @@ interface HealthData {
 
 const JOB_DESCRIPTIONS: Record<string, string> = {
   "email-outbox-delivery": "Deliver queued transactional emails",
-  "swich-checkout-reconciliation": "Reconcile historical Swich checkout transactions",
   "offer-expiry-processing": "Expire offers and send expiry notifications",
   "request-lifecycle-processing": "Process request expiry and lifecycle transitions",
   "abandoned-journey-recovery": "Send eligible unfinished-application and request reminders",
@@ -73,7 +72,6 @@ const JOB_DESCRIPTIONS: Record<string, string> = {
   day_5_liquidity_escalation: "Flag zero-offer requests on Day 5 and dispatch proactive tutor push notifications",
   "24h_expiry_warning_worker": "Alert students 24 hours prior to tuition request automatic expiration",
   offer_24h_expiry_cleaner: "Cancel pending tutor proposals exceeding the 24-hour response window",
-  switch_payment_reconciliation: "Reconcile pending Switch checkouts whose browser never returned",
   tutor_payout_processing: "Process tutor payouts for completed, cleared bookings",
   abandoned_journey_recovery: "Nudge students who left a tuition request wizard partway",
   exchange_rate_refresh: "Refresh FX reference rates for multi-currency settlement",

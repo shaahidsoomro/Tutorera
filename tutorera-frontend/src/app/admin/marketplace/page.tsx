@@ -9,7 +9,7 @@ import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 type MoneyByCurrency = { currency: string; marketplaceGMV: number; platformRevenue: number; averageAgreedRate: number };
 type Metrics = Record<string, number | null> & { lossReasons?: Record<string, number>; moneyByCurrency?: MoneyByCurrency[] };
-type RequestRow = { _id: string; subject?: string; city?: string; level?: string; teachingMode?: string; budget?: number; currency?: string; status?: string; lossReason?: string; lossReasonDetail?: string; moderationStatus?: string; moderationReason?: string; student?: { name?: string } };
+type RequestRow = { _id: string; subject?: string; city?: string; countryCode?: string; level?: string; teachingMode?: string; budget?: number; currency?: string; status?: string; lossReason?: string; lossReasonDetail?: string; moderationStatus?: string; moderationReason?: string; student?: { name?: string } };
 type OfferRow = { _id: string; amount?: number; initialStudentRate?: number; pricingUnit?: string; status?: string; flaggedForModeration?: boolean; moderationReasons?: string[]; tutor?: { name?: string }; request?: { subject?: string; city?: string; level?: string; teachingMode?: string; budget?: number; status?: string; currency?: string } };
 type HistoryRow = { _id: string; senderRole?: string; amount?: number; message?: string; status?: string; flaggedForModeration?: boolean; createdAt?: string };
 
@@ -142,7 +142,13 @@ export default function Page() {
     setRequestActionLoading(`${id}-${action}`);
     setModerationTarget(null);
     try {
-      const result = await api.post(`/admin/marketplace/requests/${id}/moderation`, { action, reason: moderationReason.trim() });
+      // The country is used only to establish an authorised country-admin scope;
+      // the API independently verifies that it matches the request being changed.
+      const result = await api.post(`/admin/marketplace/requests/${id}/moderation`, {
+        action,
+        reason: moderationReason.trim(),
+        ...(moderationTarget.request.countryCode ? { countryCode: moderationTarget.request.countryCode } : {}),
+      });
       const updated = result.data.request;
       setRequests((current) => current.map((item) => item._id === updated._id ? { ...item, status: updated.status, moderationStatus: updated.moderationStatus, moderationReason: updated.moderationReason } : item));
     } catch (error: any) {

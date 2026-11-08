@@ -26,7 +26,7 @@ it("migrates the old sparse index to the partial index without losing uniqueness
   const dryRun = await rebuildBookedSlotStartAtIndex(mongoose.connection.db!, false);
   expect(dryRun).toMatchObject({ hasOldSparseIndex: true, hasNewPartialIndex: false, created: false, dropped: false });
 
-  const applied = await rebuildBookedSlotStartAtIndex(mongoose.connection.db!, true);
+  const applied = await rebuildBookedSlotStartAtIndex(mongoose.connection.db!, true, true);
   expect(applied).toMatchObject({ created: true, dropped: true });
   const names = (await collection.indexes()).map((index) => index.name);
   expect(names).toContain(NEW_INDEX_NAME);

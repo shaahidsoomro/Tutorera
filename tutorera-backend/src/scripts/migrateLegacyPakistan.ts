@@ -25,7 +25,10 @@ async function run() {
   await mongoose.connect(uri);
 
   try {
-    await ensureLaunchMarkets();
+    // A dry run must be genuinely read-only. Launch-market seeding creates
+    // MarketConfig/TaxConfig rows, so it belongs exclusively to the apply
+    // path and must never be triggered merely by inspecting legacy data.
+    if (apply) await ensureLaunchMarkets();
     const users = await User.find({ $or: [{ countryCode: { $exists: false } }, { countryCode: "PK" }] }).select("phone countryCode").lean();
     const requests = await Request.countDocuments({ countryCode: { $exists: false } });
     const bookings = await Booking.countDocuments({ countryCode: { $exists: false } });

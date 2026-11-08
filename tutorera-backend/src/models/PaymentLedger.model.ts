@@ -35,7 +35,9 @@ const paymentLedgerSchema = new Schema<IPaymentLedger>(
     student: { type: Schema.Types.ObjectId, ref: "User", index: true },
     payer: { type: Schema.Types.ObjectId, ref: "User", index: true },
     tutor: { type: Schema.Types.ObjectId, ref: "User", index: true },
-    provider: { type: String, required: true, trim: true, default: "swich", index: true },
+    // New ledger rows must always identify the active gateway. Historical
+    // provider values are retained as immutable financial evidence.
+    provider: { type: String, required: true, trim: true, default: "rapidpay", index: true },
     providerEventId: { type: String, trim: true, index: true },
     providerTransactionId: { type: String, required: true, trim: true, index: true },
     eventType: { type: String, enum: ["checkout.created", "payment.succeeded", "payment.failed", "payment.refunded", "payout.requested", "payout.completed", "manual.adjustment"], required: true },
@@ -60,7 +62,7 @@ const paymentLedgerSchema = new Schema<IPaymentLedger>(
 );
 
 // Partial filter so the unique constraint only applies to rows that actually
-// carry a providerEventId (Swich event webhooks). Rows without one (checkout
+// carry a providerEventId (gateway webhook events). Rows without one (checkout
 // creation, poll-based confirmation) must be allowed to coexist for the same
 // basket. A sparse index is not sufficient here — MongoDB's sparse index still
 // indexes documents where the field is explicitly null, and Mongoose sets

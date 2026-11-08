@@ -265,7 +265,7 @@ export default function FeeConfigPage() {
               <div>
                 <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: TEXT_COLORS.secondary, marginBottom: "0.35rem" }}>
                   Gateway Processing Fee (%)
-                  <InfoTooltip text="Switch processing cost, for example 2.9%. It is charged on the student's full checkout amount and absorbed from TutorEra's margin; it never reduces the tutor's payout." />
+                  <InfoTooltip text="Gateway processing cost, for example 2.9%. It is charged on the student's full checkout amount and absorbed from TUTORERA's margin; it never reduces the tutor's payout." />
                 </label>
                 <div style={{ position: "relative" }}>
                   <input
@@ -280,7 +280,7 @@ export default function FeeConfigPage() {
                   />
                   <Percent size={14} style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", color: UI_COLORS.gray500 }} />
                 </div>
-                <span style={{ fontSize: "0.72rem", color: TEXT_COLORS.muted, marginTop: "0.2rem", display: "block" }}>Match your Switch merchant agreement rate</span>
+                <span style={{ fontSize: "0.72rem", color: TEXT_COLORS.muted, marginTop: "0.2rem", display: "block" }}>Match the approved RapidPay merchant agreement rate</span>
               </div>
 
               <div>

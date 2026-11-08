@@ -461,6 +461,10 @@ export const bulkVerifyTutors = async (req: AuthRequest, res: Response): Promise
 export const getAllUsers = async (req: AuthRequest, res: Response): Promise<void> => {
   const { role, search, page = "1", limit = "20" } = req.query;
   const filter: Record<string, unknown> = {};
+  // enforceCountryScope has already validated the selected scope. Apply it to
+  // both the count and result queries so country administrators cannot receive
+  // users from markets outside their assigned scope.
+  if (req.countryScopeCode) filter.countryCode = req.countryScopeCode;
   if (role && role !== "all") filter.role = role;
 
   if (search && (search as string).trim()) {

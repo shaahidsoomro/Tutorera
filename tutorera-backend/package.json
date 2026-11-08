@@ -20,7 +20,9 @@
     "academic:seed-school-offerings": "node dist/scripts/seedSchoolOfferings.js",
     "migrate:matches-discipline": "ts-node src/scripts/recalculateMatchesDiscipline.ts",
     "audit:indexes": "ts-node src/scripts/auditDatabaseIndexes.ts",
-    "migrate:booked-slot-index": "ts-node src/scripts/migrateBookedSlotStartAtIndex.ts"
+    "migrate:booked-slot-index": "ts-node src/scripts/migrateBookedSlotStartAtIndex.ts",
+    "migrate:retire-swich": "ts-node src/scripts/retireSwichMarketConfigs.ts",
+    "audit:data-integrity": "ts-node src/scripts/scanDataIntegrity.ts"
   },
   "keywords": [],
   "author": "",

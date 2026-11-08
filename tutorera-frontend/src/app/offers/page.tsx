@@ -152,7 +152,6 @@ function OffersContent() {
       showSuccess("Payment received! Confirming your booking now — this can take a few seconds.");
       router.replace("/offers");
 
-      const basketId = `BID-${offerId}`;
       let cancelled = false;
       let attempt = 0;
 
@@ -160,8 +159,8 @@ function OffersContent() {
         if (cancelled) return;
         attempt += 1;
         try {
-          const res = await api.post("/payments/confirm", { basketId });
-          if (res.data?.confirmed) {
+          const res = await api.get(`/payments/status/bid/${encodeURIComponent(offerId)}`, { headers: { "Cache-Control": "no-cache" } });
+          if (res.data?.verified) {
             showSuccess("Booking confirmed!");
             load();
             return;
@@ -170,11 +169,11 @@ function OffersContent() {
           // yet (e.g. bank transfer can take longer than card) — keep
           // checking a few more times before giving up and telling the
           // student to check back later rather than polling forever.
-          if (res.data?.sessionStatus === "Pending" && attempt < 6 && !cancelled) {
+          if (res.data?.paymentStatus === "pending" && attempt < 6 && !cancelled) {
             setTimeout(poll, 3000);
-          } else if (res.data?.sessionStatus && res.data.sessionStatus !== "Pending") {
+          } else if (res.data?.paymentStatus && res.data.paymentStatus !== "pending") {
             // Failed / Expired / Cancelled — nothing more to wait for.
-            showError(new Error(res.data.sessionStatus), "Payment was not completed. You can try accepting the offer again.");
+            showError(new Error(res.data.paymentStatus), "Payment was not completed. You can try accepting the offer again.");
             load();
           }
         } catch (e) {
@@ -796,17 +795,16 @@ function OffersContent() {
           onSuccess={() => {
             setCheckoutSession(null);
             showSuccess("Payment received! Confirming your booking now…");
-            const basketId = `BID-${checkoutSession.offerId}`;
             let attempt = 0;
             let cancelled = false;
             const poll = async () => {
               if (cancelled) return;
               attempt += 1;
               try {
-                const r = await api.post("/payments/confirm", { basketId });
-                if (r.data?.confirmed) { showSuccess("Booking confirmed!"); load(); return; }
-                if (attempt < 6 && !cancelled) setTimeout(poll, 3000);
-                else { showError(new Error(r.data?.sessionStatus || "pending"), "Payment confirmed but booking finalisation is still in progress. Check back in a moment."); load(); }
+                const r = await api.get(`/payments/status/bid/${encodeURIComponent(checkoutSession.offerId)}`, { headers: { "Cache-Control": "no-cache" } });
+                if (r.data?.verified) { showSuccess("Booking confirmed!"); load(); return; }
+                if (r.data?.paymentStatus === "pending" && attempt < 6 && !cancelled) setTimeout(poll, 3000);
+                else { showError(new Error(r.data?.paymentStatus || "pending"), "Payment verification is still in progress. Check back in a moment."); load(); }
               } catch (e) {
                 if (attempt < 3 && !cancelled) setTimeout(poll, 3000);
                 else { showError(e, "Payment received but we couldn't confirm your booking automatically. Contact support with your offer reference."); load(); }

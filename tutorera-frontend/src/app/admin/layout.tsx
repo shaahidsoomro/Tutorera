@@ -188,6 +188,7 @@ const navSections: NavSection[] = [
       { href: "/admin/users",              label: "Users & Accounts",   icon: <Users size={17} />,           permission: "users.read" },
       { href: "/admin/roles",              label: "Admin Roles (RBAC)", icon: <KeyRound size={17} />,        permission: "roles.manage" },
       { href: "/admin/audit-logs",         label: "Audit Logs",         icon: <FileText size={17} />,        permission: "audit.read" },
+      { href: "/admin/data-integrity",     label: "Data Integrity",     icon: <ShieldAlert size={17} />,     permission: "audit.read" },
       { href: "/admin/system-health",      label: "System Health",      icon: <Activity size={17} />,        permission: "system.monitor" },
       { href: "/admin/supervisor-agent",   label: "Supervisor Agent",   icon: <Brain size={17} />,           permission: "analytics.read" },
     ],

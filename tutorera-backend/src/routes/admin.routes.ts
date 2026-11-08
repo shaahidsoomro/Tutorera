@@ -53,6 +53,9 @@ import { validate as validateGuarantee, updateClaimStatusSchema } from "../valid
 import { validate as validateBooking } from "../validators/booking.validator";
 import { updateAdminPaymentSchema } from "../validators/adminFinance.validator";
 import { getMarketplaceAnalytics, getMarketplaceOfferDetail, listMarketplaceOffers, listMarketplaceRequests } from "../controllers/marketplaceAdmin.controller";
+import { getRequestModerationHistory, moderateRequest } from "../controllers/requestModeration.controller";
+import { enforceAccountAction, getAccountEnforcementHistory } from "../controllers/accountModeration.controller";
+import { listDataIntegrityIssues, updateDataIntegrityIssue } from "../controllers/dataIntegrity.controller";
 import {
   getControlTowerPulse,
   listAtRiskRequests,
@@ -72,7 +75,6 @@ import {
   getAdminRolesOverview,
   updateAdminUserRole,
   promoteUser,
-  moderateUser,
   getStudent360,
   seedZoologyEligibilityRules,
   recalculateMatchesDiscipline,
@@ -165,18 +167,24 @@ router.get("/agents/:agentId/summary", adminAgentLimiter, getAgentSummary);
 
 // System Health & RBAC Roles
 router.get("/system/health", requirePermission("system.monitor"), getSystemHealth);
+router.get("/integrity/issues", requirePermission("audit.read"), listDataIntegrityIssues);
+router.patch("/integrity/issues/:id", requirePermission("system.monitor"), updateDataIntegrityIssue);
 router.get("/roles/overview", requirePermission("roles.manage"), getAdminRolesOverview);
 router.patch("/roles/users/:userId", requirePermission("roles.manage"), updateAdminUserRole);
 
 // User Moderation & Promotion (super_admin)
 router.post("/users/:id/promote", requirePermission("roles.manage"), promoteUser);
-router.patch("/users/:id/moderate", requirePermission("users.manage"), moderateUser);
+// Keep the old action name accepted by legacy clients while the controller has
+// one canonical vocabulary for persisted enforcement events.
+const normalizeEnforcementAction = (req: any, _res: any, next: () => void) => {
+  if (req.body?.action === "reactivate") req.body.action = "reinstate";
+  next();
+};
+router.patch("/users/:id/moderate", normalizeEnforcementAction, enforceAccountAction);
 // Enforcement alias used by Users page and Safety Cases page
 // Normalises "reinstate" → "reactivate" then delegates to moderateUser
-router.post("/users/:id/enforcement", requirePermission("users.manage"), (req, res) => {
-  if (req.body?.action === "reinstate") req.body.action = "reactivate";
-  return moderateUser(req as any, res);
-});
+router.post("/users/:id/enforcement", normalizeEnforcementAction, enforceAccountAction);
+router.get("/users/:id/enforcement-history", requirePermission("users.read"), getAccountEnforcementHistory);
 
 // Upload document on behalf of a tutor (by User ID → resolves to TutorProfile ID)
 router.post("/tutors/:id/upload-docs", requirePermission("tutor.verify"), async (req, res, next) => {
@@ -195,6 +203,11 @@ router.get("/stats", requirePermission("analytics.read"), getDashboardStats);
 router.get("/analytics", requirePermission("analytics.read"), getAnalytics);
 router.get("/marketplace-analytics", requirePermission("matching.read"), getMarketplaceAnalytics);
 router.get("/marketplace/requests", requirePermission("request.read"), listMarketplaceRequests);
+// Request moderation is intentionally separate from ordinary marketplace
+// analytics. It changes lifecycle state, closes competing offers where needed,
+// and writes a request-status history record inside a transaction.
+router.post("/marketplace/requests/:id/moderation", requirePermission("request.moderate"), moderateRequest);
+router.get("/marketplace/requests/:id/moderation-history", requirePermission("request.read"), getRequestModerationHistory);
 router.get("/marketplace/offers", requirePermission("matching.read"), listMarketplaceOffers);
 router.get("/marketplace/offers/:id", requirePermission("matching.read"), getMarketplaceOfferDetail);
 router.get("/verifications", requirePermission("tutor.read"), getPendingVerifications);

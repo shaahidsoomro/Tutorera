@@ -32,8 +32,8 @@ const bookedSlotSchema = new Schema<IBookedSlot>(
 bookedSlotSchema.index({ tutor: 1, date: 1, startTime: 1 }, { unique: true });
 // A compound sparse index still includes legacy slots when `tutor` exists but
 // `startAt` does not. Restrict this constraint to normalized UTC instants.
-// Named separately from the old sparse `tutor_1_startAt_1` so both can coexist
-// while migrateBookedSlotStartAtIndex swaps them without a uniqueness gap.
+// The migration replaces the old sparse `tutor_1_startAt_1` during a brief,
+// explicitly acknowledged write pause; Atlas cannot host both key patterns.
 bookedSlotSchema.index({ tutor: 1, startAt: 1 }, { name: "tutor_1_startAt_1_dated", unique: true, partialFilterExpression: { startAt: { $type: "date" } } });
 bookedSlotSchema.index({ tutor: 1, startAt: 1, endAt: 1 });
 

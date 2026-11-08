@@ -51,7 +51,9 @@ const marketConfigSchema = new Schema<IMarketConfig>(
     homeTuitionEnabled: { type: Boolean, default: false },
     studentRegistration: { type: Boolean, default: true },
     tutorRegistration: { type: Boolean, default: true },
-    paymentProvider: { type: String, enum: ["swich", "rapidpay", "none"], default: "none" },
+    // Only RapidPay can be assigned to new or updated market configuration.
+    // Historical ledger rows retain their original provider independently.
+    paymentProvider: { type: String, enum: ["rapidpay", "none"], default: "none" },
     paymentsEnabled: { type: Boolean, default: false },
     payoutsEnabled: { type: Boolean, default: false },
     backgroundCheckRequired: { type: Boolean, default: true },

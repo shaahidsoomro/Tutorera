@@ -483,7 +483,7 @@ export default function OfferComparisonModal({
                 <ul style={{ margin: 0, paddingLeft: "1.2rem", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
                   <li>First session protection — full refund if not satisfied</li>
                   <li>Verified tutor credentials before booking</li>
-                  <li>Secure payment processing via Swich</li>
+                  <li>Secure payment processing via RapidPay</li>
                   <li>Dispute resolution support</li>
                   <li>0% platform fee — price shown is what tutor receives</li>
                 </ul>

@@ -22,6 +22,7 @@
     "PAYMENT_PROVIDER": "rapidpay",
     "RAPIDPAY_SUPPORTED_MARKETS": "PK,AE,GB,US,SA,IN",
     "SCHEDULER_MODE": "disabled",
+    "MAINTENANCE_MODE": "false",
     "CLOUDFLARE_NATIVE_RUNTIME": "true",
     "ENABLE_SCHEDULED_JOBS": "false",
     "PREVIEW_READ_ONLY": "true"
@@ -43,9 +44,11 @@
         "PAYMENT_PROVIDER": "rapidpay",
         "RAPIDPAY_SUPPORTED_MARKETS": "PK,AE,GB,US,SA,IN",
         "SCHEDULER_MODE": "disabled",
+        "MAINTENANCE_MODE": "false",
         "CLOUDFLARE_NATIVE_RUNTIME": "true",
         "ENABLE_SCHEDULED_JOBS": "true",
-        "PREVIEW_READ_ONLY": "false"
+        "PREVIEW_READ_ONLY": "false",
+        "MAINTENANCE_MODE": "false"
       },
       "triggers": { "crons": ["*/5 * * * *", "*/10 * * * *", "*/15 * * * *", "0 * * * *", "0 4 * * *"] }
     }

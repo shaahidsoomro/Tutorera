@@ -52,9 +52,9 @@ export default function PaymentProvidersPage() {
 
   const getProviderDisplayName = (key: string) => {
     switch(key) {
-      case "swich": return "Switch";
+      case "rapidpay": return "RapidPay";
       case "none": return "No Provider Attached";
-      default: return key;
+      default: return "Historical provider";
     }
   };
 

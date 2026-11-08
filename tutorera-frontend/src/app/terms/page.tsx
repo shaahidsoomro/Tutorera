@@ -166,7 +166,7 @@ const masterTermsSections = [
   {
     id: "26-payment-processing",
     title: "26. Payment Processing & Authorized Gateways",
-    content: `Payments are processed through PCI-DSS compliant third-party payment providers, including Switch where it is enabled, or approved regional banking partners. TUTORERA never stores raw credit or debit card numbers on its servers.`
+    content: `Payments are processed through the payment provider enabled for the relevant market. TUTORERA never stores raw credit or debit card numbers on its servers.`
   },
   {
     id: "27-tutor-payouts",

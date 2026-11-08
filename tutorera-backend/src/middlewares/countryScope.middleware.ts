@@ -32,7 +32,7 @@ export const enforceCountryScope = (req: AuthRequest, res: Response, next: NextF
   // routes without caring where the middleware was mounted. Audit P0-3:
   // /admin/applications is the tutor application-review surface served
   // by routes/tracking.routes.ts (mounted at /api/v1/tracking).
-  const supported = ["/marketplace/requests", "/marketplace/offers", "/markets", "/geography", "/onboarding", "/users", "/safety/cases", "/admin/applications"].some((prefix) => req.originalUrl.includes(prefix));
+  const supported = ["/marketplace/requests", "/marketplace/offers", "/markets", "/geography", "/onboarding", "/users", "/safety/cases", "/integrity", "/admin/applications"].some((prefix) => req.originalUrl.includes(prefix));
   if (!supported) {
     res.status(403).json({ success: false, code: "COUNTRY_SCOPE_ROUTE_UNSUPPORTED", message: "This administrative resource is not yet available in country-scoped mode." });
     return;

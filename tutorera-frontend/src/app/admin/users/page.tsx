@@ -13,6 +13,7 @@ interface User {
   email: string;
   role: string;
   city: string;
+  countryCode?: string;
   isActive: boolean;
   moderationStatus?: "active" | "suspended" | "banned" | "deleted";
   isVerified: boolean;
@@ -74,7 +75,11 @@ export default function UsersPage() {
     const reason = enforcementReason.trim();
     setActionLoading(selectedUser._id);
     try {
-      const result = await api.post(`/admin/users/${selectedUser._id}/enforcement`, { action, reason });
+      const result = await api.post(`/admin/users/${selectedUser._id}/enforcement`, {
+        action,
+        reason,
+        ...(selectedUser.countryCode ? { countryCode: selectedUser.countryCode } : {}),
+      });
       const updated = result.data.user;
       setUsers(prev => prev.map(u => u._id === updated._id ? { ...u, isActive: updated.isActive, moderationStatus: updated.moderationStatus } : u));
       showSuccess(`Account ${action === "reinstate" ? "reinstated" : "suspended"}.`);

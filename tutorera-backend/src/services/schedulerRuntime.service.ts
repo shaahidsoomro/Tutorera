@@ -8,14 +8,12 @@ import { processPendingPayouts } from "./payout.service";
 import { refreshRates } from "./exchangeRate.service";
 import { sendAgreementReminders } from "./legalAgreementReminder.service";
 import { sendMissingDocumentsReminders } from "./missingDocumentsReminder.service";
-import { processPendingSwichCheckouts } from "./paymentReconciliation.service";
 import { processEmailOutbox } from "./emailOutbox.service";
 import logger from "../config/logger";
 
 export function runScheduledJob(name: ScheduledJobName, io?: Server, replayMeta?: ReplayMeta) {
   const work: Record<ScheduledJobName, () => Promise<unknown>> = {
     "email-outbox-delivery": () => processEmailOutbox(),
-    "swich-checkout-reconciliation": () => processPendingSwichCheckouts(io),
     "offer-expiry-processing": () => processOfferExpirations(io),
     "request-lifecycle-processing": () => processRequestLifecycle(io),
     "abandoned-journey-recovery": () => processAbandonedJourneyRecovery(),
