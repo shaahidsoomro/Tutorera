@@ -1,0 +1,4 @@
+name = "tutorera-api"
+main = "dist/server.js"
+compatibility_date = "2026-11-08"
+compatibility_flags = ["nodejs_compat"]
