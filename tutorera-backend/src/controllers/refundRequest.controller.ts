@@ -145,17 +145,32 @@ export const getMyRefundRequests = async (req: AuthRequest, res: Response): Prom
 };
 
 export const getAllRefundRequests = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { status } = req.query;
+  const { status, page = "1", limit = "25" } = req.query;
   const filter: Record<string, unknown> = {};
   if (status) filter.status = status;
+
+  const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
+  const limitNum = Math.min(100, Math.max(1, parseInt(limit as string, 10) || 25));
+  const skip = (pageNum - 1) * limitNum;
+
+  const total = await RefundRequest.countDocuments(filter);
 
   const requests = await RefundRequest.find(filter)
     .populate("student", "name email phone")
     .populate("tutor", "name email")
     .populate("booking", "amount studentTotal currency schedule teachingMode createdAt")
-    .sort("-createdAt");
+    .sort("-createdAt")
+    .skip(skip)
+    .limit(limitNum)
+    .lean();
 
-  res.status(200).json({ success: true, total: requests.length, refundRequests: requests });
+  res.status(200).json({
+    success: true,
+    total,
+    page: pageNum,
+    pages: Math.ceil(total / limitNum),
+    refundRequests: requests
+  });
 };
 
 export const updateRefundRequestStatus = async (req: AuthRequest, res: Response): Promise<void> => {

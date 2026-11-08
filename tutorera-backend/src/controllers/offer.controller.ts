@@ -293,6 +293,13 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
 
     const checkoutAmount = Math.round((feeQuote.studentTotal - promoDiscount) * 100) / 100;
 
+    if (checkoutAmount <= 0) {
+      res.status(422).json({ success: false, code: "INVALID_CHECKOUT_AMOUNT", message: "Invalid booking amount after discounts. Contact support." }); return;
+    }
+    if (!Number.isFinite(checkoutAmount)) {
+      res.status(422).json({ success: false, code: "CALCULATION_ERROR", message: "Amount calculation error. Please try again." }); return;
+    }
+
     const payingStudent = await User.findById(request.student).select("name email phone");
     if (!payingStudent?.phone?.trim()) { res.status(422).json({ success: false, code: "PHONE_REQUIRED", message: "Add a contact phone number to your profile before starting payment." }); return; }
 
