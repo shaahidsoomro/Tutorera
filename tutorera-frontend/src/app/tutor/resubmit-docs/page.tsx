@@ -4,6 +4,7 @@ import { DocumentResubmitPanel } from "@/components/Tracking/DocumentResubmitPan
 import s from "@/components/Tracking/tracking.module.css";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/axios";
+import { STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 import { AuthenticatedTrackingPayload } from "@/types/tracking";
 import { ArrowLeft,Mail } from "lucide-react";
 import Link from "next/link";
@@ -40,8 +41,8 @@ export default function TutorResubmitDocsPage() {
   if (loading || (!payload && !fetchError)) {
     return (
       <div className={s.trackingPage}>
-        <div className={s.trackingContainer}>
-          <div className={s.spinner} />
+        <div className={s.trackingContainer} role="status">
+          <div className={s.spinner} aria-hidden="true" />
           <p className={s.empty}>Loading your document status…</p>
         </div>
       </div>
@@ -53,7 +54,7 @@ export default function TutorResubmitDocsPage() {
       <div className={s.trackingPage}>
         <div className={s.trackingContainer}>
           <div className={s.card}>
-            <p style={{ color: "#b91c1c", marginBottom: 16 }}>{fetchError}</p>
+            <p role="alert" style={{ color: STATUS_COLORS.danger.color, marginBottom: 16 }}>{fetchError}</p>
             <Link href="/tutor/application-status" className={s.ctaButton}>Back to application status</Link>
           </div>
         </div>
@@ -66,7 +67,7 @@ export default function TutorResubmitDocsPage() {
       <div className={s.trackingContainer}>
         {/* Breadcrumb */}
         <div style={{ marginBottom: 24 }}>
-          <Link href="/tutor/application-status" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: "#64748b", textDecoration: "none" }}>
+          <Link href="/tutor/application-status" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: TEXT_COLORS.muted, textDecoration: "none" }}>
             <ArrowLeft aria-hidden="true" size={15} /> Back to application status
           </Link>
         </div>
@@ -87,7 +88,7 @@ export default function TutorResubmitDocsPage() {
             <div className={s.card}>
               <div className={s.cardHeader}>
                 <p className={s.cardTitle}>Current status</p>
-                {refreshing && <span style={{ fontSize: 12, color: "#94a3b8" }}>Refreshing…</span>}
+                {refreshing && <span role="status" style={{ fontSize: 12, color: TEXT_COLORS.muted }}>Refreshing…</span>}
               </div>
               <div className={s.metaRow}>
                 <span className={s.metaLabel}>Application ID</span>
@@ -99,7 +100,7 @@ export default function TutorResubmitDocsPage() {
               </div>
               <div className={s.metaRow}>
                 <span className={s.metaLabel}>Re-verification required</span>
-                <span className={s.metaValue} style={{ color: payload.reVerificationRequired ? "#b91c1c" : "#16a34a" }}>
+                <span className={s.metaValue} style={{ color: payload.reVerificationRequired ? STATUS_COLORS.danger.color : STATUS_COLORS.success.color }}>
                   {payload.reVerificationRequired ? "Yes — action required" : "No"}
                 </span>
               </div>
@@ -124,19 +125,19 @@ export default function TutorResubmitDocsPage() {
           <div className={s.cardHeader}>
             <p className={s.cardTitle}>Need help?</p>
           </div>
-          <p style={{ fontSize: 13, color: "#64748b", margin: "0 0 12px" }}>
+          <p style={{ fontSize: 13, color: TEXT_COLORS.muted, margin: "0 0 12px" }}>
             If you&apos;re unsure what to upload or have questions about the verification process, our support team is ready to assist.
           </p>
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
             <a
               href="mailto:support@tutorera.ac.pk"
-              style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: "#2563eb", textDecoration: "none", fontWeight: 600 }}
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: TEXT_COLORS.link, textDecoration: "none", fontWeight: 600 }}
             >
               <Mail aria-hidden="true" size={15} /> Email support
             </a>
             <Link
               href="/tutor/application-status"
-              style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: "#64748b", textDecoration: "none" }}
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: TEXT_COLORS.muted, textDecoration: "none" }}
             >
               <ArrowLeft aria-hidden="true" size={15} /> View full application status
             </Link>

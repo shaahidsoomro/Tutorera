@@ -6,7 +6,7 @@ import PayoutTimeline from "@/components/Finance/PayoutTimeline";
 import { useAuth } from "@/context/AuthContext";
 import { useAppGuard } from "@/hooks/useAppGuard";
 import api from "@/lib/axios";
-import { UI_COLORS, TEXT_COLORS } from "@/lib/brand";
+import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 import { Calculator } from "lucide-react";
 import { useEffect,useState } from "react";
 import {
@@ -90,8 +90,8 @@ function ChartTooltip({ active, payload, label, isTutor }: any) {
   if (!active || !payload?.length) return null;
   const value = payload[0]?.value as number | undefined;
   return (
-    <div style={{ backgroundColor: '#021550', borderRadius: '0.5rem', padding: '0.6rem 0.875rem', boxShadow: '0 4px 12px rgba(0,0,0,0.25)' }}>
-      <p style={{ color: '#9ca3af', fontSize: '0.75rem', margin: '0 0 0.2rem' }}>{label}</p>
+    <div style={{ backgroundColor: C.primary, borderRadius: '0.5rem', padding: '0.6rem 0.875rem', boxShadow: '0 4px 12px rgba(0,0,0,0.25)' }}>
+      <p style={{ color: '#cbd5e1', fontSize: '0.75rem', margin: '0 0 0.2rem' }}>{label}</p>
       <p style={{ color: 'white', fontSize: '0.875rem', fontWeight: '700', margin: 0 }}>
         {isTutor ? `Earnings ${(value || 0).toLocaleString()}` : `${value} session${value !== 1 ? "s" : ""}`}
       </p>
@@ -166,26 +166,26 @@ function PayoutRequestPanel() {
   return (
     <div>
       <button type="button" onClick={handleOpen}
-        style={{ padding: "0.4rem 1rem", background: "#0329b2", color: "#fff", border: "none", borderRadius: 8, fontSize: "0.85rem", fontWeight: 700, cursor: "pointer", minHeight: 44 }}>
+        style={{ padding: "0.4rem 1rem", background: C.accent, color: "#fff", border: "none", borderRadius: 8, fontSize: "0.85rem", fontWeight: 700, cursor: "pointer", minHeight: 44 }}>
         💳 Request Payout
       </button>
       {open && (
         <div role="dialog" aria-modal="true" aria-labelledby="payout-modal-title" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
           <div style={{ background: "#fff", borderRadius: 16, padding: "1.5rem", maxWidth: 560, width: "100%", maxHeight: "80vh", overflowY: "auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-              <h3 id="payout-modal-title" style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: "#021550" }}>💳 Request Payout</h3>
-              <button onClick={() => setOpen(false)} aria-label="Close payout modal" style={{ background: "none", border: "none", fontSize: "1.25rem", cursor: "pointer", color: "#6b7280", minWidth: 44, minHeight: 44, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+              <h3 id="payout-modal-title" style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: C.primary }}>💳 Request Payout</h3>
+              <button onClick={() => setOpen(false)} aria-label="Close payout modal" style={{ background: "none", border: "none", fontSize: "1.25rem", cursor: "pointer", color: TEXT_COLORS.muted, minWidth: 44, minHeight: 44, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
             </div>
-            <p style={{ margin: "0 0 1rem", fontSize: "0.8rem", color: "#64748b" }}>
+            <p style={{ margin: "0 0 1rem", fontSize: "0.8rem", color: TEXT_COLORS.muted }}>
               Select completed sessions to request payment. Finance will process within 3–5 business days.
             </p>
             {payoutError && (
-              <p role="alert" style={{ margin: "0 0 0.75rem", padding: "0.5rem 0.875rem", borderRadius: "0.5rem", fontSize: "0.825rem", fontWeight: 600, background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3" }}>{payoutError}</p>
+              <p role="alert" style={{ margin: "0 0 0.75rem", padding: "0.5rem 0.875rem", borderRadius: "0.5rem", fontSize: "0.825rem", fontWeight: 600, background: STATUS_COLORS.danger.bg, color: STATUS_COLORS.danger.color, border: `1px solid ${STATUS_COLORS.danger.border}` }}>{payoutError}</p>
             )}
             {loading ? (
-              <p style={{ color: "#64748b", fontSize: "0.85rem" }}>Loading eligible sessions…</p>
+              <p style={{ color: TEXT_COLORS.muted, fontSize: "0.85rem" }}>Loading eligible sessions…</p>
             ) : bookings.length === 0 ? (
-              <p style={{ color: "#64748b", fontSize: "0.85rem" }}>No eligible sessions found. Payouts are available for completed, confirmed-payment bookings.</p>
+              <p style={{ color: TEXT_COLORS.muted, fontSize: "0.85rem" }}>No eligible sessions found. Payouts are available for completed, confirmed-payment bookings.</p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
                 {bookings.map(b => {
@@ -195,18 +195,18 @@ function PayoutRequestPanel() {
                   return (
                     <div key={b._id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.75rem 1rem", background: done ? "#f0fdf4" : "#f8fafc", border: `1px solid ${done ? "#bbf7d0" : "#e2e8f0"}`, borderRadius: 10 }}>
                       <div>
-                        <p style={{ margin: "0 0 2px", fontSize: "0.85rem", fontWeight: 700, color: "#021550" }}>
+                        <p style={{ margin: "0 0 2px", fontSize: "0.85rem", fontWeight: 700, color: C.primary }}>
                           {b.request?.subject || "Session"} — {b.student?.name || "Student"}
                         </p>
-                        <p style={{ margin: 0, fontSize: "0.75rem", color: "#64748b" }}>
+                        <p style={{ margin: 0, fontSize: "0.75rem", color: TEXT_COLORS.muted }}>
                           {currency} {amount.toLocaleString()} net · {b.completedAt ? new Date(b.completedAt).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" }) : ""}
                         </p>
                       </div>
                       {done ? (
-                        <span style={{ fontSize: "0.8rem", color: "#16a34a", fontWeight: 700 }}>✓ Requested</span>
+                        <span style={{ fontSize: "0.8rem", color: STATUS_COLORS.success.color, fontWeight: 700 }}>✓ Requested</span>
                       ) : (
                         <button onClick={() => handleRequest(b._id)} disabled={requesting === b._id}
-                          style={{ padding: "0.4rem 0.875rem", background: requesting === b._id ? "#e5e7eb" : "#0329b2", color: requesting === b._id ? "#9ca3af" : "#fff", border: "none", borderRadius: 7, fontSize: "0.8rem", fontWeight: 700, cursor: requesting === b._id ? "not-allowed" : "pointer" }}>
+                          style={{ padding: "0.4rem 0.875rem", background: requesting === b._id ? "#e5e7eb" : C.accent, color: requesting === b._id ? "#9ca3af" : "#fff", border: "none", borderRadius: 7, fontSize: "0.8rem", fontWeight: 700, minHeight: 44, cursor: requesting === b._id ? "not-allowed" : "pointer" }}>
                           {requesting === b._id ? "…" : "Request"}
                         </button>
                       )}
@@ -256,19 +256,19 @@ export default function EarningsPage() {
 
   // Stat cards
   const statCards = isTutor ? [
-    { label: "Total Earnings", value: payoutTotals.map(item => formatMoney(item.totalEarnings, item.currency)).join(" · ") || "—", color: '#16a34a', bg: '#f0fdf4', icon: '💰' },
-    { label: "Sessions Completed", value: tutorData?.stats.sessionsCount ?? 0,                              color: C.accent,  bg: '#EEF5FF', icon: '✅' },
-    { label: "Hours Taught",     value: `${tutorData?.stats.hoursTaught ?? 0} hrs`,                         color: '#7c3aed', bg: '#f5f3ff', icon: '⏱️' },
-    { label: "Subjects Taught",  value: tutorData?.stats.subjectsCount ?? 0,                                 color: '#d97706', bg: '#fffbeb', icon: '📖' },
-    { label: "Rebook Rate",      value: `${tutorData?.tutorRetentionStats?.rebookRate ?? 0}%`,                color: '#c81b7f', bg: '#fdf2f8', icon: '🔄' },
-    { label: "Repeat Students",  value: tutorData?.tutorRetentionStats?.repeatStudentCount ?? 0,             color: '#7c3aed', bg: '#f5f3ff', icon: '👥' },
+    { label: "Total Earnings", value: payoutTotals.map(item => formatMoney(item.totalEarnings, item.currency)).join(" · ") || "—", color: STATUS_COLORS.success.color, bg: STATUS_COLORS.success.bg, icon: '💰' },
+    { label: "Sessions Completed", value: tutorData?.stats.sessionsCount ?? 0,                              color: C.accent,  bg: UI_COLORS.accentLight, icon: '✅' },
+    { label: "Hours Taught",     value: `${tutorData?.stats.hoursTaught ?? 0} hrs`,                         color: STATUS_COLORS.purple.color, bg: STATUS_COLORS.purple.bg, icon: '⏱️' },
+    { label: "Subjects Taught",  value: tutorData?.stats.subjectsCount ?? 0,                                 color: STATUS_COLORS.warning.color, bg: '#fffbeb', icon: '📖' },
+    { label: "Rebook Rate",      value: `${tutorData?.tutorRetentionStats?.rebookRate ?? 0}%`,                color: UI_COLORS.magenta, bg: '#fdf2f8', icon: '🔄' },
+    { label: "Repeat Students",  value: tutorData?.tutorRetentionStats?.repeatStudentCount ?? 0,             color: STATUS_COLORS.purple.color, bg: STATUS_COLORS.purple.bg, icon: '👥' },
   ] : [
-    { label: "Sessions Completed", value: studentData?.stats.sessionsCount ?? 0,                            color: C.accent,  bg: '#EEF5FF', icon: '✅' },
-    { label: "Hours Learned",     value: `${studentData?.stats.hoursLearned ?? 0} hrs`,                    color: '#7c3aed', bg: '#f5f3ff', icon: '⏱️' },
-    { label: "Subjects Learned",  value: studentData?.stats.subjectsCount ?? 0,                            color: '#d97706', bg: '#fffbeb', icon: '📖' },
-    { label: "Tutors Worked With", value: studentData?.stats.tutorsCount ?? 0,                              color: '#16a34a', bg: '#f0fdf4', icon: '👨‍🏫' },
-    { label: "Retention Rate",     value: `${studentData?.retentionStats?.retentionRate ?? 0}%`,              color: '#c81b7f', bg: '#fdf2f8', icon: '🔄' },
-    { label: "Repeat Tutors",     value: studentData?.retentionStats?.repeatRelationships ?? 0,               color: '#7c3aed', bg: '#f5f3ff', icon: '🌟' },
+    { label: "Sessions Completed", value: studentData?.stats.sessionsCount ?? 0,                            color: C.accent,  bg: UI_COLORS.accentLight, icon: '✅' },
+    { label: "Hours Learned",     value: `${studentData?.stats.hoursLearned ?? 0} hrs`,                    color: STATUS_COLORS.purple.color, bg: STATUS_COLORS.purple.bg, icon: '⏱️' },
+    { label: "Subjects Learned",  value: studentData?.stats.subjectsCount ?? 0,                            color: STATUS_COLORS.warning.color, bg: '#fffbeb', icon: '📖' },
+    { label: "Tutors Worked With", value: studentData?.stats.tutorsCount ?? 0,                              color: STATUS_COLORS.success.color, bg: STATUS_COLORS.success.bg, icon: '👨‍🏫' },
+    { label: "Retention Rate",     value: `${studentData?.retentionStats?.retentionRate ?? 0}%`,              color: UI_COLORS.magenta, bg: '#fdf2f8', icon: '🔄' },
+    { label: "Repeat Tutors",     value: studentData?.retentionStats?.repeatRelationships ?? 0,               color: STATUS_COLORS.purple.color, bg: STATUS_COLORS.purple.bg, icon: '🌟' },
   ];
 
   return (
@@ -290,7 +290,7 @@ export default function EarningsPage() {
           {isTutor && (
             <div className="earnings-header-actions" style={{ display: "flex", gap: "0.75rem", flexShrink: 0 }}>
               <button onClick={() => setShowCalculator(v => !v)}
-                style={{ display: "flex", alignItems: "center", gap: "0.5rem", backgroundColor: showCalculator ? C.accent : "white", color: showCalculator ? "white" : C.primary, padding: "0.65rem 1.25rem", borderRadius: "0.5rem", border: `1.5px solid ${showCalculator ? C.accent : "#e5e7eb"}`, fontWeight: 600, fontSize: "0.85rem", cursor: "pointer" }}>
+                style={{ display: "flex", alignItems: "center", gap: "0.5rem", backgroundColor: showCalculator ? C.accent : "white", color: showCalculator ? "white" : C.primary, padding: "0.65rem 1.25rem", borderRadius: "0.5rem", border: `1.5px solid ${showCalculator ? C.accent : "#e5e7eb"}`, fontWeight: 600, fontSize: "0.85rem", cursor: "pointer", minHeight: 44 }}>
                 <Calculator size={16} /> {showCalculator ? "Hide Calculator" : "Rate Calculator"}
               </button>
               <PayoutReportDownload endpoint="/earnings/report/pdf" label="Download payout PDF" />
@@ -306,7 +306,7 @@ export default function EarningsPage() {
             <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
           </div>
         ) : !hasActivity ? (
-          <div style={{ backgroundColor: 'white', borderRadius: '1rem', border: '1px solid #e5e7eb' }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '1rem', border: `1px solid ${C.border}` }}>
             <EmptyState isTutor={isTutor} />
           </div>
         ) : (
@@ -314,7 +314,7 @@ export default function EarningsPage() {
             {/* Stats Cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
               {statCards.map(card => (
-                <div key={card.label} style={{ backgroundColor: 'white', borderRadius: '0.75rem', padding: '1.25rem', border: '1px solid #e5e7eb', borderTop: `3px solid ${card.color}` }}>
+                <div key={card.label} style={{ backgroundColor: 'white', borderRadius: '0.75rem', padding: '1.25rem', border: `1px solid ${C.border}`, borderTop: `3px solid ${card.color}` }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.6rem' }}>
                     <span style={{ fontSize: '1.25rem' }}>{card.icon}</span>
                     <p style={{ fontSize: '0.72rem', fontWeight: '700', color: card.color, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -336,10 +336,10 @@ export default function EarningsPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
                   <span style={{ fontSize: '1.75rem' }}>⏳</span>
                   <div>
-                    <p style={{ fontWeight: '700', color: '#92400e', fontSize: '0.95rem', margin: '0 0 0.2rem' }}>
+                    <p style={{ fontWeight: '700', color: STATUS_COLORS.warning.color, fontSize: '0.95rem', margin: '0 0 0.2rem' }}>
                       {payoutTotals.map(item => formatMoney(item.onHoldAmount, item.currency)).join(" · ")} On Hold
                     </p>
-                    <p style={{ color: '#92400e', fontSize: '0.8rem', margin: 0, opacity: 0.85 }}>
+                    <p style={{ color: STATUS_COLORS.warning.color, fontSize: '0.8rem', margin: 0, opacity: 0.85 }}>
                       From {tutorData?.stats.onHoldCount} completed session{tutorData?.stats.onHoldCount !== 1 ? "s" : ""} — payment confirmed, payout pending
                     </p>
                   </div>
@@ -359,7 +359,7 @@ export default function EarningsPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }} className="earnings-chart-row">
 
               {/* Monthly chart */}
-              <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', padding: '1.5rem', border: '1px solid #e5e7eb' }}>
+              <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', padding: '1.5rem', border: `1px solid ${C.border}` }}>
                 <h3 style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem', marginBottom: '0.2rem' }}>
                   {isTutor && !hasMultiplePayoutCurrencies ? "Monthly Earnings" : "Monthly Sessions"}
                 </h3>
@@ -368,32 +368,32 @@ export default function EarningsPage() {
                   <AreaChart data={data?.monthlyData ?? []} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
                     <defs>
                       <linearGradient id="earningsGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%"  stopColor={isTutor ? '#16a34a' : C.accent} stopOpacity={0.18} />
-                        <stop offset="95%" stopColor={isTutor ? '#16a34a' : C.accent} stopOpacity={0} />
+                        <stop offset="5%"  stopColor={isTutor ? STATUS_COLORS.success.color : C.accent} stopOpacity={0.18} />
+                        <stop offset="95%" stopColor={isTutor ? STATUS_COLORS.success.color : C.accent} stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-                    <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                    <XAxis dataKey="month" tick={{ fontSize: 11, fill: TEXT_COLORS.muted }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11, fill: TEXT_COLORS.muted }} axisLine={false} tickLine={false} allowDecimals={false} />
                     <Tooltip
                       content={(props) => <ChartTooltip {...props} isTutor={isTutor && !hasMultiplePayoutCurrencies} />}
-                      cursor={{ stroke: isTutor ? '#16a34a' : C.accent, strokeWidth: 1, strokeDasharray: '4 4' }}
+                      cursor={{ stroke: isTutor ? STATUS_COLORS.success.color : C.accent, strokeWidth: 1, strokeDasharray: '4 4' }}
                     />
                     <Area
                       type="monotone"
                       dataKey={isTutor && !hasMultiplePayoutCurrencies ? "earnings" : "sessions"}
-                      stroke={isTutor ? '#16a34a' : C.accent}
+                      stroke={isTutor ? STATUS_COLORS.success.color : C.accent}
                       strokeWidth={2.5}
                       fill="url(#earningsGradient)"
                       dot={false}
-                      activeDot={{ r: 5, fill: isTutor ? '#16a34a' : C.accent, strokeWidth: 2, stroke: 'white' }}
+                      activeDot={{ r: 5, fill: isTutor ? STATUS_COLORS.success.color : C.accent, strokeWidth: 2, stroke: 'white' }}
                     />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
 
               {/* Subjects breakdown */}
-              <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', padding: '1.5rem', border: '1px solid #e5e7eb' }}>
+              <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', padding: '1.5rem', border: `1px solid ${C.border}` }}>
                 <h3 style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem', marginBottom: '0.2rem' }}>
                   {isTutor ? "Subjects Taught" : "Subjects Learned"}
                 </h3>
@@ -410,7 +410,7 @@ export default function EarningsPage() {
                         subject={s.subject}
                         count={s.count}
                         max={maxSubject}
-                        color={isTutor ? '#16a34a' : C.accent}
+                        color={isTutor ? STATUS_COLORS.success.color : C.accent}
                       />
                     ))}
                   </div>
@@ -420,14 +420,14 @@ export default function EarningsPage() {
 
             {/* Tutor-specific: Recent Sessions */}
             {isTutor && (
-              <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', border: '1px solid #e5e7eb', overflow: 'hidden', marginBottom: '1.25rem' }}>
-                <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #e5e7eb' }}>
+              <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', border: `1px solid ${C.border}`, overflow: 'hidden', marginBottom: '1.25rem' }}>
+                <div style={{ padding: '1.25rem 1.5rem', borderBottom: `1px solid ${C.border}` }}>
                   <h3 style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem', margin: 0 }}>Recent Sessions</h3>
                 </div>
                 {/* Desktop header */}
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1fr', padding: '0.6rem 1.5rem', backgroundColor: C.gray50, borderBottom: '1px solid #e5e7eb' }} className="earnings-table-header">
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1fr', padding: '0.6rem 1.5rem', backgroundColor: C.gray50, borderBottom: `1px solid ${C.border}` }} className="earnings-table-header">
                   {["Student", "Subject", "Session Amount", "Your Earnings"].map(h => (
-                    <p key={h} style={{ fontSize: '0.72rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>{h}</p>
+                    <p key={h} style={{ fontSize: '0.72rem', fontWeight: '700', color: TEXT_COLORS.muted, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>{h}</p>
                   ))}
                 </div>
                 {(tutorData?.recentSessions ?? []).map((s, idx) => (
@@ -435,9 +435,9 @@ export default function EarningsPage() {
                     {/* Desktop row */}
                     <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1fr', padding: '0.875rem 1.5rem', alignItems: 'center', borderBottom: idx < (tutorData?.recentSessions.length ?? 0) - 1 ? '1px solid #f3f4f6' : 'none' }} className="earnings-table-row">
                       <p style={{ fontWeight: '600', color: C.primary, fontSize: '0.875rem', margin: 0 }}>{s.studentName}</p>
-                      <span style={{ fontSize: '0.8rem', fontWeight: '600', padding: '0.2rem 0.6rem', borderRadius: '999px', backgroundColor: '#EEF5FF', color: C.accent, width: 'fit-content' }}>{s.subject}</span>
+                      <span style={{ fontSize: '0.8rem', fontWeight: '600', padding: '0.2rem 0.6rem', borderRadius: '999px', backgroundColor: UI_COLORS.accentLight, color: C.accent, width: 'fit-content' }}>{s.subject}</span>
                       <p style={{ fontSize: '0.875rem', color: C.gray500, margin: 0 }}>{formatMoney(s.amount || 0, s.currency)}</p>
-                      <p style={{ fontSize: '0.875rem', fontWeight: '700', color: '#16a34a', margin: 0 }}>{formatMoney(s.tutorPayout || 0, s.currency)}</p>
+                      <p style={{ fontSize: '0.875rem', fontWeight: '700', color: STATUS_COLORS.success.color, margin: 0 }}>{formatMoney(s.tutorPayout || 0, s.currency)}</p>
                     </div>
                     {/* Mobile card */}
                     <div style={{ padding: '0.875rem 1.25rem', borderBottom: idx < (tutorData?.recentSessions.length ?? 0) - 1 ? '1px solid #f3f4f6' : 'none' }} className="earnings-mobile-card">
@@ -446,7 +446,7 @@ export default function EarningsPage() {
                           <p style={{ fontWeight: '600', color: C.primary, fontSize: '0.875rem', margin: 0 }}>{s.studentName}</p>
                           <p style={{ fontSize: '0.78rem', color: C.gray500, margin: '0.2rem 0 0' }}>{s.subject}</p>
                         </div>
-                        <p style={{ fontWeight: '700', color: '#16a34a', margin: 0 }}>{formatMoney(s.tutorPayout || 0, s.currency)}</p>
+                        <p style={{ fontWeight: '700', color: STATUS_COLORS.success.color, margin: 0 }}>{formatMoney(s.tutorPayout || 0, s.currency)}</p>
                       </div>
                     </div>
                   </div>
@@ -459,7 +459,7 @@ export default function EarningsPage() {
               <>
                 {/* Tutors worked with */}
                 {(studentData?.tutorsWorkedWith ?? []).length > 0 && (
-                  <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', padding: '1.5rem', border: '1px solid #e5e7eb', marginBottom: '1.25rem' }}>
+                  <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', padding: '1.5rem', border: `1px solid ${C.border}`, marginBottom: '1.25rem' }}>
                     <h3 style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem', marginBottom: '1.25rem' }}>Tutors Worked With</h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                       {(studentData?.tutorsWorkedWith ?? []).map((t, i) => (
@@ -471,7 +471,7 @@ export default function EarningsPage() {
                             <p style={{ fontWeight: '600', color: C.primary, fontSize: '0.875rem', margin: 0 }}>{t.name}</p>
                             <p style={{ fontSize: '0.75rem', color: C.gray500, margin: 0 }}>{t.sessions} session{t.sessions !== 1 ? "s" : ""} completed</p>
                           </div>
-                          <span style={{ fontSize: '0.78rem', fontWeight: '700', color: C.accent, backgroundColor: '#EEF5FF', padding: '0.2rem 0.6rem', borderRadius: '999px' }}>
+                          <span style={{ fontSize: '0.78rem', fontWeight: '700', color: C.accent, backgroundColor: UI_COLORS.accentLight, padding: '0.2rem 0.6rem', borderRadius: '999px' }}>
                             #{i + 1}
                           </span>
                         </div>
@@ -481,20 +481,20 @@ export default function EarningsPage() {
                 )}
 
                 {/* Recent Sessions */}
-                <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
-                  <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #e5e7eb' }}>
+                <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+                  <div style={{ padding: '1.25rem 1.5rem', borderBottom: `1px solid ${C.border}` }}>
                     <h3 style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem', margin: 0 }}>Recent Sessions</h3>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr', padding: '0.6rem 1.5rem', backgroundColor: C.gray50, borderBottom: '1px solid #e5e7eb' }} className="earnings-table-header">
+                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr', padding: '0.6rem 1.5rem', backgroundColor: C.gray50, borderBottom: `1px solid ${C.border}` }} className="earnings-table-header">
                     {["Tutor", "Subject", "Amount Paid"].map(h => (
-                      <p key={h} style={{ fontSize: '0.72rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>{h}</p>
+                      <p key={h} style={{ fontSize: '0.72rem', fontWeight: '700', color: TEXT_COLORS.muted, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>{h}</p>
                     ))}
                   </div>
                   {(studentData?.recentSessions ?? []).map((s, idx) => (
                     <div key={s._id}>
                       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr', padding: '0.875rem 1.5rem', alignItems: 'center', borderBottom: idx < (studentData?.recentSessions.length ?? 0) - 1 ? '1px solid #f3f4f6' : 'none' }} className="earnings-table-row">
                         <p style={{ fontWeight: '600', color: C.primary, fontSize: '0.875rem', margin: 0 }}>{s.tutorName}</p>
-                        <span style={{ fontSize: '0.8rem', fontWeight: '600', padding: '0.2rem 0.6rem', borderRadius: '999px', backgroundColor: '#EEF5FF', color: C.accent, width: 'fit-content' }}>{s.subject}</span>
+                        <span style={{ fontSize: '0.8rem', fontWeight: '600', padding: '0.2rem 0.6rem', borderRadius: '999px', backgroundColor: UI_COLORS.accentLight, color: C.accent, width: 'fit-content' }}>{s.subject}</span>
                         <p style={{ fontSize: '0.875rem', fontWeight: '600', color: C.primary, margin: 0 }}>Rs. {(s.amount || 0).toLocaleString()}</p>
                       </div>
                       <div style={{ padding: '0.875rem 1.25rem', borderBottom: idx < (studentData?.recentSessions.length ?? 0) - 1 ? '1px solid #f3f4f6' : 'none' }} className="earnings-mobile-card">
