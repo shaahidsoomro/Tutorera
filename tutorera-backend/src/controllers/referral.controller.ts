@@ -9,13 +9,16 @@ import crypto from "crypto";
 
 const DEFAULT_REFERRAL_CREDIT_AMOUNT = 200;
 const DEFAULT_REFERRED_DISCOUNT_AMOUNT = 200;
-const DEFAULT_REFERRAL_CURRENCY = "PKR";
+// New programs settle in the global currency. Records created before currency was
+// tracked were all PKR, so they keep that when no currency is stored.
+const GLOBAL_SETTLEMENT_CURRENCY = "USD";
+const LEGACY_REFERRAL_CURRENCY = "PKR";
 
 // ─── config helpers ──────────────────────────────────────────────────────────
 
 async function getOrCreateConfig(): Promise<IReferralConfig> {
   let config = await ReferralConfig.findOne();
-  if (!config) config = await ReferralConfig.create({});
+  if (!config) config = await ReferralConfig.create({ currency: GLOBAL_SETTLEMENT_CURRENCY });
   return config;
 }
 
@@ -106,11 +109,11 @@ export const getMyReferral = async (req: AuthRequest, res: Response): Promise<vo
     referralCode: user.referralCode,
     referralLink: `${process.env.CLIENT_URL}/register?ref=${user.referralCode}`,
     referralCredit: user.referralCredit,
-    referralCreditCurrency: user.referralCreditCurrency || DEFAULT_REFERRAL_CURRENCY,
+    referralCreditCurrency: user.referralCreditCurrency || (user.referralCredit > 0 ? LEGACY_REFERRAL_CURRENCY : (config.currency || LEGACY_REFERRAL_CURRENCY)),
     program: {
       referrerRewardAmount: config.referrerRewardAmount,
       referredDiscountAmount: config.referredDiscountAmount,
-      currency: config.currency || DEFAULT_REFERRAL_CURRENCY,
+      currency: config.currency || LEGACY_REFERRAL_CURRENCY,
       isActive: config.isActive,
       milestonesEnabled: config.milestonesEnabled,
       milestones: config.milestones,
@@ -172,11 +175,11 @@ export const applyReferralCode = async (req: AuthRequest, res: Response): Promis
     return;
   }
 
-  const currency = config.currency || DEFAULT_REFERRAL_CURRENCY;
+  const currency = config.currency || LEGACY_REFERRAL_CURRENCY;
   const referredDiscountAmount = config.referredDiscountAmount ?? DEFAULT_REFERRED_DISCOUNT_AMOUNT;
 
   const hasBalance = (currentUser.referralCredit || 0) > 0;
-  const balanceCurrency = hasBalance ? (currentUser.referralCreditCurrency || DEFAULT_REFERRAL_CURRENCY) : currency;
+  const balanceCurrency = hasBalance ? (currentUser.referralCreditCurrency || LEGACY_REFERRAL_CURRENCY) : currency;
   if (hasBalance && balanceCurrency !== currency) {
     res.status(400).json({
       success: false,
@@ -231,7 +234,7 @@ export const creditReferrerOnFirstBooking = async (userId: string): Promise<void
     if (!user?.referredBy) return;
 
     const config = await getOrCreateConfig();
-    const creditCurrency = config.currency || DEFAULT_REFERRAL_CURRENCY;
+    const creditCurrency = config.currency || LEGACY_REFERRAL_CURRENCY;
 
     // Count how many referrals this referrer has already credited
     const creditedCount = await Referral.countDocuments({
@@ -329,7 +332,7 @@ export const getAllReferrals = async (req: AuthRequest, res: Response): Promise<
 
   const allCredited = await Referral.find({ status: "credited" }).select("creditAmount creditCurrency");
   const creditedByCurrency = allCredited.reduce((grouped, r) => {
-    const cur = r.creditCurrency || DEFAULT_REFERRAL_CURRENCY;
+    const cur = r.creditCurrency || LEGACY_REFERRAL_CURRENCY;
     grouped[cur] = (grouped[cur] || 0) + (r.creditAmount || 0);
     return grouped;
   }, {} as Record<string, number>);
@@ -343,6 +346,8 @@ export const getAllReferrals = async (req: AuthRequest, res: Response): Promise<
     pages: Math.ceil(total / limit),
     limit,
     creditByCurrency,
+    // Credit in different currencies is never summed into one figure.
+    totalCreditIssued: creditByCurrency.length === 0 ? 0 : creditByCurrency.length === 1 ? creditByCurrency[0].total : null,
     referrals,
   });
 };
@@ -369,7 +374,7 @@ export const exportReferralsAdmin = async (_req: AuthRequest, res: Response): Pr
         referred?.createdAt ? new Date(referred.createdAt).toISOString().split("T")[0] : "",
         r.status,
         String(r.creditAmount),
-        r.creditCurrency || DEFAULT_REFERRAL_CURRENCY,
+        r.creditCurrency || LEGACY_REFERRAL_CURRENCY,
         String(r.milestoneIndex ?? ""),
         r.fraudFlag ? "Yes" : "No",
         new Date(r.createdAt).toISOString().split("T")[0],

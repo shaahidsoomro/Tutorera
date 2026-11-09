@@ -345,8 +345,22 @@ export const getMyPayouts = async (req: AuthRequest, res: Response): Promise<voi
     .skip(skip)
     .limit(limitNum)
     .lean(),
-    Booking.find(filter).select("payoutStatus tutorPayout").lean(),
+    Booking.find(filter).select("payoutStatus tutorPayout currency").lean(),
   ]);
+
+  // Amounts are only meaningful within one currency; totals are also reported per
+  // currency. Records that predate currency tracking were all PKR.
+  const OPEN_PAYOUT_STATES = ["pending", "approved", "processing", "held"];
+  const byCurrency = new Map<string, { currency: string; totalPayoutAmount: number; pendingAmount: number; paidAmount: number }>();
+  for (const row of summaryRows) {
+    const currency = row.currency || "PKR";
+    const entry = byCurrency.get(currency) ?? { currency, totalPayoutAmount: 0, pendingAmount: 0, paidAmount: 0 };
+    entry.totalPayoutAmount += row.tutorPayout || 0;
+    if (OPEN_PAYOUT_STATES.includes(row.payoutStatus)) entry.pendingAmount += row.tutorPayout || 0;
+    if (row.payoutStatus === "paid") entry.paidAmount += row.tutorPayout || 0;
+    byCurrency.set(currency, entry);
+  }
+  const currencyTotals = Array.from(byCurrency.values()).sort((a, b) => a.currency.localeCompare(b.currency));
 
   const totalPayoutAmount = summaryRows.reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
   const pendingAmount = summaryRows.filter(b => ["pending", "approved", "processing", "held"].includes(b.payoutStatus)).reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
@@ -359,6 +373,7 @@ export const getMyPayouts = async (req: AuthRequest, res: Response): Promise<voi
       totalPayoutAmount,
       pendingAmount,
       paidAmount,
+      currencyTotals,
     },
     pagination: { total, page: pageNum, pages: Math.ceil(total / limitNum), limit: limitNum },
     payouts: payouts.map(p => ({
@@ -366,7 +381,7 @@ export const getMyPayouts = async (req: AuthRequest, res: Response): Promise<voi
       studentName: (p.student as unknown as { name?: string } | null)?.name || "Student",
       subject: (p.request as unknown as { subject?: string } | null)?.subject || "General",
       amount: p.amount,
-      currency: "PKR",
+      currency: p.currency || "PKR",
       subtotal: p.subtotal,
       tutorFee: p.tutorFee,
       tax: p.tax,

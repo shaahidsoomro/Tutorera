@@ -33,7 +33,8 @@ const referralConfigSchema = new Schema<IReferralConfig>(
   {
     referrerRewardAmount: { type: Number, default: 200, min: 0 },
     referredDiscountAmount: { type: Number, default: 200, min: 0 },
-    currency: { type: String, uppercase: true, trim: true, default: "PKR" },
+    // No schema default: a default would also relabel legacy documents that predate this field.
+    currency: { type: String, uppercase: true, trim: true },
     isActive: { type: Boolean, default: true },
     milestonesEnabled: { type: Boolean, default: false },
     milestones: {
