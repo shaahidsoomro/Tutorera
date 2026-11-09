@@ -9,7 +9,7 @@ test("accepts the verified RapidPay production configuration", () => {
 
 test("blocks provider mismatch and unverified replacement contract", () => {
   const verified = { requestedProvider: "rapidpay", implementedProvider: "rapidpay", contractVerified: true };
-  assert.throws(() => assertPaymentReleasePolicy(verified, { PAYMENT_PROVIDER: "swich" }), /does not match/);
+  assert.throws(() => assertPaymentReleasePolicy(verified, { PAYMENT_PROVIDER: "legacy-provider" }), /does not match/);
   assert.throws(() => assertPaymentReleasePolicy({ ...verified, contractVerified: false }, { PAYMENT_PROVIDER: "rapidpay" }), /migration is incomplete/);
   assert.doesNotThrow(() => assertPaymentReleasePolicy(verified, { PAYMENT_PROVIDER: "rapidpay" }));
 });

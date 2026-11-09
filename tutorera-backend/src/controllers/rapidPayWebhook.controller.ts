@@ -12,7 +12,7 @@ import { finalizePromoRedemption, getAppliedPromoForBasket } from "../services/p
 // Register this URL in the RapidPay merchant dashboard (Settings → Webhooks):
 //   https://tutorera.ac.pk/api/payments/rapidpay/webhook
 //
-// Set RAPIDPAY_WEBHOOK_SECRET in Render / Cloudflare to the signing salt
+// Set RAPID_GATEWAY_WEBHOOK_SECRET in Render / Cloudflare to the signing salt
 // shown on that same settings page. Never commit the secret to source.
 //
 // Signature scheme (from RapidPay docs):
@@ -78,7 +78,7 @@ function extractWebhookPayload(body: unknown): RapidPayWebhookPayload | null {
  * eventId-based dedup make duplicate deliveries a no-op.
  */
 export const handleRapidPayWebhook = async (req: Request, res: Response): Promise<void> => {
-  const secret = process.env.RAPIDPAY_WEBHOOK_SECRET?.trim();
+  const secret = process.env.RAPID_GATEWAY_WEBHOOK_SECRET?.trim();
   if (!secret) {
     logger.error("RAPIDPAY_WEBHOOK_SECRET is not configured — webhook cannot be verified");
     res.status(503).json({ success: false, message: "Webhook verification is not configured." });

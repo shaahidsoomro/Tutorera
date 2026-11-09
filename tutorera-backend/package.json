@@ -24,6 +24,7 @@
     "db:ensure-indexes": "ts-node src/scripts/ensureDatabaseIndexes.ts",
     "migrate:booked-slot-index": "ts-node src/scripts/migrateBookedSlotStartAtIndex.ts",
     "migrate:retire-swich": "ts-node src/scripts/retireSwichMarketConfigs.ts",
+    "migrate:reconcile-rapidpay-markets": "ts-node src/scripts/reconcileRapidPayMarketAvailability.ts",
     "audit:data-integrity": "ts-node src/scripts/scanDataIntegrity.ts"
   },
   "keywords": [],

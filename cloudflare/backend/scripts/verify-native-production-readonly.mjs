@@ -7,7 +7,7 @@ const backendRequire = createRequire(new URL("../../../tutorera-backend/package.
 const dotenv = backendRequire("dotenv");
 const config = JSON.parse(readFileSync(new URL("../wrangler.jsonc", import.meta.url), "utf8"));
 const local = dotenv.parse(readFileSync(new URL("../../../tutorera-backend/.env", import.meta.url)));
-const allowlist = ["MONGO_URI", "JWT_SECRET", "RESEND_API_KEY", "RESEND_WEBHOOK_SECRET", "CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET", "EMAIL_USER", "EMAIL_PASS", "RESEND", "GROQ_API_KEY", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "SWICH_CLIENT_ID", "SWICH_CLIENT_SECRET", "SWICH_SUPPORTED_MARKETS", "GEONAMES_USERNAME"];
+const allowlist = ["MONGO_URI", "JWT_SECRET", "RESEND_API_KEY", "RESEND_WEBHOOK_SECRET", "CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET", "EMAIL_USER", "EMAIL_PASS", "RESEND", "GROQ_API_KEY", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "RAPID_GATEWAY_MERCHANT_ID", "RAPID_GATEWAY_CLIENT_SECRET", "RAPID_GATEWAY_WEBHOOK_SECRET", "GEONAMES_USERNAME"];
 let worker;
 
 try {
@@ -20,10 +20,10 @@ try {
   const source = Object.fromEntries(rows.map((row) => { const item = row.envVar || row; return [item.key, item.value]; }));
   const bindings = { ...config.vars, LOG_LEVEL: "silent", ENABLE_SCHEDULED_JOBS: "false" };
   for (const key of allowlist) if (source[key]) bindings[key] = source[key];
-  for (const key of ["SWICH_AUTH_BASE_URL", "SWICH_API_BASE_URL"]) {
+  for (const key of ["RAPID_GATEWAY_BASE_URL"]) {
     const value = source[key] || local[key];
     const url = new URL(value);
-    if (url.protocol !== "https:" || /sandbox/i.test(url.hostname)) throw new Error("Approved live provider hosts are missing");
+    if (url.protocol !== "https:" || /sandbox/i.test(url.hostname)) throw new Error("Approved live RapidPay host is missing");
     bindings[key] = value;
   }
   // Runtime secrets stay in this process; no env file, Worker or DNS is written.

@@ -37,10 +37,8 @@ async function check() {
     "MONGO_URI", "JWT_SECRET", "RESEND_API_KEY", "RESEND_WEBHOOK_SECRET",
     "CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET",
     "EMAIL_USER", "EMAIL_PASS", "RESEND", "GROQ_API_KEY", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET",
-    "RAPIDPAY_API_KEY", "RAPIDPAY_MERCHANT_ID", "RAPIDPAY_WEBHOOK_SECRET",
+    "RAPID_GATEWAY_MERCHANT_ID", "RAPID_GATEWAY_CLIENT_SECRET", "RAPID_GATEWAY_WEBHOOK_SECRET",
     ...(!production ? ["PREVIEW_AUTH_TOKEN"] : []),
-    ...(((production ? config.env.production.vars : config.vars).SWICH_CHECKOUT_MODE || "session") === "pwa"
-      ? ["SWICH_CALLBACK_URL", "SWICH_CALLBACK_SECRET", "SWICH_PWA_BASE_URL"] : []),
   ];
   const missing = required.filter((name) => !secrets.some((secret) => secret.name === name));
   if (missing.length) throw new Error(`Missing Worker secret names: ${missing.join(", ")}. Populate them securely before deployment.`);

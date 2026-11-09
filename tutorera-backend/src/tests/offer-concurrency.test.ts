@@ -25,7 +25,7 @@ jest.mock("../utils/socket", () => ({
 }));
 jest.mock("../utils/sendEmail", () => jest.fn().mockResolvedValue(undefined));
 // The acceptOffer handler calls out to the real payment provider to
-// create a checkout session — that requires live Switch credentials
+// create a checkout session — that requires live RapidPay credentials
 // (throws PAYMENT_GATEWAY_NOT_CONFIGURED otherwise) and is not what
 // this suite is testing. Stub just the checkout call.
 jest.mock("../services/paymentProvider.service", () => ({

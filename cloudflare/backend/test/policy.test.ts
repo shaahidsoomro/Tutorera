@@ -6,7 +6,7 @@ import { JOB_SCHEDULES } from "../../../tutorera-backend/src/config/scheduledJob
 
 test("proxy removes forged job and identity headers while retaining authentication and raw body", async () => {
   const raw = '{ "payment": 1, "ref": "a" }';
-  const forwarded = forwardToBackend(new Request("https://api.tutorera.ac.pk/api/v1/payments/swich/callback?signature=test", {
+  const forwarded = forwardToBackend(new Request("https://api.tutorera.ac.pk/api/v1/payments/rapidpay/webhook?signature=test", {
     method: "POST", body: raw,
     headers: { "X-Tutorera-Job-Token": "forged", "X-Tutorera-Preview-Token": "private-preview", "X-Forwarded-For": "forged", Forwarded: "forged", "CF-Connecting-IP": "192.0.2.1", Authorization: "Bearer test", Cookie: "token=test", "Content-Type": "application/json" },
   }));

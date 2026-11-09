@@ -185,10 +185,10 @@ async function validateDatabase() {
         const rapidPayCount = await MarketConfig.countDocuments({
           paymentProvider: "rapidpay",
         });
-        const switchCount = await MarketConfig.countDocuments({
-          paymentProvider: "swich",
+        const disabledCount = await MarketConfig.countDocuments({
+          paymentProvider: "none",
         });
-        return `${markets} markets (RapidPay: ${rapidPayCount}, Swich: ${switchCount})`;
+        return `${markets} markets (RapidPay: ${rapidPayCount}, payments disabled: ${disabledCount})`;
       },
     },
   ];

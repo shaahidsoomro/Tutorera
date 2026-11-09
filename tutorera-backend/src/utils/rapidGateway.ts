@@ -2,7 +2,7 @@
 import axios from "axios";
 import crypto from "crypto";
 
-const BASE_URL = "https://secure.rapid-gateway.com";
+const BASE_URL = (process.env.RAPID_GATEWAY_BASE_URL || "https://secure.rapid-gateway.com").replace(/\/$/, "");
 
 // "sandbox" (default) or "live". Switching to live later is just an env
 // var change — no code change needed.

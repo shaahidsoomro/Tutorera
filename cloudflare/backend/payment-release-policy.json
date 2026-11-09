@@ -2,5 +2,5 @@
   "requestedProvider": "rapidpay",
   "implementedProvider": "rapidpay",
   "contractVerified": true,
-  "reason": "RapidPay embedded-checkout SDK wired as active gateway. Merchant API contract documented and implemented (OAuth2 token endpoint, /v1/checkout-sessions, X-RapidGateway-Signature webhook signing). Set contractVerified: true only after a full end-to-end checkout is tested in TEST mode (use test credentials: client/secret, amount 100=success) and payment, webhook delivery, booking finalization, and the confirm-poll path are all verified. Required env vars: RAPIDPAY_API_KEY (client secret), RAPIDPAY_MERCHANT_ID (1442), RAPIDPAY_BASE_URL (https://secure.rapid-gateway.com), RAPIDPAY_WEBHOOK_SECRET."
+  "reason": "RapidPay hosted checkout is the sole active gateway. Its OAuth2 token endpoint, hosted-transaction redirect, and signed webhook are implemented. Enable live checkout only after a full merchant test proves checkout, webhook delivery, booking finalization, and payment-status polling. Required secrets: RAPID_GATEWAY_MERCHANT_ID, RAPID_GATEWAY_CLIENT_SECRET, RAPID_GATEWAY_BASE_URL, and RAPID_GATEWAY_WEBHOOK_SECRET."
 }

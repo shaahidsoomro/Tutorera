@@ -45,7 +45,7 @@ async function run() {
 
     const result = await MarketConfig.updateMany(
       { paymentProvider: "swich" },
-      { $set: { paymentProvider: "rapidpay" } },
+      { $set: { paymentProvider: "none", paymentsEnabled: false, "featureFlags.acceptance": false } },
     );
     const finalReport = { ...report, modifiedMarketConfigs: result.modifiedCount };
     await recordMigrationRun({

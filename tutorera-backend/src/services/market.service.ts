@@ -12,33 +12,33 @@ export const LAUNCH_MARKETS = {
   },
   AE: {
     countryName: "United Arab Emirates", iso3: "ARE", dialCode: "+971", currency: "AED", currencySymbol: "AED",
-    timezone: "Asia/Dubai", timezones: ["Asia/Dubai"], launchStatus: "live", paymentProvider: "rapidpay",
-    paymentsEnabled: true, payoutsEnabled: false, onlineEnabled: true, homeTuitionEnabled: true,
-    featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: true },
+    timezone: "Asia/Dubai", timezones: ["Asia/Dubai"], launchStatus: "beta", paymentProvider: "none",
+    paymentsEnabled: false, payoutsEnabled: false, onlineEnabled: true, homeTuitionEnabled: true,
+    featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: false },
   },
   GB: {
     countryName: "United Kingdom", iso3: "GBR", dialCode: "+44", currency: "GBP", currencySymbol: "£",
-    timezone: "Europe/London", timezones: ["Europe/London"], launchStatus: "live", paymentProvider: "rapidpay",
-    paymentsEnabled: true, payoutsEnabled: false, onlineEnabled: true, homeTuitionEnabled: true,
-    featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: true },
+    timezone: "Europe/London", timezones: ["Europe/London"], launchStatus: "beta", paymentProvider: "none",
+    paymentsEnabled: false, payoutsEnabled: false, onlineEnabled: true, homeTuitionEnabled: true,
+    featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: false },
   },
   US: {
     countryName: "United States", iso3: "USA", dialCode: "+1", currency: "USD", currencySymbol: "$",
-    timezone: "America/New_York", timezones: ["America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles"], launchStatus: "live", paymentProvider: "rapidpay",
-    paymentsEnabled: true, payoutsEnabled: false, onlineEnabled: true, homeTuitionEnabled: true,
-    featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: true },
+    timezone: "America/New_York", timezones: ["America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles"], launchStatus: "beta", paymentProvider: "none",
+    paymentsEnabled: false, payoutsEnabled: false, onlineEnabled: true, homeTuitionEnabled: true,
+    featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: false },
   },
   SA: {
     countryName: "Saudi Arabia", iso3: "SAU", dialCode: "+966", currency: "SAR", currencySymbol: "SAR",
-    timezone: "Asia/Riyadh", timezones: ["Asia/Riyadh"], launchStatus: "live", paymentProvider: "rapidpay",
-    paymentsEnabled: true, payoutsEnabled: false, onlineEnabled: true, homeTuitionEnabled: true,
-    featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: true },
+    timezone: "Asia/Riyadh", timezones: ["Asia/Riyadh"], launchStatus: "beta", paymentProvider: "none",
+    paymentsEnabled: false, payoutsEnabled: false, onlineEnabled: true, homeTuitionEnabled: true,
+    featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: false },
   },
   IN: {
     countryName: "India", iso3: "IND", dialCode: "+91", currency: "INR", currencySymbol: "₹",
-    timezone: "Asia/Kolkata", timezones: ["Asia/Kolkata"], launchStatus: "live", paymentProvider: "rapidpay",
-    paymentsEnabled: true, payoutsEnabled: false, onlineEnabled: true, homeTuitionEnabled: true,
-    featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: true },
+    timezone: "Asia/Kolkata", timezones: ["Asia/Kolkata"], launchStatus: "beta", paymentProvider: "none",
+    paymentsEnabled: false, payoutsEnabled: false, onlineEnabled: true, homeTuitionEnabled: true,
+    featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: false },
   },
 } as const;
 
@@ -150,7 +150,7 @@ if (market.paymentProvider !== "rapidpay") {
     throw httpError("No compliant payment provider is configured for this market.", 409, "PAYMENT_PROVIDER_UNAVAILABLE");
   }
   const capabilities = getRapidPayCapabilities();
-  if (!capabilities.markets.has(market.countryCode)) {
+  if (!capabilities.markets.has(market.countryCode) || !capabilities.currencies.has(market.currency)) {
     throw httpError("RapidPay is not approved for this market yet.", 409, "RAPIDPAY_MARKET_OR_CURRENCY_UNSUPPORTED");
   }
   return market;

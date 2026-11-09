@@ -38,9 +38,8 @@ try {
       CLOUDINARY_CLOUD_NAME: "test-only", CLOUDINARY_API_KEY: "test-only", CLOUDINARY_API_SECRET: "test-only",
       EMAIL_USER: "test-only", EMAIL_PASS: "test-only", GROQ_API_KEY: "test-only",
       GOOGLE_CLIENT_ID: "test-only", GOOGLE_CLIENT_SECRET: "test-only",
-      SWICH_CLIENT_ID: "test-only", SWICH_CLIENT_SECRET: "test-only-client-secret",
-      SWICH_AUTH_BASE_URL: "https://auth.swichnow.com", SWICH_API_BASE_URL: "https://api.swichnow.com",
-      SWICH_CHECKOUT_MODE: "session", SWICH_MODE: "live",
+      RAPID_GATEWAY_MERCHANT_ID: "test-only-merchant", RAPID_GATEWAY_CLIENT_SECRET: "test-only-client-secret",
+      RAPID_GATEWAY_WEBHOOK_SECRET: "test-only-webhook-secret", RAPID_GATEWAY_BASE_URL: "https://secure.rapid-gateway.com",
     },
   }));
 

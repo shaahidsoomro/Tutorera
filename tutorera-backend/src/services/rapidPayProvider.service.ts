@@ -77,10 +77,11 @@ export function getRapidPayCapabilities() {
 }
 
 export function assertRapidPayCheckoutCapability(countryCode: string | undefined, currency: string): void {
-  // RapidGateway processes PKR only.
-  if (currency.toUpperCase() !== "PKR") {
+  const capabilities = getRapidPayCapabilities();
+  const market = (countryCode || "PK").toUpperCase();
+  if (!capabilities.markets.has(market) || !capabilities.currencies.has(currency.toUpperCase())) {
     throw httpError(
-      "RapidGateway checkout supports PKR only.",
+      "RapidPay checkout is not available for this market and currency yet.",
       409,
       "RAPIDPAY_MARKET_OR_CURRENCY_UNSUPPORTED"
     );

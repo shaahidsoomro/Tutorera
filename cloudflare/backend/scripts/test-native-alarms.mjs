@@ -17,7 +17,7 @@ const bundle = await build({
       Object.defineProperty(TutoreraBackend.prototype, 'runtime', { value: async function () {
         const mode = await this.ctx.storage.get('fixture:mode');
         return {
-          validateEnv() {}, assertSwichRuntimeConfiguration() {}, io: {},
+          validateEnv() {}, assertRapidPayRuntimeConfiguration() {}, io: {},
           mongoose: { connection: { readyState: mode === 'database-down' ? 0 : 1 }, connect: async () => { throw new Error('fixture outage'); } },
           runScheduledJob: async () => {
             await this.ctx.storage.put('fixture:runs', (await this.ctx.storage.get('fixture:runs') || 0) + 1);

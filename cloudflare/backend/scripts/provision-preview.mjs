@@ -20,14 +20,14 @@ try {
   if (!response.ok) throw new Error("Source configuration access failed");
   const rows = await response.json();
   const source = Object.fromEntries(rows.map((row) => { const item = row.envVar || row; return [item.key, item.value]; }));
-  const allowed = ["MONGO_URI", "JWT_SECRET", "RESEND_API_KEY", "RESEND_WEBHOOK_SECRET", "CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET", "EMAIL_USER", "EMAIL_PASS", "RESEND", "GROQ_API_KEY", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "SWICH_CLIENT_ID", "SWICH_CLIENT_SECRET", "SWICH_SUPPORTED_MARKETS", "GEONAMES_USERNAME"];
+  const allowed = ["MONGO_URI", "JWT_SECRET", "RESEND_API_KEY", "RESEND_WEBHOOK_SECRET", "CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET", "EMAIL_USER", "EMAIL_PASS", "RESEND", "GROQ_API_KEY", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "RAPID_GATEWAY_MERCHANT_ID", "RAPID_GATEWAY_CLIENT_SECRET", "RAPID_GATEWAY_WEBHOOK_SECRET", "GEONAMES_USERNAME"];
   const secrets = Object.fromEntries(allowed.filter((key) => source[key]).map((key) => [key, source[key]]));
-  const missing = allowed.filter((key) => !["GEONAMES_USERNAME", "SWICH_SUPPORTED_MARKETS"].includes(key) && !secrets[key]);
+  const missing = allowed.filter((key) => key !== "GEONAMES_USERNAME" && !secrets[key]);
   if (missing.length) throw new Error(`Required source settings missing: ${missing.join(", ")}`);
   const local = dotenv.parse(readFileSync(new URL("../../../tutorera-backend/.env", import.meta.url)));
-  for (const key of ["SWICH_AUTH_BASE_URL", "SWICH_API_BASE_URL"]) {
+  for (const key of ["RAPID_GATEWAY_BASE_URL"]) {
     const url = new URL(source[key] || local[key]);
-    if (url.protocol !== "https:" || /sandbox/i.test(url.hostname)) throw new Error("Live payment hosts are not configured");
+    if (url.protocol !== "https:" || /sandbox/i.test(url.hostname)) throw new Error("Live RapidPay host is not configured");
     secrets[key] = url.origin;
   }
   secrets.PREVIEW_AUTH_TOKEN = previewToken;
