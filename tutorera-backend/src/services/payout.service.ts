@@ -32,6 +32,18 @@ export class PayoutError extends Error {
 
 const MIN_REFERENCE_LENGTH = 8;
 
+/** Payout states in which the batch still owns its bookings. */
+export const IN_FLIGHT_PAYOUT_STATES = ["pending", "requested", "initiated"] as const;
+
+/**
+ * True when a booking belongs to an unsettled TutorPayout batch. Such a booking must only
+ * move through that batch, never through the booking-level payout endpoints, or the same
+ * money could be settled twice.
+ */
+export async function isBookingInPayoutBatch(bookingId: mongoose.Types.ObjectId | string): Promise<boolean> {
+  return Boolean(await TutorPayout.exists({ bookings: bookingId, state: { $in: [...IN_FLIGHT_PAYOUT_STATES] } }));
+}
+
 function minimumForCurrency(currency: string): number {
   return MINIMUM_BY_CURRENCY[currency.toUpperCase()] ?? DEFAULT_MINIMUM;
 }
@@ -74,7 +86,7 @@ export async function createPayoutRequests(): Promise<PayoutCreationResult> {
   try {
     // Exclude bookings already under an in-flight payout
     const inFlightPayouts = await TutorPayout.find({
-      state: { $in: ["pending", "requested", "initiated"] },
+      state: { $in: [...IN_FLIGHT_PAYOUT_STATES] },
     }).select("bookings").lean();
     const inFlightBookingIds = new Set(
       inFlightPayouts.flatMap((p) => p.bookings.map((id) => id.toString()))
@@ -277,8 +289,8 @@ export async function markPayoutComplete(input: PayoutCompletionInput): Promise<
       payout.adminNote = input.adminNote?.trim();
       await payout.save({ session });
 
-      await Booking.updateMany(
-        { _id: { $in: payout.bookings } },
+      const settled = await Booking.updateMany(
+        { _id: { $in: payout.bookings }, payoutStatus: "processing" },
         {
           $set: {
             payoutStatus: "paid",
@@ -292,6 +304,11 @@ export async function markPayoutComplete(input: PayoutCompletionInput): Promise<
         },
         { session }
       );
+      // Every booking must still be waiting on this batch. If one was changed meanwhile, abort the
+      // whole transaction rather than pay a booking that may already have been settled.
+      if (settled.modifiedCount !== payout.bookings.length) {
+        throw new PayoutError(409, "PAYOUT_BOOKINGS_CHANGED", "One or more bookings in this payout changed state; review them before completing.");
+      }
 
       await PaymentLedger.findByIdAndUpdate(
         payout.ledgerEntry,
@@ -377,6 +394,7 @@ export async function listPayouts(filters: {
   const [items, total] = await Promise.all([
     TutorPayout.find(query)
       .populate("tutor", "name email")
+      .populate("initiatedBy", "name")
       .populate("actionedBy", "name")
       .sort({ requestedAt: -1 })
       .skip((page - 1) * limit)

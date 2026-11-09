@@ -119,6 +119,7 @@ const navSections: NavSection[] = [
     items: [
       { href: "/admin/payments",           label: "Payments",           icon: <CreditCard size={17} />,      permission: "payment.read" },
       { href: "/admin/payouts",            label: "Payouts",            icon: <Banknote size={17} />,        permission: "payout.read" },
+      { href: "/admin/payout-batches",     label: "Payout Batches",     icon: <ClipboardList size={17} />,  permission: "payout.read" },
       { href: "/admin/refunds",            label: "Refund Requests",    icon: <ShieldCheck size={17} />,     permission: "claims.read" },
       { href: "/admin/reconciliation",     label: "Reconciliation",     icon: <Calculator size={17} />,      permission: "finance.reconcile" },
       { href: "/admin/fee-config",         label: "Fee Config",         icon: <Sliders size={17} />,         permission: "finance.fee_configure" },

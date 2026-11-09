@@ -110,6 +110,39 @@ describe("admin tutor-payout workflow (two finance reviewers)", () => {
     }
   });
 
+  it("keeps booking-level payout endpoints away from bookings that belong to a batch", async () => {
+    const a = await signIn("finance");
+    const b = await signIn("finance");
+    const student = await mkUser("student", "s4");
+    const tutor = await mkUser("tutor", "t4");
+    const booking = await mkBooking(student, tutor);
+    await a.agent.post(`${BASE}/scan?apply=true`).expect(200);
+
+    const edit = await b.agent.patch(`/api/v1/admin/bookings/${booking.id}/payment`).send({ payoutStatus: "held", payoutNote: "Holding for review" }).expect(409);
+    expect(edit.body.code).toBe("PAYOUT_MANAGED_BY_BATCH");
+    const verify = await b.agent.post(`/api/v1/admin/bookings/${booking.id}/payout/verify`)
+      .send({ settlementReference: "BANK-TXN-12345", verificationEvidence: "STATEMENT-LINE-88", note: "independently checked statement" }).expect(409);
+    expect(verify.body.code).toBe("PAYOUT_MANAGED_BY_BATCH");
+    expect((await Booking.findById(booking._id))?.payoutStatus).toBe("processing");
+  });
+
+  it("refuses to pay a batch whose booking changed state, and rolls the whole completion back", async () => {
+    const a = await signIn("finance");
+    const b = await signIn("finance");
+    const student = await mkUser("student", "s5");
+    const tutor = await mkUser("tutor", "t5");
+    const booking = await mkBooking(student, tutor);
+    await a.agent.post(`${BASE}/scan?apply=true`).expect(200);
+    const { transferRef } = (await TutorPayout.findOne().lean())!;
+    await a.agent.post(`${BASE}/${transferRef}/initiate`).send({ settlementReference: "BANK-TXN-55555" }).expect(200);
+
+    await Booking.updateOne({ _id: booking._id }, { $set: { payoutStatus: "held" } });
+    const res = await b.agent.post(`${BASE}/${transferRef}/complete`).send({ settlementReference: "BANK-TXN-55555", evidenceRef: "STATEMENT-LINE-55" }).expect(409);
+    expect(res.body.code).toBe("PAYOUT_BOOKINGS_CHANGED");
+    expect((await TutorPayout.findOne({ transferRef }))?.state).toBe("initiated");
+    expect((await Booking.findById(booking._id))?.payoutStatus).toBe("held");
+  });
+
   it("failing a payout needs a note and returns its bookings to pending", async () => {
     const { agent } = await signIn("finance");
     const student = await mkUser("student", "s3");

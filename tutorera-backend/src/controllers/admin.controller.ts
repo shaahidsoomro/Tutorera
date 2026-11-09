@@ -22,6 +22,7 @@ import Request from "../models/Request.model";
 import Review from "../models/Review.model";
 import { creditReferrerOnFirstBooking } from "../controllers/referral.controller";
 import { logAudit } from "../utils/logAudit";
+import { isBookingInPayoutBatch } from "../services/payout.service";
 import AuditLog from "../models/AuditLog.model";
 import EmailLog from "../models/EmailLog.model";
 import EmailOutbox from "../models/EmailOutbox.model";
@@ -569,6 +570,12 @@ export const updatePaymentStatus = async (
     return;
   }
   const previousFinancialState = { status: booking.status, paymentStatus: booking.paymentStatus, payoutStatus: booking.payoutStatus };
+  const touchesPayout = payoutStatus !== undefined || payoutNote !== undefined || payoutSettlementReference !== undefined ||
+    payoutSettlementMethod !== undefined || payoutEvidenceReference !== undefined;
+  if (touchesPayout && await isBookingInPayoutBatch(booking._id)) {
+    res.status(409).json({ success: false, code: "PAYOUT_MANAGED_BY_BATCH", message: "This booking is part of a tutor payout batch. Manage it from the Payout Batches page." });
+    return;
+  }
 
   const paymentTransitions: Record<string, string[]> = {
     pending: ["received", "failed", "disputed"], received: ["confirmed", "failed", "disputed"],
@@ -801,6 +808,9 @@ export const verifyExternalPayout = async (req: AuthRequest, res: Response): Pro
   }
   const booking = await Booking.findById(req.params.id);
   if (!booking) { res.status(404).json({ success: false, code: "BOOKING_NOT_FOUND" }); return; }
+  if (await isBookingInPayoutBatch(booking._id)) {
+    res.status(409).json({ success: false, code: "PAYOUT_MANAGED_BY_BATCH", message: "This booking is part of a tutor payout batch. Manage it from the Payout Batches page." }); return;
+  }
   if (booking.status !== "completed" || booking.paymentStatus !== "confirmed" || booking.payoutStatus !== "processing") {
     res.status(409).json({ success: false, code: "PAYOUT_NOT_READY", message: "Only a completed, paid booking with a recorded external transfer can be verified." }); return;
   }

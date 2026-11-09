@@ -171,6 +171,7 @@ describe("markPayoutComplete", () => {
     session = makeMockSession();
     (mongoose.startSession as jest.Mock).mockResolvedValue(session);
     (TutorPayout.findOne as jest.Mock).mockResolvedValue({ ...basePayout, save: jest.fn().mockResolvedValue(undefined) });
+    (Booking.updateMany as jest.Mock).mockResolvedValue({ modifiedCount: 1 });
   });
 
   it("throws when evidenceRef is blank or too short", async () => {
