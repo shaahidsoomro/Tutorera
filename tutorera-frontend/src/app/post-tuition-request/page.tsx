@@ -19,8 +19,10 @@ function PostTuitionRequestContent() {
 
   const marketPrefill = useMemo<Partial<PostRequestPayload>>(() => {
     const market = getMarketByRoute(searchParams.get("market") || undefined);
-    if (!market) return {};
+    const subject = searchParams.get("subject")?.trim();
+    if (!market) return subject ? { subject } : {};
     return {
+      ...(subject ? { subject } : {}),
       countryCode: market.isoCountryCode,
       countryName: market.countryName,
       currency: market.currency,

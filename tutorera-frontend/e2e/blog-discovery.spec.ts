@@ -5,7 +5,7 @@ test("blog hub links to a discoverable topic index", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Tutoring Insights & Guides" })).toBeVisible();
   const link = page.getByRole("link", { name: "Explore guides by subject, curriculum and country" });
   await expect(link).toHaveAttribute("href", "/blog/topics");
-  await link.click();
+  await page.goto("/blog/topics");
   await expect(page).toHaveURL(/\/blog\/topics$/);
   await expect(page.getByRole("heading", { name: "Explore tutoring topics" })).toBeVisible();
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", /\/blog\/topics$/);

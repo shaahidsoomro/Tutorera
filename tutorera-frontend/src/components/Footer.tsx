@@ -281,7 +281,7 @@ export default function Footer() {
                 <h3>{col.heading}</h3>
                 <ul>
                   {col.subjects.map((sub) => (
-                    <li key={sub.href}>
+                    <li key={`${col.heading}-${sub.href}-${sub.label}`}>
                       <Link href={sub.href}>{sub.label}</Link>
                     </li>
                   ))}

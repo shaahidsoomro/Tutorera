@@ -20,6 +20,7 @@ export default async function SeoTutorDirectory({ kind, value, filters, title, d
     : 0;
   const hasMixedCurrencies = currencies.length > 1;
   const context = filters?.city && filters?.subject ? `${filters.subject} tutoring in ${filters.city}` : `${value} tutoring`;
+  const requestHref = `/post-tuition-request?subject=${encodeURIComponent(value)}`;
   const faq = [
     { q: `How do I choose a ${value} tutor?`, a: `Compare tutor profiles by relevant subjects, teaching levels, experience, lesson mode, availability, completed-booking reviews, verification status, and hourly rate. Discuss learning goals before confirming a booking.` },
     { q: `Can I book ${context} online?`, a: `Yes. Use the teaching-mode information on each profile to find tutors offering online lessons, in-person lessons, or both.` },
@@ -67,7 +68,7 @@ export default async function SeoTutorDirectory({ kind, value, filters, title, d
           <p className={styles.heroSubtitle}>{description}</p>
           <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", marginTop: "1.25rem", flexWrap: "wrap" }}>
             <Link
-              href="/post-tuition-request"
+              href={requestHref}
               style={{
                 background: "white",
                 color: "#021550",
@@ -95,7 +96,7 @@ export default async function SeoTutorDirectory({ kind, value, filters, title, d
             <h2 style={{ marginBottom: ".75rem", color: "#021550" }}>No matching tutors listed right now</h2>
             <p style={{ color: "#64748b", marginBottom: "1.5rem" }}>Tell us your exact requirements and let eligible tutors send offers directly to you.</p>
             <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
-              <Link href="/post-tuition-request" style={{ background: "#0329B2", color: "white", padding: "0.75rem 1.5rem", borderRadius: "0.5rem", fontWeight: 800, textDecoration: "none" }}>
+              <Link href={requestHref} style={{ background: "#0329B2", color: "white", padding: "0.75rem 1.5rem", borderRadius: "0.5rem", fontWeight: 800, textDecoration: "none" }}>
                 Post Tuition Request
               </Link>
               <Link href="/tutors" style={{ color: "#0329B2", fontWeight: 700, padding: "0.75rem 1rem", textDecoration: "none" }}>

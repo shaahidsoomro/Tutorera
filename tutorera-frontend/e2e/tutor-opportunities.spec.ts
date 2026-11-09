@@ -7,8 +7,8 @@ test.beforeEach(async ({ page }) => {
     if (path.endsWith("/auth/me")) return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ user: { _id: "tutor-1", name: "Tutor", email: "tutor@test.com", role: "tutor", isVerified: true, isApproved: true, plan: "free", countryCode: "PK" } }) });
     if (path.endsWith("/tracking/application-status")) return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ payload: { marketplaceEligibility: { eligible: true } } }) });
     if (path.endsWith("/liquidity/overview")) return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, scores: {
-      "Lahore|Mathematics|in-person": { score: 70, grade: "Moderate", components: { demandScore: 90, supplyScore: 30, fillRateScore: 60, competitionScore: 40 }, meta: { openRequests: 8, eligibleTutors: 2, fillRate: .6, avgOffersPerRequest: 2, avgSessionPrice: 2500, sampleSize: 18 } },
-      "Karachi|Physics|online": { score: 55, grade: "Moderate", components: { demandScore: 50, supplyScore: 60, fillRateScore: 55, competitionScore: 45 }, meta: { openRequests: 2, eligibleTutors: 8, fillRate: .55, avgOffersPerRequest: 4, avgSessionPrice: 1800, sampleSize: 20 } },
+      "PK|PKR|Lahore|Mathematics|in-person": { score: 70, grade: "Moderate", components: { demandScore: 90, supplyScore: 30, fillRateScore: 60, competitionScore: 40 }, meta: { openRequests: 8, eligibleTutors: 2, fillRate: .6, avgOffersPerRequest: 2, avgSessionPrice: 2500, sampleSize: 18, currency: "PKR" } },
+      "PK|PKR|Karachi|Physics|online": { score: 55, grade: "Moderate", components: { demandScore: 50, supplyScore: 60, fillRateScore: 55, competitionScore: 45 }, meta: { openRequests: 2, eligibleTutors: 8, fillRate: .55, avgOffersPerRequest: 4, avgSessionPrice: 1800, sampleSize: 20, currency: "PKR" } },
     } }) });
     return route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
   });
@@ -17,12 +17,12 @@ test.beforeEach(async ({ page }) => {
 test("tutor can rank and filter anonymized teaching opportunities", async ({ page }) => {
   await page.goto("/opportunities");
   await expect(page.getByRole("heading", { name: "Teaching opportunities" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Mathematics" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Ranked teaching opportunities" }).getByRole("heading", { name: "Mathematics" })).toBeVisible();
   const cards = page.getByRole("region", { name: "Ranked teaching opportunities" }).locator("article");
   await expect(cards.first()).toContainText("Lahore");
   await page.getByPlaceholder("Search city or subject").fill("Physics");
-  await expect(page.getByRole("heading", { name: "Mathematics" })).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Physics" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Ranked teaching opportunities" }).getByRole("heading", { name: "Mathematics" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Ranked teaching opportunities" }).getByRole("heading", { name: "Physics" })).toBeVisible();
 });
 
 test("opportunity workspace remains usable on mobile", async ({ page }) => {
