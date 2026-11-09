@@ -1,8 +1,25 @@
-import mongoose, { Schema } from "mongoose";
+import mongoose, { Schema, Types } from "mongoose";
+
+// Explicit document shape so query typing does not rely on schema inference.
+export interface IPaymentCheckoutIntent {
+  _id: string;
+  provider: string;
+  amount: number;
+  currency: string;
+  state: "prepared" | "dispatched" | "responded" | "unknown";
+  booking?: Types.ObjectId;
+  bid?: Types.ObjectId;
+  student?: Types.ObjectId;
+  payer?: Types.ObjectId;
+  tutor?: Types.ObjectId;
+  feeSnapshot?: unknown;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 // The basket is unique per attempt. This records our intended amount, not a
 // claim that the provider created a checkout or received any money.
-const schema = new Schema({
+const schema = new Schema<IPaymentCheckoutIntent>({
   _id: { type: String, required: true },
   provider: { type: String, required: true },
   amount: { type: Number, required: true, min: 0 },
@@ -17,4 +34,4 @@ const schema = new Schema({
 }, { timestamps: true });
 schema.index({ state: 1, updatedAt: 1 });
 schema.index({ bid: 1, createdAt: -1 });
-export default mongoose.model("PaymentCheckoutIntent", schema);
+export default mongoose.model<IPaymentCheckoutIntent>("PaymentCheckoutIntent", schema);
