@@ -9,6 +9,10 @@ export const getOrCreateConversationSchema = z.object({
     bookingId: z.string().min(1, "Booking ID is required"),
 });
 
+export const getOrCreateOfferConversationSchema = z.object({
+    offerId: z.string().regex(/^[a-f\d]{24}$/i, "A valid offer ID is required"),
+});
+
 export type SendMessageInput = z.infer<typeof sendMessageSchema>;
 export type GetOrCreateConversationInput = z.infer<typeof getOrCreateConversationSchema>;
 

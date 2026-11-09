@@ -3,10 +3,34 @@ import { AuthRequest } from "../types";
 import Conversation from "../models/Conversation.model";
 import Message from "../models/Message.model";
 import Booking from "../models/Booking.model";
+import Bid from "../models/Bid.model";
+import RequestModel from "../models/Request.model";
 import { filterContactInfo } from "../utils/contentFilter";
 import { sendNotification } from "../utils/socket";
 import { isConversationStudentEligible } from "../services/chatAccess.service";
 import { Types } from "mongoose";
+
+// One conversation per student-tutor pair. The atomic upsert makes concurrent
+// opens safe; a unique-index collision from a racing upsert is retried once.
+async function upsertPairConversation(
+  student: Types.ObjectId,
+  tutor: Types.ObjectId,
+  update: { stage: "offer" | "booking"; request?: Types.ObjectId; offer?: Types.ObjectId; bookingId?: string }
+) {
+  const operators = update.bookingId
+    ? { $addToSet: { bookings: update.bookingId }, $set: { stage: "booking" } }
+    : { $setOnInsert: { stage: "offer", ...(update.request ? { request: update.request } : {}), ...(update.offer ? { offer: update.offer } : {}) } };
+  const run = () => Conversation.findOneAndUpdate(
+    { student, tutor },
+    operators,
+    { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
+  ).populate("student", "name avatar").populate("tutor", "name avatar");
+  try { return (await run())!; }
+  catch (err: unknown) {
+    if (typeof err === "object" && err !== null && "code" in err && err.code === 11000) return (await run())!;
+    throw err;
+  }
+}
 
 // @desc    Get or create conversation for offer stage
 // @route   POST /api/chat/offer-conversation
@@ -15,63 +39,39 @@ export const getOrCreateOfferConversation = async (
   req: AuthRequest,
   res: Response
 ): Promise<void> => {
-  const { offerId, requestId } = req.body;
+  const { offerId } = req.body;
   const userId = req.user?._id;
 
-  if (!offerId) {
-    res.status(400).json({ success: false, message: "offerId is required" });
+  const offer = await Bid.findById(offerId);
+  if (!offer) {
+    res.status(404).json({ success: false, message: "Offer not found" });
+    return;
+  }
+  if (["withdrawn", "rejected", "expired", "not_selected"].includes(offer.status)) {
+    res.status(409).json({ success: false, message: "This offer is closed." });
+    return;
+  }
+  const request = await RequestModel.findById(offer.request).select("student");
+  if (!request) {
+    res.status(404).json({ success: false, message: "Request not found" });
     return;
   }
 
-  let conversation = await Conversation.findOne({ offer: offerId })
-    .populate("student", "name avatar")
-    .populate("tutor", "name avatar");
-
-  if (!conversation) {
-    try {
-      const Offer = require("../models/Offer.model").default;
-      const offer = await Offer.findById(offerId);
-      if (!offer) {
-        res.status(404).json({ success: false, message: "Offer not found" });
-        return;
-      }
-
-      const isStudent = offer.student.toString() === userId?.toString();
-      const isTutor = offer.tutor.toString() === userId?.toString();
-
-      if (!isStudent && !isTutor) {
-        res.status(403).json({ success: false, message: "Not authorized" });
-        return;
-      }
-
-      conversation = await Conversation.create({
-        student: offer.student,
-        tutor: offer.tutor,
-        request: requestId || offer.request,
-        offer: offerId,
-        stage: 'offer',
-      });
-      await conversation.populate("student", "name avatar");
-      await conversation.populate("tutor", "name avatar");
-    } catch (err: unknown) {
-      if (typeof err === "object" && err !== null && "code" in err && err.code === 11000) {
-        conversation = await Conversation.findOne({ offer: offerId })
-          .populate("student", "name avatar")
-          .populate("tutor", "name avatar");
-        if (!conversation) throw err;
-      } else {
-        throw err;
-      }
-    }
+  const isStudent = request.student.toString() === userId?.toString();
+  const isTutor = offer.tutor.toString() === userId?.toString();
+  if (!isStudent && !isTutor) {
+    res.status(403).json({ success: false, message: "Not authorized" });
+    return;
+  }
+  if (!(await isConversationStudentEligible(request.student))) {
+    res.status(403).json({ success: false, code: "STUDENT_CHAT_UNAVAILABLE" });
+    return;
   }
 
-  const isStudent = conversation.student._id.toString() === userId?.toString();
-  if (isStudent) {
-    await Conversation.findByIdAndUpdate(conversation._id, { studentUnread: 0 });
-  } else {
-    await Conversation.findByIdAndUpdate(conversation._id, { tutorUnread: 0 });
-  }
+  const conversation = await upsertPairConversation(request.student, offer.tutor,
+    { stage: "offer", request: offer.request, offer: offer._id });
 
+  await Conversation.findByIdAndUpdate(conversation._id, isStudent ? { studentUnread: 0 } : { tutorUnread: 0 });
   res.status(200).json({ success: true, conversation });
 };
 
@@ -110,21 +110,10 @@ export const getOrCreateConversation = async (
     .populate("student", "name avatar")
     .populate("tutor", "name avatar");
 
-  // Create if not exists
+  // Attach the booking to the pair's conversation (created on first contact,
+  // possibly at the offer stage).
   if (!conversation) {
-    // Unique booking index makes concurrent opens safe once initialized.
-    try {
-      conversation = await Conversation.create({
-        student: booking.student, tutor: booking.tutor, bookings: [bookingId], stage: 'booking'
-      });
-      await conversation.populate("student", "name avatar");
-      await conversation.populate("tutor", "name avatar");
-    } catch (err: unknown) {
-      if (!(typeof err === "object" && err !== null && "code" in err && err.code === 11000)) throw err;
-      conversation = await Conversation.findOne({ bookings: bookingId })
-        .populate("student", "name avatar").populate("tutor", "name avatar");
-      if (!conversation) throw err;
-    }
+    conversation = await upsertPairConversation(booking.student, booking.tutor, { stage: "booking", bookingId });
   }
 
   // Reset unread count for current user
