@@ -53,7 +53,7 @@ import Booking from "../models/Booking.model";
 import TutorPayout from "../models/TutorPayout.model";
 import PaymentLedger from "../models/PaymentLedger.model";
 import {
-  processPendingPayouts,
+  createPayoutRequests,
   markPayoutComplete,
   markPayoutFailed,
 } from "../services/payout.service";
@@ -70,7 +70,7 @@ function makeMockSession() {
   };
 }
 
-describe("processPendingPayouts", () => {
+describe("createPayoutRequests", () => {
   let session: ReturnType<typeof makeMockSession>;
 
   beforeEach(() => {
@@ -86,7 +86,7 @@ describe("processPendingPayouts", () => {
     (Booking.find as jest.Mock).mockReturnValue(mockQuery([{
       _id: bookingId, tutor: tutorId, tutorPayout: 2000, currency: "PKR",
     }]));
-    const result = await processPendingPayouts();
+    const result = await createPayoutRequests();
     expect(result.skippedBelowThreshold).toBe(1);
     expect(result.requested).toBe(0);
     expect(TutorPayout.create).not.toHaveBeenCalled();
@@ -96,7 +96,7 @@ describe("processPendingPayouts", () => {
     (Booking.find as jest.Mock).mockReturnValue(mockQuery([{
       _id: bookingId, tutor: tutorId, tutorPayout: 3000, currency: "PKR",
     }]));
-    const result = await processPendingPayouts();
+    const result = await createPayoutRequests();
     expect(result.requested).toBe(1);
     expect(result.skippedBelowThreshold).toBe(0);
     expect(TutorPayout.create).toHaveBeenCalledTimes(1);
@@ -111,7 +111,7 @@ describe("processPendingPayouts", () => {
     (Booking.find as jest.Mock).mockReturnValue(mockQuery([{
       _id: bookingId, tutor: tutorId, tutorPayout: 5, currency: "XYZ",
     }]));
-    const result = await processPendingPayouts();
+    const result = await createPayoutRequests();
     expect(result.skippedBelowThreshold).toBe(1);
   });
 
@@ -120,7 +120,7 @@ describe("processPendingPayouts", () => {
     (Booking.find as jest.Mock).mockReturnValue(mockQuery([{
       _id: bookingId, tutor: tutorId, tutorPayout: 50, currency: "USD",
     }]));
-    const result = await processPendingPayouts();
+    const result = await createPayoutRequests();
     expect(result.skippedAlreadyPending).toBe(1);
     expect(TutorPayout.create).not.toHaveBeenCalled();
   });
@@ -129,8 +129,8 @@ describe("processPendingPayouts", () => {
     (Booking.find as jest.Mock).mockReturnValue(mockQuery([{
       _id: bookingId, tutor: tutorId, tutorPayout: 50, currency: "USD",
     }]));
-    await processPendingPayouts();
-    await processPendingPayouts();
+    await createPayoutRequests();
+    await createPayoutRequests();
     const refs = (TutorPayout.create as jest.Mock).mock.calls.map(([docs]: [Array<{ transferRef: string }>]) => docs[0].transferRef);
     expect(refs[0]).not.toBe(refs[1]);
   });
@@ -140,7 +140,7 @@ describe("processPendingPayouts", () => {
     (Booking.find as jest.Mock).mockReturnValue(mockQuery([{
       _id: bookingId, tutor: tutorId, tutorPayout: 50, currency: "USD",
     }]));
-    const result = await processPendingPayouts();
+    const result = await createPayoutRequests();
     expect(result.failed).toBe(1);
     expect(session.endSession).toHaveBeenCalled();
   });

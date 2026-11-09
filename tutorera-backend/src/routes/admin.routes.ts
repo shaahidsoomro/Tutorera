@@ -1,6 +1,5 @@
 import { Router } from "express";
 import { listPaymentHolds, listUnresolvedPaymentEvents, listUnresolvedCheckoutIntents, getPaymentEventEvidence } from "../controllers/adminPaymentHolds.controller";
-import { planAdminSupervisor, listAdminAgents, readAdminAgent } from "../controllers/adminAgentSupervisor.controller";
 import { listPendingAgeReviews, closeAgeReview, claimAgeReview, reassignAgeReview, proposeVerifiedDob, approveVerifiedDob } from "../controllers/ageReview.controller";
 import {
   getDashboardStats,
@@ -88,6 +87,7 @@ import promoCodeAdminRoutes from "./admin/promoCode.routes";
 import emailTemplateAdminRoutes from "./admin/emailTemplate.routes";
 import academicFrameworkAdminRoutes from "./admin/academicFramework.routes";
 import verificationAdminRoutes from "./admin/verification.routes";
+import payoutAdminRoutes from "./admin/payout.routes";
 import subjectAdminRoutes from "./admin/subject.routes";
 import disciplineSubjectMapAdminRoutes from "./admin/disciplineSubjectMap.routes";
 import {
@@ -103,11 +103,6 @@ const router = Router();
 
 router.use(protect, authorize("admin"));
 router.use(enforceCountryScope);
-
-// Supervisor foundation: authorized planning only, no autonomous actions.
-router.get("/agents", listAdminAgents);
-router.post("/agents/supervisor/plan", planAdminSupervisor);
-router.get("/agents/:agentId/summary", readAdminAgent);
 
 // Control Tower & Liquidity
 router.get("/control-tower/pulse", requirePermission("system.monitor"), getControlTowerPulse);
@@ -155,6 +150,7 @@ router.use("/geography", geographyAdminRoutes);
 router.use("/promo-codes", promoCodeAdminRoutes);
 router.use("/email-templates", emailTemplateAdminRoutes);
 router.use("/academic-framework", academicFrameworkAdminRoutes);
+router.use("/tutor-payouts", payoutAdminRoutes);
 router.use("/verification", verificationAdminRoutes);
 router.use("/subjects", subjectAdminRoutes);
 router.use("/discipline-subject-maps", disciplineSubjectMapAdminRoutes);
