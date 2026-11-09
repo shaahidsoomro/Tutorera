@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import TutorProfile, { ITutorProfile } from "../models/TutorProfile.model";
 import AuditLog from "../models/AuditLog.model";
 import TutorApplicationStatusHistory from "../models/TutorApplicationStatusHistory.model";
-import { approveSubjectEligibility, rejectSubjectEligibility, revokeSubjectEligibility } from "./subjectEligibility.service";
+import { approveSubjectEligibility, refreshPendingEligibilityHints, rejectSubjectEligibility, revokeSubjectEligibility } from "./subjectEligibility.service";
 import { EDUCATION_LEVELS, normalizeEducationLevel } from "../config/educationLevels";
 
 export class SubjectDecisionError extends Error {
@@ -61,8 +61,8 @@ export async function commitSubjectDecision(input: {
 export const AUTO_APPROVAL_REASON = "Auto-approved with verified qualification";
 
 /**
- * Approving a qualification approves the tutor's directly-eligible subjects
- * at the levels the tutor declared. Each subject still goes through
+ * Approving a qualification approves the tutor's pending subjects that the
+ * qualification makes eligible, at the levels the tutor declared. Each subject still goes through
  * commitSubjectDecision, so the rule checks (minimum degree level, active
  * rule, evidence for conditional subjects) are unchanged: anything that does
  * not pass stays pending for manual admin review.
@@ -72,13 +72,17 @@ export async function autoApproveEligibleSubjects(profileId: string, actor: { id
   const skipped: string[] = [];
   const profile = await TutorProfile.findById(profileId);
   if (!profile || profile.degreeVerificationStatus !== "approved") return { approved, skipped };
+  if (await refreshPendingEligibilityHints(profile)) await profile.save({ validateModifiedOnly: true });
   const levels = Array.from(new Set((profile.levels || [])
     .map((level) => normalizeEducationLevel(level))
     .filter((level) => (EDUCATION_LEVELS as readonly string[]).includes(level))));
   if (levels.length === 0) return { approved, skipped };
 
   for (const entry of profile.subjectEligibility || []) {
-    if (entry.status !== "pending" || entry.eligibilityType !== "direct") continue;
+    // The stored eligibilityType is only a hint captured when the subject was
+    // requested (often before any discipline existed); approveSubjectEligibility
+    // re-resolves it against the current qualifications and rules.
+    if (entry.status !== "pending") continue;
     try {
       await commitSubjectDecision({ profileId, subject: entry.subject, action: "approve", levels,
         reason: AUTO_APPROVAL_REASON, expectedToken: subjectDecisionToken(profile, entry.subject), actor });

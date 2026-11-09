@@ -391,14 +391,7 @@ export async function findIneligibleNewSubjects(
 ): Promise<{ blocked: string[]; hasQualification: boolean }> {
   const existing = new Set((profile.subjectEligibility || []).map((entry) => normalize(entry.subject)));
   const candidates = subjects.filter((subject) => !existing.has(normalize(subject)));
-  const disciplines: string[] = [];
-  for (const qualification of profile.education || []) {
-    if (qualification.disciplineRef) {
-      const canonical = await AcademicDiscipline.findById(qualification.disciplineRef).lean();
-      if (canonical?.status === "active") { disciplines.push(canonical.name); continue; }
-    }
-    if (qualification.discipline?.trim()) disciplines.push(qualification.discipline);
-  }
+  const disciplines = await qualificationDisciplines(profile.education);
   if (disciplines.length === 0) return { blocked: candidates, hasQualification: false };
 
   const blocked: string[] = [];
@@ -407,6 +400,53 @@ export async function findIneligibleNewSubjects(
     if (resolutions.every((resolution) => resolution.eligibilityType === "unmapped")) blocked.push(subject);
   }
   return { blocked, hasQualification: true };
+}
+
+/** Active discipline names for a tutor's declared qualifications. */
+export async function qualificationDisciplines(education: ITutorProfile["education"] | undefined): Promise<string[]> {
+  const disciplines: string[] = [];
+  for (const qualification of education || []) {
+    if (qualification.disciplineRef) {
+      const canonical = await AcademicDiscipline.findById(qualification.disciplineRef).lean();
+      if (canonical?.status === "active") { disciplines.push(canonical.name); continue; }
+    }
+    if (qualification.discipline?.trim()) disciplines.push(qualification.discipline);
+  }
+  return disciplines;
+}
+
+/**
+ * Re-resolves the stored hints (eligibilityType, matchesDiscipline,
+ * evidenceRequired, refs) of not-yet-decided subjects against the tutor's
+ * current qualifications and rules. Requests created before a discipline
+ * was declared are stored as "unmapped"; this brings them up to date.
+ * Mutates the profile and returns true when something changed.
+ */
+export async function refreshPendingEligibilityHints(profile: ITutorProfile): Promise<boolean> {
+  const disciplines = await qualificationDisciplines(profile.education);
+  if (disciplines.length === 0) return false;
+  let changed = false;
+  for (const entry of profile.subjectEligibility || []) {
+    if (entry.status !== "pending" && entry.status !== "needs_evidence") continue;
+    const resolutions = await Promise.all(disciplines.map((discipline) => resolveTeachingEligibility(discipline, entry.subject)));
+    const best = resolutions.find((r) => r.eligibilityType === "direct") ?? resolutions.find((r) => r.eligibilityType === "conditional") ?? resolutions[0];
+    if (!best) continue;
+    const matchesDiscipline = best.eligibilityType === "direct";
+    const hasEvidence = (entry.evidence || []).some((item) => Boolean(item.url));
+    const status = best.eligibilityType === "conditional" && best.evidenceRequired && !hasEvidence ? "needs_evidence"
+      : entry.status === "needs_evidence" ? "pending" : entry.status;
+    if (entry.eligibilityType !== best.eligibilityType || entry.matchesDiscipline !== matchesDiscipline
+      || entry.evidenceRequired !== best.evidenceRequired || entry.status !== status) {
+      entry.eligibilityType = best.eligibilityType;
+      entry.matchesDiscipline = matchesDiscipline;
+      entry.evidenceRequired = best.evidenceRequired;
+      entry.subjectRef = best.subjectId;
+      entry.eligibilityRuleRef = best.ruleId;
+      entry.status = status;
+      changed = true;
+    }
+  }
+  return changed;
 }
 
 export function offDisciplineResponse(blocked: string[], hasQualification: boolean) {

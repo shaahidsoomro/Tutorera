@@ -10,6 +10,7 @@
     "test:watch": "jest --watch --runInBand",
     "test:marketplace": "npm run build && node --test test/*.test.js",
     "backfill:tracking": "ts-node src/scripts/backfillTutorTracking.ts",
+    "migrate:subject-eligibility": "ts-node src/scripts/migrateSubjectEligibility.ts",
     "audit:student-age": "ts-node src/scripts/auditStudentAgeCoverage.ts",
     "audit:age-review-index": "ts-node src/scripts/auditAgeReviewIndexes.ts",
     "promote:super-admin": "ts-node src/scripts/promoteSuperAdmin.ts",

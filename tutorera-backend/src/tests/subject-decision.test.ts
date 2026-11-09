@@ -92,7 +92,8 @@ describe("auto-approval on qualification approval", () => {
       degreeVerificationStatus: "approved", education: [{ degree: "BSc", institution: "University", year: 2020,
         discipline: "Science Fixture", degreeDoc: "private-document" }],
       subjectEligibility: [
-        { subject: "Physics", status: "pending", eligibilityType: "direct", matchesDiscipline: true, evidenceRequired: false, levels: [] },
+        // Stale hint from before the discipline was known: must still approve.
+        { subject: "Physics", status: "pending", eligibilityType: "unmapped", matchesDiscipline: false, evidenceRequired: true, levels: [] },
         { subject: "History", status: "pending", eligibilityType: "unmapped", matchesDiscipline: false, evidenceRequired: true, levels: [] },
       ] });
     reviewQualification(profile, 0, "approved", new Types.ObjectId().toString(), "Verified", "bachelors");
