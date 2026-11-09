@@ -197,7 +197,7 @@ function LoginForm() {
               autoCapitalize="none"
               spellCheck="false"
               placeholder="you@example.com"
-              style={{ width: "100%", padding: "0.75rem 1rem", border: "1.5px solid #e5e7eb", borderRadius: "0.5rem", fontSize: "0.9rem", outline: "none", boxSizing: "border-box", color: C.primary }}
+              style={{ width: "100%", padding: "0.9rem 1rem", border: "1.5px solid #e5e7eb", borderRadius: "0.5rem", fontSize: "0.9rem", outline: "none", boxSizing: "border-box", color: C.primary, minHeight: "44px" }}
               onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
               onBlur={e => (e.currentTarget.style.borderColor = "#e5e7eb")}
             />
@@ -216,7 +216,7 @@ function LoginForm() {
                 required
                 autoComplete="current-password"
                 placeholder="••••••••"
-                style={{ width: "100%", padding: "0.75rem 2.75rem 0.75rem 1rem", border: "1.5px solid #e5e7eb", borderRadius: "0.5rem", fontSize: "0.9rem", outline: "none", boxSizing: "border-box", color: C.primary }}
+                style={{ width: "100%", padding: "0.9rem 2.75rem 0.9rem 1rem", border: "1.5px solid #e5e7eb", borderRadius: "0.5rem", fontSize: "0.9rem", outline: "none", boxSizing: "border-box", color: C.primary, minHeight: "44px" }}
                 onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
                 onBlur={e => (e.currentTarget.style.borderColor = "#e5e7eb")}
               />
@@ -224,9 +224,9 @@ function LoginForm() {
                 type="button"
                 onClick={() => setShowPass(!showPass)}
                 aria-label={showPass ? "Hide password" : "Show password"}
-                style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: C.gray500 }}
+                style={{ position: "absolute", right: "0.5rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: C.gray500, padding: "0.5rem", minWidth: "44px", minHeight: "44px", display: "flex", alignItems: "center", justifyContent: "center" }}
               >
-                {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                {showPass ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
           </div>
@@ -234,7 +234,7 @@ function LoginForm() {
           <button
             type="submit"
             disabled={loading}
-            style={{ backgroundColor: loading ? "#93c5fd" : C.accent, color: "white", padding: "0.85rem", borderRadius: "0.5rem", border: "none", fontWeight: "700", fontSize: "1rem", cursor: loading ? "not-allowed" : "pointer", transition: "background 0.2s" }}
+            style={{ backgroundColor: loading ? "#93c5fd" : C.accent, color: "white", padding: "0.9rem", borderRadius: "0.5rem", border: "none", fontWeight: "700", fontSize: "1rem", cursor: loading ? "not-allowed" : "pointer", transition: "background 0.2s", minHeight: "48px" }}
           >
             {loading ? "Signing in..." : "Sign in"}
           </button>

@@ -94,6 +94,19 @@ export default function Navbar() {
     router.replace("/");
   };
 
+  const handleMegaMenuKeyDown = (e: React.KeyboardEvent, key: string) => {
+    if (e.key === "ArrowDown" || e.key === "Enter") {
+      e.preventDefault();
+      setMegaOpen(key);
+      setTimeout(() => {
+        document.querySelector(`.${s.megaPanel} a`)?.focus();
+      }, 0);
+    } else if (e.key === "Escape") {
+      setMegaOpen(null);
+      (e.target as HTMLElement).focus();
+    }
+  };
+
   const dashboardHref = user?.role === "admin"
     ? "/admin"
     : user?.role === "pending"
@@ -120,7 +133,14 @@ export default function Navbar() {
               onMouseEnter={() => setMegaOpen(key)}
               onMouseLeave={() => setMegaOpen(null)}
             >
-              <button type="button" className={s.navButton} aria-expanded={megaOpen === key} aria-haspopup="true">
+              <button
+                type="button"
+                className={s.navButton}
+                aria-expanded={megaOpen === key}
+                aria-haspopup="true"
+                onKeyDown={(e) => handleMegaMenuKeyDown(e, key)}
+                onClick={() => setMegaOpen(megaOpen === key ? null : key)}
+              >
                 {menu.label} <ChevronDown size={13} />
               </button>
               {megaOpen === key && (
