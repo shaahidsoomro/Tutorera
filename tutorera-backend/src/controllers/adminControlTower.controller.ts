@@ -23,6 +23,9 @@ import { ROLE_PERMISSIONS, ALL_PERMISSIONS, hasPermission, Permission } from "..
 import mongoose from "mongoose";
 import logger from "../config/logger";
 import { logAudit } from "../utils/logAudit";
+import ScheduledJobLease from "../models/ScheduledJobLease.model";
+import ScheduledJobRun from "../models/ScheduledJobRun.model";
+import { JOB_SCHEDULES } from "../config/scheduledJobs";
 
 // ─── 1. Control Tower Operational Pulse & Action Triage ───────────────────────
 
@@ -411,10 +414,50 @@ export const getFinanceExceptions = async (req: AuthRequest, res: Response): Pro
 
 // ─── 5. System Health & Jobs ─────────────────────────────────────────────────
 
-export const getSystemHealth = async (_req: AuthRequest, res: Response): Promise<void> => {
+export const getSystemHealth = async (req: AuthRequest, res: Response): Promise<void> => {
   const dbStatus = mongoose.connection.readyState === 1 ? "healthy" : "degraded";
   const memoryUsage = process.memoryUsage();
   const uptimeSeconds = Math.floor(process.uptime());
+
+  const native = process.env.CLOUDFLARE_NATIVE_RUNTIME === "true";
+  // The Cloudflare runtime registers an inspector for its Durable Object job
+  // queue; an unreachable queue is reported as unavailable, never as empty.
+  let nativeQueue: unknown = null;
+  const inspect = native ? req.app.get("nativeJobQueueInspector") : undefined;
+  if (typeof inspect === "function") {
+    try { nativeQueue = await inspect(); }
+    catch (error) { logger.warn({ err: error }, "Native job queue inspection failed"); }
+  }
+
+  const now = new Date();
+  const [leases, failures] = await Promise.all([
+    ScheduledJobLease.find().lean(),
+    ScheduledJobRun.find({ status: "failed" }).sort({ finishedAt: -1 }).limit(10).lean(),
+  ]);
+  const leaseByName = new Map(leases.map((lease) => [lease.name, lease]));
+  const names = Array.from(new Set([...JOB_SCHEDULES.map((job) => job.name as string), ...leases.map((lease) => lease.name)])).sort();
+  const jobs = names.map((name) => {
+    const lease = leaseByName.get(name);
+    const schedule = JOB_SCHEDULES.find((job) => job.name === name);
+    const failing = (lease?.consecutiveFailures ?? 0) > 0;
+    const leaseActive = !!lease && lease.leaseExpiresAt > now;
+    return {
+      name,
+      cron: schedule?.cron ?? null,
+      holderId: lease?.holderId ?? null,
+      status: !lease ? "idle" : leaseActive ? "running" : failing ? "error" : "healthy",
+      isLeaseActive: leaseActive,
+      leaseExpiresAt: lease?.leaseExpiresAt?.toISOString() ?? null,
+      lastStartedAt: lease?.lastStartedAt?.toISOString() ?? null,
+      lastCompletedAt: lease?.lastCompletedAt?.toISOString() ?? null,
+      lastSucceededAt: lease?.lastCompletedAt?.toISOString() ?? null,
+      lastDurationMs: lease?.lastDurationMs ?? null,
+      consecutiveFailures: lease?.consecutiveFailures ?? 0,
+      totalRuns: lease?.totalRuns ?? 0,
+      totalFailures: lease?.totalFailures ?? 0,
+      lastError: lease?.lastError || null,
+    };
+  });
 
   res.json({
     success: true,
@@ -428,12 +471,18 @@ export const getSystemHealth = async (_req: AuthRequest, res: Response): Promise
         heapUsedMb: Math.round(memoryUsage.heapUsed / 1024 / 1024),
         heapTotalMb: Math.round(memoryUsage.heapTotal / 1024 / 1024),
       },
-      jobs: [
-        { name: "request_lifecycle_worker", interval: "15 minutes", status: "running" },
-        { name: "day_5_liquidity_escalation", interval: "15 minutes", status: "running" },
-        { name: "24h_expiry_warning_worker", interval: "15 minutes", status: "running" },
-        { name: "offer_24h_expiry_cleaner", interval: "15 minutes", status: "running" },
-      ],
+      scheduler: {
+        engine: native ? "cloudflare-alarms" : "in-process",
+        enabled: native ? process.env.ENABLE_SCHEDULED_JOBS === "true" : true,
+        mode: !native ? "in-process" : process.env.ENABLE_SCHEDULED_JOBS === "true" ? "durable-object-alarms" : "paused",
+        queueVisibility: !native ? "not_applicable" : nativeQueue ? "available" : "unavailable",
+      },
+      nativeQueue,
+      jobs,
+      degradedJobs: jobs.filter((job) => job.consecutiveFailures > 0).map((job) => job.name),
+      recentJobFailures: failures.map((run) => ({
+        jobName: run.jobName, error: run.error ?? null, startedAt: run.startedAt, finishedAt: run.finishedAt, durationMs: run.durationMs,
+      })),
     },
   });
 };
