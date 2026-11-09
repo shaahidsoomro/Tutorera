@@ -10,6 +10,7 @@ import { creditReferrerOnFirstBooking } from "../controllers/referral.controller
 import sendEmail from "../utils/sendEmail";
 import { bookingCancelledEmail } from "../utils/emailTemplates";
 import User from "../models/User.model";
+import ParentProfile from "../models/ParentProfile.model";
 import { logAudit } from "../utils/logAudit";
 import { sendNotification } from "../utils/socket";
 import AbandonedJourney from "../models/AbandonedJourney.model";
@@ -125,7 +126,7 @@ export const updateBookingStatus = async (req: AuthRequest, res: Response): Prom
       res.status(403).json({ success: false, code: "STUDENT_NOT_FOUND", message: "Cannot modify booking for invalid student." });
       return;
     }
-    const parentAuthorized = await ParentProfile.exists({ user: req.user._id, "children.studentUser": booking.student });
+    const parentAuthorized = await ParentProfile.exists({ user: userId, "children.studentUser": booking.student });
     if (!parentAuthorized) {
       res.status(403).json({ success: false, code: "GUARDIAN_NOT_AUTHORIZED", message: "You are not an authorized guardian for this student." });
       return;

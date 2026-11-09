@@ -217,7 +217,7 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
 
     await releaseExpiredPaymentHold(offer.request as Types.ObjectId);
 
-    let request: InstanceType<typeof Request> | null;
+    let request = null as InstanceType<typeof Request> | null;
     await session.withTransaction(async () => {
       request = await Request.findOne({ _id: offer.request, status: { $in: [...ACTIVE_REQUEST_STATES] } }).session(session);
       if (!request) throw { statusCode: 409, message: "This request has already been matched with another tutor." };
