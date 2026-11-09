@@ -99,7 +99,7 @@ export default function Navbar() {
       e.preventDefault();
       setMegaOpen(key);
       setTimeout(() => {
-        document.querySelector(`.${s.megaPanel} a`)?.focus();
+        (document.querySelector(`.${s.megaPanel} a`) as HTMLElement)?.focus();
       }, 0);
     } else if (e.key === "Escape") {
       setMegaOpen(null);

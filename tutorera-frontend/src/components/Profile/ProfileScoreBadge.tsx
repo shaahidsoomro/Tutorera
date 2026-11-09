@@ -62,7 +62,7 @@ export function ProfileScoreBadge({
     <div
       style={{
         backgroundColor: "white",
-        border: `1px solid ${C.gray200}`,
+        border: `1px solid #e5e7eb`,
         borderRadius: "0.75rem",
         padding: "1rem",
         boxShadow: "0 2px 4px rgba(0,0,0,0.05)",

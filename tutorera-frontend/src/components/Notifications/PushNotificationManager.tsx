@@ -75,7 +75,9 @@ export function PushNotificationManager({ maxNotifications = 3 }: PushNotificati
         return (
           <div
             key={notif.id}
-            onClick={() => notif.link && window.location.href = notif.link}
+            onClick={() => {
+              if (notif.link) window.location.href = notif.link;
+            }}
             style={{
               backgroundColor: styles.bg,
               border: `1px solid ${styles.border}`,
