@@ -90,7 +90,13 @@ export default function TutorOnboardingPage() {
   const [avatarPreview, setAvatarPreview] = useState<string>("");
 
   // Step 2
-  const [step2, setStep2] = useState({ degree: "", institution: "", year: "" });
+  const [step2, setStep2] = useState({ degree: "", institution: "", year: "", discipline: "" });
+  const [disciplineMaps, setDisciplineMaps] = useState<{ discipline: string; eligibleSubjects: string[] }[]>([]);
+  useEffect(() => {
+    api.get("/tutors/eligible-subjects")
+      .then(res => setDisciplineMaps(res.data?.maps ?? []))
+      .catch(() => setDisciplineMaps([]));
+  }, []);
   const [degreeDoc, setDegreeDoc] = useState<File | null>(null);
 
   // Step 3
@@ -100,9 +106,20 @@ export default function TutorOnboardingPage() {
   const [subjectEvidenceFiles, setSubjectEvidenceFiles] = useState<Record<string, File | null>>({});
   const [uploadingEvidence, setUploadingEvidence] = useState("");
   // Keep already selected subjects visible when switching curriculum filters.
-  const visibleSubjects = qualificationSelection
-    ? Array.from(new Set([...qualificationSubjects, ...selectedSubjects]))
-    : subjects;
+  // A tutor can only choose subjects related to the discipline of their
+  // degree (plus subjects already on their profile). The server enforces
+  // the same rule.
+  const subjectKey = (name: string) => name.trim().toLowerCase();
+  const eligibleForDiscipline = disciplineMaps.find(map => map.discipline === step2.discipline)?.eligibleSubjects;
+  const allowedKeys = eligibleForDiscipline ? new Set(eligibleForDiscipline.map(subjectKey)) : null;
+  const heldKeys = new Set(subjectEligibility.map(entry => subjectKey(entry.subject)));
+  const isSubjectAllowed = (name: string) => !allowedKeys || allowedKeys.has(subjectKey(name)) || heldKeys.has(subjectKey(name));
+  const visibleSubjects = !step2.discipline || !allowedKeys
+    ? (disciplineMaps.length === 0 && step2.discipline ? subjects : [])
+    : Array.from(new Set([
+        ...(qualificationSelection ? qualificationSubjects : eligibleForDiscipline!),
+        ...subjectEligibility.map(entry => entry.subject),
+      ])).filter(isSubjectAllowed);
 
   const [selectedLevels, setSelectedLevels] = useState<string[]>([]);
 
@@ -164,6 +181,7 @@ export default function TutorOnboardingPage() {
                 degree: p.education[0].degree || "",
                 institution: p.education[0].institution || "",
                 year: p.education[0].year ? String(p.education[0].year) : "",
+                discipline: p.education[0].discipline || "",
               });
             }
 
@@ -290,8 +308,8 @@ export default function TutorOnboardingPage() {
       }
 
       else if (currentStep === 2) {
-        if (!step2.degree || !step2.institution || !step2.year) {
-          setError("Please fill all required fields."); setSaving(false); return;
+        if (!step2.degree || !step2.institution || !step2.year || !step2.discipline) {
+          setError("Please fill all required fields, including the discipline of your degree."); setSaving(false); return;
         }
         formData.append("data", JSON.stringify(step2));
         if (degreeDoc) formData.append("degreeDoc", degreeDoc);
@@ -659,6 +677,24 @@ export default function TutorOnboardingPage() {
                     onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
                 </div>
                 <div>
+                  <label htmlFor="degree-discipline" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Degree Discipline *</label>
+                  <select id="degree-discipline" value={step2.discipline}
+                    onChange={e => {
+                      const discipline = e.target.value;
+                      setStep2({ ...step2, discipline });
+                      const next = disciplineMaps.find(map => map.discipline === discipline)?.eligibleSubjects;
+                      if (next) {
+                        const allowed = new Set(next.map(subjectKey));
+                        setSelectedSubjects(prev => prev.filter(subject => allowed.has(subjectKey(subject)) || heldKeys.has(subjectKey(subject))));
+                      }
+                    }}
+                    style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary, background: 'white' }}>
+                    <option value="">Select the subject area of your degree</option>
+                    {disciplineMaps.map(map => <option key={map.discipline} value={map.discipline}>{map.discipline}</option>)}
+                  </select>
+                  <p style={{ margin: '0.3rem 0 0', fontSize: '0.75rem', color: C.gray500 }}>You can only teach subjects related to your degree.</p>
+                </div>
+                <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
                     <label style={{ fontSize: '0.875rem', fontWeight: '600', color: C.primary }}>Upload Degree Certificate</label>
                     {existingDocs.degreeDoc && (
@@ -721,6 +757,7 @@ export default function TutorOnboardingPage() {
                     {curriculumSelection && <div style={{ marginTop: "0.75rem" }}><label htmlFor="qualification-filter" style={{ display: "block", fontWeight: 600, marginBottom: "0.4rem" }}>Qualification (optional)</label><select id="qualification-filter" value={qualificationSelection} onChange={event => setQualificationSelection(event.target.value)} style={{ padding: "0.65rem", border: "1px solid #cbd5e1", borderRadius: 8, width: 320, maxWidth: "100%" }}><option value="">All qualifications</option>{selectedCatalogueGroups.map(group => <option key={group.qualification} value={group.qualification}>{group.qualification}</option>)}</select></div>}
                   </div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.6rem' }}>Subjects You Teach *</label>
+                  {!step2.discipline && <p style={{ margin: '0 0 0.6rem', fontSize: '0.8rem', color: '#b45309' }}>Select the discipline of your degree in the Education step to see the subjects you can teach.</p>}
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                     {visibleSubjects.map(s => (
                       <button key={s} type="button" onClick={() => toggleItem(selectedSubjects, s, setSelectedSubjects)}
