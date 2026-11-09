@@ -8,6 +8,11 @@ import { CheckCircle2, Eye, EyeOff, Info } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import GoogleButton from "@/components/GoogleButton";
 import BrandLogo from "@/components/BrandLogo";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { loginSchema, LoginFormData } from "@/lib/auth-schemas";
+import { FormField, FormInput } from "@/components/Auth/FormField";
+import { LoadingOverlay } from "@/components/Auth/LoadingOverlay";
 
 const C = UI_COLORS;
 
@@ -21,11 +26,13 @@ function getSafeRedirect(target: string | null): string | null {
 }
 
 function LoginForm() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const { register, handleSubmit, formState: { errors, isSubmitting }, setError: setFormError } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    mode: 'onChange'
+  });
+
   const [showPass, setShowPass] = useState(false);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [serverError, setServerError] = useState("");
   const { user, loading: authLoading, login, loginWithGoogle } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -56,7 +63,6 @@ function LoginForm() {
     return null;
   }, [searchParams]);
 
-  // If already authenticated, smoothly navigate to dashboard or redirect destination
   useEffect(() => {
     if (!authLoading && user) {
       if (user.role === "pending") {
@@ -71,14 +77,10 @@ function LoginForm() {
     }
   }, [user, authLoading, safeRedirect, router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    const sanitizedEmail = email.trim().toLowerCase();
-
+  const onSubmit = async (data: LoginFormData) => {
+    setServerError("");
     try {
-      const loggedInUser = await login(sanitizedEmail, password);
+      const loggedInUser = await login(data.email.trim().toLowerCase(), data.password);
       if (loggedInUser.role === "admin") {
         router.replace(safeRedirect && safeRedirect.startsWith("/admin") ? safeRedirect : "/admin");
       } else if (loggedInUser.role === "pending") {
@@ -88,14 +90,12 @@ function LoginForm() {
       }
     } catch (err: unknown) {
       const errorObj = err as { response?: { data?: { message?: string } } };
-      setError(errorObj.response?.data?.message || "Invalid email or password");
-    } finally {
-      setLoading(false);
+      setServerError(errorObj.response?.data?.message || "Invalid email or password");
     }
   };
 
   const handleGoogleToken = async (idToken: string) => {
-    setError("");
+    setServerError("");
     try {
       const { user: authedUser, needsRole } = await loginWithGoogle(idToken);
       if (needsRole || authedUser.role === "pending") {
@@ -107,7 +107,7 @@ function LoginForm() {
       }
     } catch (err: unknown) {
       const errorObj = err as { response?: { data?: { message?: string } } };
-      setError(errorObj.response?.data?.message || "Google sign-in failed. Please try again.");
+      setServerError(errorObj.response?.data?.message || "Google sign-in failed. Please try again.");
     }
   };
 
@@ -125,8 +125,10 @@ function LoginForm() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "#F5F7FF", display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem 1rem" }}>
-      <div style={{ backgroundColor: "white", borderRadius: "1rem", padding: "2.5rem", width: "100%", maxWidth: "440px", boxShadow: "0 4px 20px rgba(0,0,0,0.08)", border: "1px solid #e5e7eb" }}>
+    <>
+      <LoadingOverlay isVisible={isSubmitting} message="Signing you in..." />
+      <div style={{ minHeight: "100vh", backgroundColor: "#F5F7FF", display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem 1rem" }}>
+        <div style={{ backgroundColor: "white", borderRadius: "1rem", padding: "2.5rem", width: "100%", maxWidth: "440px", boxShadow: "0 4px 20px rgba(0,0,0,0.08)", border: "1px solid #e5e7eb" }}>
 
         <div style={{ textAlign: "center", marginBottom: "1.75rem" }}>
           <BrandLogo size="lg" />
@@ -175,33 +177,29 @@ function LoginForm() {
           <div style={{ flex: 1, height: "1px", backgroundColor: "#e5e7eb" }} />
         </div>
 
-        {error && (
+        {serverError && (
           <div
             role="alert"
             data-testid="login-error"
             style={{ backgroundColor: "#fef2f2", border: "1px solid #fecaca", borderRadius: "0.5rem", padding: "0.75rem 1rem", marginBottom: "1.5rem", color: C.error, fontSize: "0.875rem" }}
           >
-            {error}
+            {serverError}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
-          <div>
-            <label style={{ display: "block", fontSize: "0.875rem", fontWeight: "600", color: C.primary, marginBottom: "0.4rem" }}>Email address</label>
-            <input
+        <form onSubmit={handleSubmit(onSubmit)} style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
+          <FormField label="Email address" error={errors.email?.message} required>
+            <FormInput
+              {...register('email')}
               type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
               autoComplete="email"
               autoCapitalize="none"
               spellCheck="false"
               placeholder="you@example.com"
-              style={{ width: "100%", padding: "0.9rem 1rem", border: "1.5px solid #e5e7eb", borderRadius: "0.5rem", fontSize: "0.9rem", outline: "none", boxSizing: "border-box", color: C.primary, minHeight: "44px" }}
-              onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
-              onBlur={e => (e.currentTarget.style.borderColor = "#e5e7eb")}
+              error={errors.email?.message}
+              style={{ minHeight: "44px" }}
             />
-          </div>
+          </FormField>
 
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.4rem" }}>
@@ -209,16 +207,13 @@ function LoginForm() {
               <Link href="/forgot-password" style={{ fontSize: "0.8rem", color: C.accent, textDecoration: "none" }}>Forgot password?</Link>
             </div>
             <div style={{ position: "relative" }}>
-              <input
+              <FormInput
+                {...register('password')}
                 type={showPass ? "text" : "password"}
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
                 autoComplete="current-password"
                 placeholder="••••••••"
-                style={{ width: "100%", padding: "0.9rem 2.75rem 0.9rem 1rem", border: "1.5px solid #e5e7eb", borderRadius: "0.5rem", fontSize: "0.9rem", outline: "none", boxSizing: "border-box", color: C.primary, minHeight: "44px" }}
-                onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
-                onBlur={e => (e.currentTarget.style.borderColor = "#e5e7eb")}
+                error={errors.password?.message}
+                style={{ minHeight: "44px", paddingRight: "2.75rem" }}
               />
               <button
                 type="button"
@@ -229,14 +224,15 @@ function LoginForm() {
                 {showPass ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
+            {errors.password && <p style={{ fontSize: '0.75rem', color: C.error, marginTop: '0.3rem' }}>⚠ {errors.password.message}</p>}
           </div>
 
           <button
             type="submit"
-            disabled={loading}
-            style={{ backgroundColor: loading ? "#93c5fd" : C.accent, color: "white", padding: "0.9rem", borderRadius: "0.5rem", border: "none", fontWeight: "700", fontSize: "1rem", cursor: loading ? "not-allowed" : "pointer", transition: "background 0.2s", minHeight: "48px" }}
+            disabled={isSubmitting}
+            style={{ backgroundColor: isSubmitting ? "#93c5fd" : C.accent, color: "white", padding: "0.9rem", borderRadius: "0.5rem", border: "none", fontWeight: "700", fontSize: "1rem", cursor: isSubmitting ? "not-allowed" : "pointer", transition: "background 0.2s", minHeight: "48px" }}
           >
-            {loading ? "Signing in..." : "Sign in"}
+            {isSubmitting ? "Signing in..." : "Sign in"}
           </button>
         </form>
 
@@ -251,6 +247,7 @@ function LoginForm() {
         </p>
       </div>
     </div>
+    </>
   );
 }
 

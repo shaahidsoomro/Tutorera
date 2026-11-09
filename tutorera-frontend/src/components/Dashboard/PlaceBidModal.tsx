@@ -132,17 +132,29 @@ export default function PlaceBidModal({ request, onClose, onSuccess }: Props) {
             )}
           </div>
 
-          <DashCard padding="sm" style={{ background: STATUS_COLORS.warning.bg, boxShadow: "none", fontSize: 13, lineHeight: 1.7 }}>
-            <strong>Estimated fees and earnings</strong>
+          <DashCard padding="md" style={{ background: "#f0f9ff", border: `2px solid ${UI_COLORS.accent}`, boxShadow: "0 2px 8px rgba(3,41,178,0.08)" }}>
+            <strong style={{ fontSize: 14, display: 'block', marginBottom: '0.75rem', color: UI_COLORS.primary }}>💰 Estimated Earnings Breakdown</strong>
             <div aria-live="polite">
               {quote ? (
-                <>
-                  Agreed rate: {quote.currency} {quote.subtotal.toLocaleString()}<br />
-                  TUTORERA fee: {quote.currency} {quote.tutorFee.toLocaleString()}<br />
-                  Tax on fee: {quote.currency} {quote.tax.toLocaleString()}<br />
-                  <strong>Estimated net: {quote.currency} {quote.tutorNet.toLocaleString()}</strong><br />
-                  <span style={{ fontSize: 12, color: TEXT_COLORS.muted }}>The market policy is recalculated and fixed when the offer is accepted.</span>
-                </>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: 13, lineHeight: 1.6 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '1px solid #dbeafe' }}>
+                    <span>Proposed rate:</span>
+                    <span style={{ fontWeight: 600 }}>{quote.currency} {quote.subtotal.toLocaleString()}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: TEXT_COLORS.muted }}>
+                    <span>TUTORERA platform fee (20%):</span>
+                    <span>−{quote.currency} {quote.tutorFee.toLocaleString()}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: TEXT_COLORS.muted }}>
+                    <span>Tax on fee (15%):</span>
+                    <span>−{quote.currency} {quote.tax.toLocaleString()}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.5rem', borderTop: '2px solid #3b82f6', marginTop: '0.25rem' }}>
+                    <strong style={{ color: UI_COLORS.primary }}>You receive:</strong>
+                    <strong style={{ fontSize: 14, color: '#16a34a' }}>{quote.currency} {quote.tutorNet.toLocaleString()}</strong>
+                  </div>
+                  <p style={{ fontSize: 11, color: TEXT_COLORS.muted, margin: '0.5rem 0 0', fontStyle: 'italic' }}>Fees are recalculated and locked when offer is accepted.</p>
+                </div>
               ) : (
                 <span>{quoteNote || `Your proposed rate is ${currency} ${value.toLocaleString()}. Calculating fees...`}</span>
               )}

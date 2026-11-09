@@ -8,6 +8,73 @@ import { sendNotification } from "../utils/socket";
 import { isConversationStudentEligible } from "../services/chatAccess.service";
 import { Types } from "mongoose";
 
+// @desc    Get or create conversation for offer stage
+// @route   POST /api/chat/offer-conversation
+// @access  Private
+export const getOrCreateOfferConversation = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  const { offerId, requestId } = req.body;
+  const userId = req.user?._id;
+
+  if (!offerId) {
+    res.status(400).json({ success: false, message: "offerId is required" });
+    return;
+  }
+
+  let conversation = await Conversation.findOne({ offer: offerId })
+    .populate("student", "name avatar")
+    .populate("tutor", "name avatar");
+
+  if (!conversation) {
+    try {
+      const Offer = require("../models/Offer.model").default;
+      const offer = await Offer.findById(offerId);
+      if (!offer) {
+        res.status(404).json({ success: false, message: "Offer not found" });
+        return;
+      }
+
+      const isStudent = offer.student.toString() === userId?.toString();
+      const isTutor = offer.tutor.toString() === userId?.toString();
+
+      if (!isStudent && !isTutor) {
+        res.status(403).json({ success: false, message: "Not authorized" });
+        return;
+      }
+
+      conversation = await Conversation.create({
+        student: offer.student,
+        tutor: offer.tutor,
+        request: requestId || offer.request,
+        offer: offerId,
+        stage: 'offer',
+      });
+      await conversation.populate("student", "name avatar");
+      await conversation.populate("tutor", "name avatar");
+    } catch (err: unknown) {
+      if (typeof err === "object" && err !== null && "code" in err && err.code === 11000) {
+        conversation = await Conversation.findOne({ offer: offerId })
+          .populate("student", "name avatar")
+          .populate("tutor", "name avatar");
+        if (!conversation) throw err;
+      } else {
+        throw err;
+      }
+    }
+  }
+
+  const isStudent = conversation.student._id.toString() === userId?.toString();
+  if (isStudent) {
+    await Conversation.findByIdAndUpdate(conversation._id, { studentUnread: 0 });
+  } else {
+    await Conversation.findByIdAndUpdate(conversation._id, { tutorUnread: 0 });
+  }
+
+  res.status(200).json({ success: true, conversation });
+};
+
 // @desc    Get or create conversation
 // @route   POST /api/chat/conversation
 // @access  Private
@@ -39,7 +106,7 @@ export const getOrCreateConversation = async (
   }
 
   // Find existing conversation
-  let conversation = await Conversation.findOne({ booking: bookingId })
+  let conversation = await Conversation.findOne({ bookings: bookingId })
     .populate("student", "name avatar")
     .populate("tutor", "name avatar");
 
@@ -48,13 +115,13 @@ export const getOrCreateConversation = async (
     // Unique booking index makes concurrent opens safe once initialized.
     try {
       conversation = await Conversation.create({
-        student: booking.student, tutor: booking.tutor, booking: bookingId,
+        student: booking.student, tutor: booking.tutor, bookings: [bookingId], stage: 'booking'
       });
       await conversation.populate("student", "name avatar");
       await conversation.populate("tutor", "name avatar");
     } catch (err: unknown) {
       if (!(typeof err === "object" && err !== null && "code" in err && err.code === 11000)) throw err;
-      conversation = await Conversation.findOne({ booking: bookingId })
+      conversation = await Conversation.findOne({ bookings: bookingId })
         .populate("student", "name avatar").populate("tutor", "name avatar");
       if (!conversation) throw err;
     }
