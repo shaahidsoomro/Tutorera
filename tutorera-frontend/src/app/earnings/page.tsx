@@ -9,6 +9,7 @@ import api from "@/lib/axios";
 import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 import { Calculator } from "lucide-react";
 import { useEffect,useState } from "react";
+import { useSocket } from "@/context/SocketContext";
 import {
   Area,
   AreaChart,
@@ -230,12 +231,15 @@ export default function EarningsPage() {
   const [showCalculator, setShowCalculator] = useState(false);
   const guardStatus = useAppGuard();
 
+  const { notifications } = useSocket();
+  const latestBookingNotifId = notifications.find(n => n.type === "booking")?._id;
+
   useEffect(() => {
     api.get("/earnings")
       .then(res => setData(res.data))
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, []);
+  }, [latestBookingNotifId]);
 
   if (guardStatus !== "ok" || !user) return null;
 
