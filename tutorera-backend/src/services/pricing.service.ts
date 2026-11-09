@@ -50,7 +50,20 @@ export async function resolveMarketplaceFees(
   if (!config) {
     // Existing production rates until an admin actively publishes a version.
     const fallback = calculateMarketplaceFees(amount);
-    const quote = { ...fallback, currency: MARKETPLACE_FEES.currency, feeConfig: { ...MARKETPLACE_FEES, version: "legacy-2026-08-30", countryCode: code } };
+    // Same shape as a configured FeeConfig, so every consumer (agreement
+    // disclosures, fee previews, booking snapshots) can rely on the same fields.
+    const quote = {
+      ...fallback,
+      currency: MARKETPLACE_FEES.currency,
+      feeConfig: {
+        ...MARKETPLACE_FEES,
+        version: "legacy-2026-08-30", countryCode: code, currency: MARKETPLACE_FEES.currency,
+        studentFeePercent: MARKETPLACE_FEES.studentPlatformFeePercent,
+        tutorFeePercent: MARKETPLACE_FEES.tutorPlatformFeePercent,
+        taxPercent: MARKETPLACE_FEES.taxRatePercent,
+        effectiveDate: new Date(MARKETPLACE_FEES.effectiveFrom),
+      },
+    };
     assertQuoteCurrency(quote, expectedCurrency);
     return quote;
   }
