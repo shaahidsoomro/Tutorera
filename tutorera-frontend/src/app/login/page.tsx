@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client";
 
 import { UI_COLORS } from "@/lib/brand";

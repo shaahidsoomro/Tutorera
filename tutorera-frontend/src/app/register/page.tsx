@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client";
 import BrandLogo from "@/components/BrandLogo";
 import GoogleButton from "@/components/GoogleButton";
@@ -21,11 +20,11 @@ const C = UI_COLORS;
 const launchMarkets = [{ code: "PK", name: "Pakistan", dial: "+92" }, { code: "AE", name: "United Arab Emirates", dial: "+971" }, { code: "GB", name: "United Kingdom", dial: "+44" }];
 
 function RegisterForm() {
-  const { register, handleSubmit, watch, formState: { errors, isSubmitting }, setError: setFormError, clearErrors } = useForm({
+  const { register, handleSubmit, watch, formState: { errors, isSubmitting }, setError: setFormError, clearErrors } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
     mode: 'onChange',
     defaultValues: { role: 'student', countryCode: 'PK', preferredLanguage: 'en', name: '', email: '', password: '', city: '' }
-  } as any);
+  });
 
   const watchRole = watch('role');
   const watchDateOfBirth = watch('dateOfBirth');
