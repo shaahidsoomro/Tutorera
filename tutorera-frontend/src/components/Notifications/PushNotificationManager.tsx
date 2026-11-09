@@ -40,7 +40,7 @@ export function PushNotificationManager({ maxNotifications = 3 }: PushNotificati
   const handleDismiss = (id: string) => {
     setVisibleNotifications((prev) => prev.filter((n) => n.id !== id));
     setNotifications((prev) => prev.filter((n) => n.id !== id));
-    api.post(`/notifications/${id}/read`).catch(console.error);
+    api.patch(`/notifications/${id}/read`).catch(console.error);
   };
 
   const getNotificationStyles = (type: string) => {

@@ -22,6 +22,18 @@ export default function AcademicFrameworkPage() {
   const [seedResult, setSeedResult] = useState<{ created: number; updated: number } | null>(null);
   const [seedError, setSeedError]   = useState<string | null>(null);
 
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.get("/admin/academic-framework/overview");
+      setOverview(data.overview);
+    } catch (error) {
+      showError(error, "Could not load the academic framework");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const runSeed = async () => {
     setSeeding(true);
     setSeedResult(null);
@@ -36,18 +48,6 @@ export default function AcademicFrameworkPage() {
       setSeeding(false);
     }
   };
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { data } = await api.get("/admin/academic-framework/overview");
-      setOverview(data.overview);
-    } catch (error) {
-      showError(error, "Could not load the academic framework");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   useEffect(() => { void load(); }, [load]);
 

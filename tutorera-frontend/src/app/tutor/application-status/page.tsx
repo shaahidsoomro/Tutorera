@@ -118,8 +118,8 @@ export default function TutorApplicationStatusPage() {
     setEvidenceBusy(subject);
     setEvidenceError(null);
     try {
-      const data = new FormData(); data.append("evidence", file); data.append("label", file.name);
-      await api.post(`/tutors/subject-eligibility/${encodeURIComponent(subject)}/evidence`, data);
+      const data = new FormData(); data.append("subject", subject); data.append("evidence", file); data.append("label", file.name);
+      await api.post("/upload/subject-eligibility-evidence", data);
       const profileRes = await api.get("/tutors/profile/me");
       setSubjectRequests(profileRes.data?.profile?.subjectEligibility || []);
     } catch (uploadError: any) {
