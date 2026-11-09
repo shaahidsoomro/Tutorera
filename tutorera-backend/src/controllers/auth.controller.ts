@@ -687,7 +687,9 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
     user.resetPasswordExpire = undefined;
     await user.save();
     console.error("[forgotPassword] Resend delivery failed:", err);
-    res.status(500).json({ success: false, message: "Failed to send email. Please try again." });
+    // Respond with the same generic success as an unknown email. A distinct failure
+    // response would reveal that the account exists (email enumeration).
+    res.status(200).json(genericResponse);
     return;
   }
 

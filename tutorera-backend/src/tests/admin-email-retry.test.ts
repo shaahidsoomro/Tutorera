@@ -34,7 +34,7 @@ describe("admin email retry", () => {
     const response = await admin.post(`/api/v1/admin/email-logs/${log._id}/retry`).expect(200);
     expect(response.body.success).toBe(true);
     expect(await EmailLog.countDocuments()).toBe(1);
-    expect((await EmailOutbox.findOne({ emailLog: log._id }))!).toMatchObject({ status: "queued", attempts: 0 });
+    expect((await EmailOutbox.findOne({ emailLog: log._id }).lean())!).toMatchObject({ status: "queued", attempts: 0 });
     expect(await AuditLog.countDocuments({ action: "email_delivery_retried", targetId: log._id.toString() })).toBe(1);
   });
   it("rejects a retry after delivery has completed", async () => {

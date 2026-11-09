@@ -46,7 +46,7 @@ describe("pricing insights filter safeguards", () => {
     expect(res.json).toHaveBeenCalledWith({
       success: true,
       insight: {
-        count: 2, min: 1000, max: 1200, median: 1100,
+        count: 2, currency: "PKR", min: 1000, max: 1200, median: 1100,
         sampleSource: { completedBookings: 1, activeProfiles: 1 },
       },
     });
@@ -61,7 +61,7 @@ describe("pricing insights filter safeguards", () => {
     expect(res.json).toHaveBeenCalledWith({
       success: true,
       insight: {
-        count: 0, min: null, max: null, median: null,
+        count: 0, currency: "PKR", min: null, max: null, median: null,
         sampleSource: { completedBookings: 0, activeProfiles: 0 },
       },
     });

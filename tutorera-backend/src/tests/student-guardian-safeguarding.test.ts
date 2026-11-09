@@ -8,7 +8,8 @@ import ParentProfile from "../models/ParentProfile.model";
 import AgeReviewRequest from "../models/AgeReviewRequest.model";
 import sendEmail from "../utils/sendEmail";
 import { ensureLaunchMarkets } from "../services/market.service";
-import { ageOnDate, verifyGuardianConsent } from "../services/guardianConsent.service";
+import { ageOnDate, verifyGuardianConsent } from "../services/guardianConsent.service";
+import { googleIdToken, installGoogleJwksMock } from "./helpers/googleIdToken";
 
 // Guardian-consent behavior is tested here, not the IP-based HTTP throttle.
 // Other integration suites exercise rate limiting itself. Without isolation,
@@ -20,19 +21,8 @@ jest.mock("../middlewares/rateLimiters", () => ({
 }));
 
 jest.mock("../utils/sendEmail", () => jest.fn().mockResolvedValue(undefined));
-jest.mock("google-auth-library", () => ({
-  OAuth2Client: jest.fn().mockImplementation(() => ({
-    verifyIdToken: jest.fn(async ({ idToken }: { idToken: string }) => ({
-      getPayload: () => ({
-        sub: `verified-google-${idToken}`,
-        email: idToken, name: "Google Minor", email_verified: true,
-        picture: "",
-      }),
-    })),
-  })),
-}));
 
-beforeAll(() => { process.env.JWT_SECRET = "test-secret-at-least-16-chars"; });
+beforeAll(() => { process.env.JWT_SECRET = "test-secret-at-least-16-chars"; installGoogleJwksMock(); });
 beforeEach(async () => { await ensureLaunchMarkets(); jest.clearAllMocks(); });
 let i = 0;
 const email = (kind: string) => `safeguard-${kind}-${Date.now()}-${++i}@example.test`;
@@ -51,7 +41,7 @@ async function signupMinor(method: "local" | "google" = "local") {
   const studentEmail = email("student"), guardianEmail = email("guardian");
   const signup = method === "google"
     ? await request(app).post("/api/v1/auth/google").send({
-        idToken: studentEmail, role: "student", countryCode: "PK",
+        idToken: googleIdToken(studentEmail), role: "student", countryCode: "PK",
         ...underage, guardianEmail,
       }).expect(201)
     : await request(app).post("/api/v1/auth/register").send({
@@ -215,7 +205,7 @@ describe("Phase 5 — student age declaration and verified guardian mailbox cons
 
     const pendingEmail = email("pending-role");
     const pending = await request(app).post("/api/v1/auth/google").send({
-      idToken: pendingEmail, countryCode: "PK",
+      idToken: googleIdToken(pendingEmail), countryCode: "PK",
     }).expect(201);
     await request(app).patch("/api/v1/auth/select-role")
       .set("Authorization", `Bearer ${pending.body.token}`)
@@ -232,13 +222,13 @@ describe("Phase 5 — student age declaration and verified guardian mailbox cons
   it("does not allow a new Google student to omit age; blocks unselected role access", async () => {
     const newEmail = email("google-undated");
     const noAge = await request(app).post("/api/v1/auth/google")
-      .send({ idToken: newEmail, role: "student", countryCode: "PK" }).expect(400);
+      .send({ idToken: googleIdToken(newEmail), role: "student", countryCode: "PK" }).expect(400);
     expect(noAge.body.code).toBe("STUDENT_AGE_DETAILS_REQUIRED");
     expect(await User.findOne({ email: newEmail })).toBeNull();
 
     const pendingEmail = email("pending-protected");
     const pending = await request(app).post("/api/v1/auth/google")
-      .send({ idToken: pendingEmail, countryCode: "PK" }).expect(201);
+      .send({ idToken: googleIdToken(pendingEmail), countryCode: "PK" }).expect(201);
     const restricted = await request(app).get("/api/v1/payments/history")
       .set("Authorization", `Bearer ${pending.body.token}`).expect(403);
     expect(restricted.body.code).toBe("ROLE_SELECTION_REQUIRED");

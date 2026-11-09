@@ -36,8 +36,8 @@ async function fixture(status: string, approved = true) {
   const student = await User.create({ name: "Student", email: `s-${suffix}@test.local`, password: "password123", phone: "03001234567", role: "student", isActive: true });
   const tutor = await User.create({ name: "Tutor", email: `t-${suffix}@test.local`, password: "password123", role: "tutor", isActive: true });
   await TutorProfile.create({ user: tutor._id, subjectEligibility: [{ subject: "Mathematics", levels: ["Matric"], status: approved ? "approved" : "rejected" }] });
-  const requirement = await Request.create({ student: student._id, subject: "Mathematics", level: "Matric", description: "Need help with algebra.", budget: 1000, currency: "USD", schedule: "Evenings", status: "open", teachingMode: "online", allowCounterOffers: true, expiresAt: new Date(Date.now() + 86400000) });
-  const offer = await Bid.create({ request: requirement._id, tutor: tutor._id, amount: 1000, initialStudentRate: 1000, currency: "USD", message: "I can teach.", status, expiresAt: new Date(Date.now() - 1000) });
+  const requirement = await Request.create({ student: student._id, subject: "Mathematics", level: "Matric", description: "Need help with algebra.", budget: 1000, currency: "PKR", schedule: "Evenings", status: "open", teachingMode: "online", allowCounterOffers: true, expiresAt: new Date(Date.now() + 86400000) });
+  const offer = await Bid.create({ request: requirement._id, tutor: tutor._id, amount: 1000, initialStudentRate: 1000, currency: "PKR", message: "I can teach.", status, expiresAt: new Date(Date.now() - 1000) });
   const token = (id: string) => jwt.sign({ id }, process.env.JWT_SECRET as string, { expiresIn: "1h" });
   return { student, tutor, requirement, offer, studentToken: token(student.id), tutorToken: token(tutor.id) };
 }

@@ -1222,8 +1222,17 @@ export const retryEmailLog = async (req: AuthRequest, res: Response): Promise<vo
   }
   const outbox = await EmailOutbox.findOne({ emailLog: log._id });
   if (!outbox) { res.status(409).json({ success: false, message: "No outbox job found for this log entry." }); return; }
-  await EmailOutbox.updateOne({ _id: outbox._id }, { $set: { status: "queued", nextAttemptAt: new Date(), lastError: undefined } });
+  // Reset attempts so the worker does not immediately give up again (a failed job sits at maxAttempts).
+  await EmailOutbox.updateOne({ _id: outbox._id }, { $set: { status: "queued", attempts: 0, nextAttemptAt: new Date() }, $unset: { lastError: "" } });
   await EmailLog.updateOne({ _id: log._id }, { $set: { status: "queued" }, $inc: { retryCount: 1 } });
+  await logAudit({
+    action: "email_delivery_retried",
+    actor: req.user?.name || req.user?.email || "admin",
+    actorId: req.user?._id?.toString(),
+    entity: "EmailLog",
+    targetId: log._id.toString(),
+    metadata: { previousStatus: log.status, previousAttempts: outbox.attempts },
+  });
   res.json({ success: true, message: "Email queued for retry." });
 };
 

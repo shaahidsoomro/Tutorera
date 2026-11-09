@@ -8,6 +8,12 @@ import request from "supertest";
 import app from "../app";
 
 describe("BE-05: forgot-password OTP requests are rate-limited", () => {
+  // The limiters skip themselves under NODE_ENV=test so other suites are not throttled;
+  // lift that skip (evaluated per request) for this suite only.
+  const originalEnv = process.env.NODE_ENV;
+  beforeAll(() => { process.env.NODE_ENV = "development"; });
+  afterAll(() => { process.env.NODE_ENV = originalEnv; });
+
   it("allows up to 5 requests, then blocks the 6th with 429", async () => {
     const email = "otp-throttle-test@test.com";
 

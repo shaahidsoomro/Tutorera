@@ -3,22 +3,12 @@ import app from "../app";
 import User from "../models/User.model";
 import MarketConfig from "../models/MarketConfig.model";
 import { ensureLaunchMarkets } from "../services/market.service";
-import { googleAuthSchema, registerSchema } from "../validators/auth.validator";
+import { googleAuthSchema, registerSchema } from "../validators/auth.validator";
+import { googleIdToken, installGoogleJwksMock } from "./helpers/googleIdToken";
 
 // No network, outbound emails or external identity service in these tests.
 jest.mock("../utils/sendEmail", () => jest.fn().mockResolvedValue(undefined));
-jest.mock("google-auth-library", () => ({
-  OAuth2Client: jest.fn().mockImplementation(() => ({
-    verifyIdToken: jest.fn(async ({ idToken }: { idToken: string }) => {
-      const [marker, email] = idToken.split("|");
-      return { getPayload: () => ({
-        sub: `google-sub-${email}`, email, name: "Google Market User",
-        email_verified: marker !== "unverified", picture: "",
-      }) };
-    }),
-  })),
-}));
-beforeAll(() => { process.env.JWT_SECRET = "test-secret-at-least-16-chars"; });
+beforeAll(() => { process.env.JWT_SECRET = "test-secret-at-least-16-chars"; installGoogleJwksMock(); });
 let counter = 0;
 const email = () => `market-signup-${Date.now()}-${++counter}@example.test`;
 const register = (countryCode: string, role: "student" | "tutor" | "parent" = "student") => ({
@@ -76,7 +66,7 @@ describe("Fix 3 — registration market integrity", () => {
   it("accepts selected AE country for a new verified Google account", async () => {
     const selectedEmail = email();
     const response = await request(app).post("/api/v1/auth/google")
-      .send({ idToken: `verified|${selectedEmail}`, role: "tutor", countryCode: "AE", preferredLanguage: "en" })
+      .send({ idToken: googleIdToken(selectedEmail), role: "tutor", countryCode: "AE", preferredLanguage: "en" })
       .expect(201);
     expect(response.body.user.countryCode).toBe("AE");
     expect(response.body.user.currency).toBe("AED");
@@ -87,12 +77,12 @@ describe("Fix 3 — registration market integrity", () => {
   it("does not silently register Google users into unsupported markets or accept unverified identities", async () => {
     const unsupportedEmail = email();
     await request(app).post("/api/v1/auth/google")
-      .send({ idToken: `verified|${unsupportedEmail}`, role: "student", countryCode: "ZZ", dateOfBirth: "1998-01-15" }).expect(422);
+      .send({ idToken: googleIdToken(unsupportedEmail), role: "student", countryCode: "ZZ", dateOfBirth: "1998-01-15" }).expect(422);
     expect(await User.findOne({ email: unsupportedEmail })).toBeNull();
 
     const unverifiedEmail = email();
     await request(app).post("/api/v1/auth/google")
-      .send({ idToken: `unverified|${unverifiedEmail}`, role: "student", countryCode: "AE", dateOfBirth: "1998-01-15" }).expect(401);
+      .send({ idToken: googleIdToken(unverifiedEmail, { verified: false }), role: "student", countryCode: "AE", dateOfBirth: "1998-01-15" }).expect(401);
     expect(await User.findOne({ email: unverifiedEmail })).toBeNull();
   });
 
@@ -100,7 +90,7 @@ describe("Fix 3 — registration market integrity", () => {
     const existing = register("PK");
     await request(app).post("/api/v1/auth/register").send(existing).expect(201);
     const response = await request(app).post("/api/v1/auth/google")
-      .send({ idToken: `verified|${existing.email}`, role: "student", countryCode: "GB" }).expect(200);
+      .send({ idToken: googleIdToken(existing.email), role: "student", countryCode: "GB" }).expect(200);
     expect(response.body.user.countryCode).toBe("PK");
     expect((await User.findOne({ email: existing.email }))?.currency).toBe("PKR");
   });
@@ -109,7 +99,7 @@ describe("Fix 3 — registration market integrity", () => {
     const candidateEmail = email();
     const agent = request.agent(app);
     await agent.post("/api/v1/auth/google")
-      .send({ idToken: `verified|${candidateEmail}`, countryCode: "AE" }).expect(201);
+      .send({ idToken: googleIdToken(candidateEmail), countryCode: "AE" }).expect(201);
     await MarketConfig.updateOne({ countryCode: "AE" }, { $set: { tutorRegistration: false } });
     await agent.patch("/api/v1/auth/select-role").send({ role: "tutor" }).expect(422);
     expect((await User.findOne({ email: candidateEmail }))?.role).toBe("pending");

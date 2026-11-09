@@ -39,7 +39,7 @@ describe("PUT /blogs/:id (updateBlog)", () => {
     await Blog.create({ title: "Taken", slug: "already-taken-slug", content: "content", excerpt: "e", author: admin2._id, isPublished: true });
     const blog = await Blog.create({ title: "Mine", slug: "my-own-slug", content: "content", excerpt: "e", author: admin2._id, isPublished: true });
 
-    const res = await agent.put(`/api/v1/blogs/${blog._id}`).send({ slug: "already-taken-slug" }).expect(400);
+    const res = await agent.put(`/api/v1/blogs/${blog._id}`).send({ slug: "already-taken-slug" }).expect(409);
     expect(res.body.success).toBe(false);
   });
 
