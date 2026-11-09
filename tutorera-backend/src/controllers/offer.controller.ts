@@ -590,5 +590,5 @@ export const shortlistOffer = async (req: AuthRequest, res: Response): Promise<v
     res.status(409).json({ success: false, message: "Offer cannot be shortlisted in its current state" }); return;
   }
   await Bid.findByIdAndUpdate(id, { shortlistedAt: new Date() });
-  res.json({ success: true, message: "Offer shortlisted" });
+  res.json({ success: true, shortlisted: true, message: "Offer shortlisted" });
 };

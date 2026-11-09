@@ -23,6 +23,7 @@ type NativeRuntime = BackendModule & { io: ReturnType<BackendModule["initSocket"
 export class TutoreraBackend extends DurableObject<Env> {
   private connecting?: Promise<unknown>;
   private validated = false;
+  private schemaSync?: Promise<void>;
   private initializing?: Promise<NativeRuntime>;
 
   private runtime(): Promise<NativeRuntime> {
@@ -54,19 +55,27 @@ export class TutoreraBackend extends DurableObject<Env> {
   }
 
   private async ensureDatabase(): Promise<void> {
-    const { mongoose, validateEnv, assertRapidPayRuntimeConfiguration } = await this.runtime();
+    const { mongoose, validateEnv, assertRapidPayRuntimeConfiguration, ensureSchemaOnce } = await this.runtime();
     if (!this.validated) {
       validateEnv({ throwOnError: true });
       assertRapidPayRuntimeConfiguration();
       this.validated = true;
     }
-    if (mongoose.connection.readyState === 1) return;
-    this.connecting ??= mongoose.connect(this.env.MONGO_URI, {
-      autoIndex: false, autoCreate: false,
-      maxPoolSize: 1, minPoolSize: 0, maxConnecting: 1,
-      serverSelectionTimeoutMS: 5000, connectTimeoutMS: 5000,
-    }).finally(() => { this.connecting = undefined; });
-    await this.connecting;
+    if (mongoose.connection.readyState !== 1) {
+      this.connecting ??= mongoose.connect(this.env.MONGO_URI, {
+        autoIndex: false, autoCreate: false,
+        maxPoolSize: 1, minPoolSize: 0, maxConnecting: 1,
+        serverSelectionTimeoutMS: 5000, connectTimeoutMS: 5000,
+      }).finally(() => { this.connecting = undefined; });
+      await this.connecting;
+    }
+    // autoIndex/autoCreate stay off for fast cold starts, so build missing
+    // collections/indexes once per index-definition change, in the background.
+    // The read-only preview never writes.
+    this.schemaSync ??= ensureSchemaOnce(mongoose, { readOnly: this.env.PREVIEW_READ_ONLY === "true" })
+      .then((outcome) => console.log("schema_sync", outcome))
+      .catch((error: unknown) => console.error("schema_sync_error", (error as Error).message));
+    this.ctx.waitUntil(this.schemaSync);
   }
 
   async fetch(request: Request): Promise<Response> {

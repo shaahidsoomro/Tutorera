@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test';
+import { blockApi } from './helpers';
 
 test.describe('Register Page - Form Validation', () => {
   test.beforeEach(async ({ page }) => {
+    await blockApi(page);
     await page.goto('/register');
   });
 
