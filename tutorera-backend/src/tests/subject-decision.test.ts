@@ -3,6 +3,7 @@ import TutorProfile from "../models/TutorProfile.model";
 import AuditLog from "../models/AuditLog.model";
 import TutorApplicationStatusHistory from "../models/TutorApplicationStatusHistory.model";
 import DisciplineSubjectMap from "../models/DisciplineSubjectMap.model";
+import { findIneligibleNewSubjects } from "../services/subjectEligibility.service";
 import Request from "../models/Request.model";
 import Booking from "../models/Booking.model";
 import { reviewQualification } from "../services/qualificationReview.service";
@@ -117,5 +118,27 @@ describe("auto-approval on qualification approval", () => {
     const result = await autoApproveEligibleSubjects(profileId, actor);
     expect(result.approved).toEqual([]);
     expect((await TutorProfile.findById(profileId))!.subjectEligibility![0].status).toBe("pending");
+  });
+});
+
+describe("subject selection requires a relevant qualification", () => {
+  const edu = [{ degree: "BSc", institution: "University", year: 2020, discipline: "Science Fixture", degreeDoc: "doc" }];
+
+  it("blocks every new subject when the tutor has no qualification", async () => {
+    const result = await findIneligibleNewSubjects({ education: [], subjectEligibility: [] } as never, ["Physics"]);
+    expect(result).toEqual({ blocked: ["Physics"], hasQualification: false });
+  });
+
+  it("blocks subjects unrelated to the qualification and allows related ones", async () => {
+    await DisciplineSubjectMap.create({ discipline: "Science Fixture", eligibleSubjects: ["Physics"], isActive: true });
+    const result = await findIneligibleNewSubjects({ education: edu, subjectEligibility: [] } as never, ["Physics", "History"]);
+    expect(result).toEqual({ blocked: ["History"], hasQualification: true });
+  });
+
+  it("does not re-check subjects the tutor already holds", async () => {
+    await DisciplineSubjectMap.create({ discipline: "Science Fixture", eligibleSubjects: ["Physics"], isActive: true });
+    const result = await findIneligibleNewSubjects({ education: edu,
+      subjectEligibility: [{ subject: "History", status: "approved", levels: [] }] } as never, ["History"]);
+    expect(result.blocked).toEqual([]);
   });
 });

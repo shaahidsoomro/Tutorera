@@ -25,7 +25,7 @@ import { resolveMarket } from "../services/market.service";
 import { syncReviewQueueForProfile } from "../services/verification.service";
 import { syncMarketplaceAndHomeTuition } from "./tracking.controller";
 import { calculateMarketplaceFees } from "../services/pricing.service";
-import { requestSubjectEligibility, syncApprovedSubjects, resolveTeachingEligibility } from "../services/subjectEligibility.service";
+import { requestSubjectEligibility, syncApprovedSubjects, findIneligibleNewSubjects, offDisciplineResponse } from "../services/subjectEligibility.service";
 import AcademicDiscipline from "../models/AcademicDiscipline.model";
 import SchoolOffering from "../models/SchoolOffering.model";
 import { assignUniqueTutorSlug } from "../services/tutorSlug.service";
@@ -160,6 +160,14 @@ export const createOrUpdateProfile = async (
     if (Array.isArray(updateData.subjects)) {
       const selectedSubjects = Array.from(new Set(updateData.subjects.map((subject: unknown) => String(subject || "").trim()).filter(Boolean))) as string[];
       const disciplines = (profile.education || []).map((education) => education.discipline).filter(Boolean) as string[];
+      const eligibility = await findIneligibleNewSubjects(
+        { education: Array.isArray(updateData.education) ? updateData.education : profile.education, subjectEligibility: profile.subjectEligibility },
+        selectedSubjects
+      );
+      if (eligibility.blocked.length > 0) {
+        res.status(422).json(offDisciplineResponse(eligibility.blocked, eligibility.hasQualification));
+        return;
+      }
       for (const subject of selectedSubjects) {
         await requestSubjectEligibility(profile, subject, { disciplines });
       }
@@ -823,6 +831,10 @@ export const saveOnboardingStep = async (
     }
 
     const previous = profile.education?.[qualificationIndex];
+    if (!String(parsedData.discipline || previous?.discipline || "").trim()) {
+      res.status(400).json({ success: false, code: "DISCIPLINE_REQUIRED", message: "Select the discipline of your degree. It determines which subjects you can teach." });
+      return;
+    }
     const replacement = prepareDegreeReplacement(profile,
       degreeDocUrl || previous?.degreeDoc || "", degreeDocPublicId || previous?.degreeDocPublicId || "", qualificationIndex, true);
     const education = replacement.education;
@@ -879,40 +891,12 @@ export const saveOnboardingStep = async (
     const selectedSubjects: string[] = parsedData.subjects || [];
     const disciplines = (profile.education || []).map((education) => education.discipline).filter(Boolean) as string[];
 
-    // Enforce discipline-subject alignment: reject subjects that are completely
-    // unrelated to every declared qualification discipline.
-    if (disciplines.length > 0 && selectedSubjects.length > 0) {
-      const blockedSubjects: string[] = [];
-      for (const subject of selectedSubjects) {
-        const resolutions = await Promise.all(
-          disciplines.map((d) => resolveTeachingEligibility(d, subject))
-        );
-        const anyEligible = resolutions.some((r) => r.eligibilityType !== "unmapped");
-        if (!anyEligible) {
-          // Only block if at least one canonical AcademicDiscipline record exists
-          // for the tutor's disciplines — meaning rules are actually defined.
-          const canonicalExists = await Promise.all(
-            disciplines.map((d) =>
-              AcademicDiscipline.findOne({
-                name: new RegExp(`^${d.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i"),
-                status: "active",
-              }).lean()
-            )
-          );
-          if (canonicalExists.some(Boolean)) {
-            blockedSubjects.push(subject);
-          }
-        }
-      }
-      if (blockedSubjects.length > 0) {
-        res.status(422).json({
-          success: false,
-          code: "SUBJECTS_OFF_DISCIPLINE",
-          message: `The following subject(s) are not eligible based on your declared qualification(s): ${blockedSubjects.join(", ")}. Please select only subjects that align with your qualification discipline(s).`,
-          blockedSubjects,
-        });
-        return;
-      }
+    // Strict discipline-subject alignment: a tutor can only add subjects
+    // related to a declared qualification, and none without a qualification.
+    const eligibility = await findIneligibleNewSubjects(profile, selectedSubjects);
+    if (eligibility.blocked.length > 0) {
+      res.status(422).json(offDisciplineResponse(eligibility.blocked, eligibility.hasQualification));
+      return;
     }
 
     for (const subject of selectedSubjects) {

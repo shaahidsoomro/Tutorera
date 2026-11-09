@@ -4,6 +4,7 @@ import User from "../models/User.model";
 import TutorProfile from "../models/TutorProfile.model";
 import TutorAvailability from "../models/TutorAvailability.model";
 import { ensureLaunchMarkets } from "../services/market.service";
+import DisciplineSubjectMap from "../models/DisciplineSubjectMap.model";
 
 // End-to-end regression test for the tutor onboarding wizard, covering the
 // exact failure reported in production: submitting the "Educational
@@ -139,19 +140,19 @@ describe("Tutor onboarding — full E2E flow with real Cloudinary uploads", () =
     // 3. Step 2 — Education, with a real degree-certificate upload.
     // This is the exact step and payload shape shown in the production bug
     // report (degree + institution + graduationYear + a selected file).
-    const step2 = await agent
+    const submitStep2 = (extra: Record<string, unknown>) => agent
       .post("/api/v1/tutors/onboarding/step")
       .set(auth)
       .field("step", "2")
-      .field(
-        "data",
-        JSON.stringify({
-          degree: "BSc Computer Science",
-          institution: "University of the Punjab",
-          year: 2018,
-        })
-      )
+      .field("data", JSON.stringify({ degree: "BSc Computer Science", institution: "University of the Punjab", year: 2018, ...extra }))
       .attach("degreeDoc", PNG_1X1, "degree-certificate.png");
+
+    // A degree without a discipline cannot be related to any subject.
+    const step2NoDiscipline = await submitStep2({});
+    expect(step2NoDiscipline.status).toBe(400);
+    expect(step2NoDiscipline.body.code).toBe("DISCIPLINE_REQUIRED");
+
+    const step2 = await submitStep2({ discipline: "Computer Science" });
 
     expect(step2.status).toBe(200);
     expect(step2.body.success).toBe(true);
@@ -168,6 +169,16 @@ describe("Tutor onboarding — full E2E flow with real Cloudinary uploads", () =
     expect(degreeUploadOptions.moderation).toBeUndefined();
 
     // 4. Step 3 — Experience & Curricula
+    await DisciplineSubjectMap.create({ discipline: "Computer Science", eligibleSubjects: ["Mathematics", "Physics"], isActive: true });
+    const offDiscipline = await agent
+      .post("/api/v1/tutors/onboarding/step")
+      .set(auth)
+      .field("step", "3")
+      .field("data", JSON.stringify({ experience: 5, subjects: ["History"], levels: ["O-Level"], curricula: [] }));
+    expect(offDiscipline.status).toBe(422);
+    expect(offDiscipline.body.code).toBe("SUBJECTS_OFF_DISCIPLINE");
+    expect(offDiscipline.body.blockedSubjects).toEqual(["History"]);
+
     const step3 = await agent
       .post("/api/v1/tutors/onboarding/step")
       .set(auth)

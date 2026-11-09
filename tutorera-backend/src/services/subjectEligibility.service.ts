@@ -378,3 +378,44 @@ export function grandfatherExistingSubjects(profile: ITutorProfile): void {
   }
   syncApprovedSubjects(profile);
 }
+
+/**
+ * Subjects the tutor may not newly select: none of their declared
+ * qualifications relates to the subject (or they declared no qualification
+ * at all). Subjects already on the profile are not re-checked, so tutors
+ * with existing subjects can still save unrelated profile edits.
+ */
+export async function findIneligibleNewSubjects(
+  profile: Pick<ITutorProfile, "education" | "subjectEligibility">,
+  subjects: string[]
+): Promise<{ blocked: string[]; hasQualification: boolean }> {
+  const existing = new Set((profile.subjectEligibility || []).map((entry) => normalize(entry.subject)));
+  const candidates = subjects.filter((subject) => !existing.has(normalize(subject)));
+  const disciplines: string[] = [];
+  for (const qualification of profile.education || []) {
+    if (qualification.disciplineRef) {
+      const canonical = await AcademicDiscipline.findById(qualification.disciplineRef).lean();
+      if (canonical?.status === "active") { disciplines.push(canonical.name); continue; }
+    }
+    if (qualification.discipline?.trim()) disciplines.push(qualification.discipline);
+  }
+  if (disciplines.length === 0) return { blocked: candidates, hasQualification: false };
+
+  const blocked: string[] = [];
+  for (const subject of candidates) {
+    const resolutions = await Promise.all(disciplines.map((discipline) => resolveTeachingEligibility(discipline, subject)));
+    if (resolutions.every((resolution) => resolution.eligibilityType === "unmapped")) blocked.push(subject);
+  }
+  return { blocked, hasQualification: true };
+}
+
+export function offDisciplineResponse(blocked: string[], hasQualification: boolean) {
+  return {
+    success: false,
+    code: "SUBJECTS_OFF_DISCIPLINE",
+    message: hasQualification
+      ? `You can only teach subjects related to your qualification. Not eligible based on your declared qualification(s): ${blocked.join(", ")}.`
+      : "Add your qualification before choosing subjects. You can only teach subjects related to your qualification.",
+    blockedSubjects: blocked,
+  };
+}

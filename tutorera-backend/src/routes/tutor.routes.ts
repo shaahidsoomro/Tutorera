@@ -13,6 +13,7 @@ import {
   getPublicTutorSeoFacets,
 } from "../controllers/publicTutor.controller";
 import { getMySchoolOfferings, updateMySchoolOfferings } from "../controllers/schoolOffering.controller";
+import { listActiveDisciplineSubjectMaps } from "../controllers/disciplineSubjectMap.controller";
 import {
   saveAvailability,
   getTutorAvailability,
@@ -31,6 +32,7 @@ router.post("/availability", protect, authorize("tutor"), validateAvailability(s
 router.get("/availability/me", protect, authorize("tutor"), getMyAvailability);
 
 // Onboarding
+router.get("/eligible-subjects", protect, authorize("tutor"), listActiveDisciplineSubjectMaps);
 router.get("/onboarding/status", protect, authorize("tutor"), getOnboardingStatus);
 router.post("/onboarding/step", protect, authorize("tutor"), uploadVerification.fields([
   { name: "avatar", maxCount: 1 },
