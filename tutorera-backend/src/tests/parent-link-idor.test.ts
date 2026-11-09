@@ -18,6 +18,7 @@ import ParentLinkRequest from "../models/ParentLinkRequest.model";
 import ParentProfile from "../models/ParentProfile.model";
 import TuitionRequest from "../models/Request.model";
 import Bid from "../models/Bid.model";
+import ParentBookingApproval from "../models/ParentBookingApproval.model";
 
 function tokenFor(userId: string): string {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET as string, { expiresIn: "1h" });
@@ -141,56 +142,55 @@ describe("parent-link IDOR boundaries", () => {
     expect(remove.status).toBe(403);
   });
 
-  it("a parent cannot decide a booking approval for a child they are not linked to (403)", async () => {
-    // decideBookingApproval must verify that the Request's student is
-    // actually in the acting parent's ParentProfile.children. A
-    // stranger parent with the request id must get 403 and the request
-    // must stay in awaiting_parent_approval status.
-    const owner = await makeUser("parent", "booking-owner");
-    const stranger = await makeUser("parent", "booking-stranger");
-    const student = await makeUser("student", "booking-child");
-    const tutor = await makeUser("tutor", "booking-tutor");
-
-    // owner is linked to the student with approval required.
+  async function approvalFixture(suffix: string, ownerLinked: boolean) {
+    const owner = await makeUser("parent", `approval-owner-${suffix}`);
+    const stranger = await makeUser("parent", `approval-stranger-${suffix}`);
+    const student = await makeUser("student", `approval-child-${suffix}`);
+    const tutor = await makeUser("tutor", `approval-tutor-${suffix}`);
     await ParentProfile.create({
       user: owner.user._id,
-      children: [{ studentUser: student.user._id, name: "Owned Child", level: "O-Level (Cambridge / Edexcel)", subjects: ["Mathematics"], relationship: "child" }],
+      children: ownerLinked ? [{ studentUser: student.user._id, name: "Owned Child", level: "O-Level (Cambridge / Edexcel)", subjects: ["Mathematics"], relationship: "child" }] : [],
       approvalRequiredForBookings: true,
     });
-
-    const offer = await Bid.create({
-      request: new Types.ObjectId(),
-      tutor: tutor.user._id,
-      amount: 1000,
-      initialStudentRate: 1000,
-      currency: "USD",
-      message: "Offer",
-      status: "submitted",
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-    });
-
     const parentRequest = await TuitionRequest.create({
-      student: student.user._id,
-      subject: "Mathematics",
-      level: "O-Level (Cambridge / Edexcel)",
-      description: "Need help",
-      budget: 1000,
-      currency: "USD",
-      teachingMode: "online",
-      schedule: "Mon",
-      status: "awaiting_parent_approval",
-      acceptedOffer: offer._id,
+      student: student.user._id, subject: "Mathematics", level: "O-Level (Cambridge / Edexcel)", description: "Need help",
+      budget: 1000, currency: "USD", teachingMode: "online", schedule: "Mon", status: "awaiting_parent_approval",
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     });
+    const offer = await Bid.create({ request: parentRequest._id, tutor: tutor.user._id, amount: 1000, initialStudentRate: 1000,
+      currency: "USD", message: "Offer", status: "submitted", expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) });
+    const approval = await ParentBookingApproval.create({ parent: owner.user._id, student: student.user._id, request: parentRequest._id,
+      bid: offer._id, amount: 1000, currency: "USD", status: "pending", expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) } as never);
+    return { owner, stranger, parentRequest, approval };
+  }
+
+  it("a stranger parent cannot decide another parent's booking approval (indistinguishable from not found)", async () => {
+    const { stranger, parentRequest, approval } = await approvalFixture("stranger", true);
 
     const res = await request(app)
-      .post(`/api/v1/parent/booking-approvals/${parentRequest.id}`)
+      .post(`/api/v1/parent/booking-approvals/${approval.id}`)
       .set("Authorization", `Bearer ${stranger.token}`)
-      .send({ decision: "decline" });
+      .send({ decision: "rejected" });
+
+    // The approval is scoped to its parent, so a stranger gets the same
+    // answer as for a missing approval and learns nothing about it.
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe("APPROVAL_NOT_PENDING");
+    expect((await ParentBookingApproval.findById(approval._id))?.status).toBe("pending");
+    expect((await TuitionRequest.findById(parentRequest._id))?.status).toBe("awaiting_parent_approval");
+  });
+
+  it("a parent whose link to the child was revoked cannot decide (403)", async () => {
+    const { owner, parentRequest, approval } = await approvalFixture("revoked", false);
+
+    const res = await request(app)
+      .post(`/api/v1/parent/booking-approvals/${approval.id}`)
+      .set("Authorization", `Bearer ${owner.token}`)
+      .send({ decision: "approved" });
 
     expect(res.status).toBe(403);
-
-    const after = await TuitionRequest.findById(parentRequest._id);
-    expect(after?.status).toBe("awaiting_parent_approval");
+    expect(res.body.code).toBe("PARENT_LINK_REVOKED");
+    expect((await ParentBookingApproval.findById(approval._id))?.status).toBe("pending");
+    expect((await TuitionRequest.findById(parentRequest._id))?.status).toBe("awaiting_parent_approval");
   });
 });

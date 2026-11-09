@@ -15,6 +15,7 @@ import crypto from "crypto";
 import { escapeHtml } from "../utils/escapeHtml";
 import GuardianConsent from "../models/GuardianConsent.model";
 import { resolveMarketplaceFees } from "../services/pricing.service";
+import { logAudit } from "../utils/logAudit";
 
 const LINK_CODE_TTL_MS = 15 * 60 * 1000;
 const MAX_LINK_ATTEMPTS = 5;
@@ -149,6 +150,11 @@ export const addChildAccount = async (req: AuthRequest, res: Response): Promise<
     throw error;
   }
 
+  await logAudit({
+    action: "parent_student_link_requested", actor: req.user.name, actorId: req.user._id.toString(),
+    entity: "ParentLinkRequest", targetId: linkRequest._id.toString(), targetName: student.name,
+    metadata: { studentId: student._id.toString(), relationship: linkRequest.relationship },
+  });
   res.status(202).json({ success: true, message: "A verification code was sent to the student.", requestId: linkRequest._id, expiresInSeconds: LINK_CODE_TTL_MS / 1000 });
 };
 
@@ -210,6 +216,11 @@ export const confirmChildAccount = async (req: AuthRequest, res: Response): Prom
       linkRequest.status = "confirmed";
       linkRequest.confirmedAt = new Date();
       await linkRequest.save({ session });
+      await logAudit({
+        action: "parent_student_link_confirmed", actor: req.user?.name, actorId: req.user?._id?.toString(),
+        entity: "ParentLinkRequest", targetId: linkRequest._id.toString(),
+        metadata: { studentId: linkRequest.student.toString(), relationship: linkRequest.relationship },
+      }, session);
     });
   } catch (error: any) {
     res.status(error?.statusCode || 500).json({ success: false,
@@ -469,11 +480,12 @@ export const saveParentOnboarding = async (req: AuthRequest, res: Response): Pro
 };
 
 export const cancelChildLinkRequest = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (req.user?.role !== "parent") { res.status(403).json({ success: false, message: "Access denied." }); return; }
   const { requestId } = req.params;
   if (!mongoose.Types.ObjectId.isValid(requestId)) { res.status(400).json({ success: false, message: "Invalid request ID" }); return; }
   const linkRequest = await ParentLinkRequest.findById(requestId);
   if (!linkRequest) { res.status(404).json({ success: false, message: "Link request not found" }); return; }
-  if (linkRequest.parent.toString() !== req.user?._id?.toString()) { res.status(403).json({ success: false, message: "Forbidden" }); return; }
+  if (linkRequest.parent.toString() !== req.user?._id?.toString()) { res.status(404).json({ success: false, message: "Link request not found" }); return; }
   if (linkRequest.status !== "pending") { res.status(409).json({ success: false, message: "Only pending link requests can be cancelled" }); return; }
   linkRequest.status = "cancelled";
   await linkRequest.save();
