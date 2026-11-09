@@ -1,6 +1,7 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useSocket } from "@/context/SocketContext";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/axios";
@@ -132,6 +133,17 @@ function OffersContent() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const { notifications } = useSocket();
+  const latestBidNotifId = notifications.find((n) => n.type === "bid")?._id;
+  const seenBidNotifId = useRef(latestBidNotifId);
+  useEffect(() => {
+    if (!latestBidNotifId || latestBidNotifId === seenBidNotifId.current) return;
+    seenBidNotifId.current = latestBidNotifId;
+    api.get("/offers/my")
+      .then((r) => setOffers(((r.data.offers || []) as Offer[]).filter((o) => o && o.tutor && o.request)))
+      .catch(() => {});
+  }, [latestBidNotifId]);
 
   useEffect(() => {
     setNow(Date.now());
