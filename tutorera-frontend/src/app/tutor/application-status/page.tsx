@@ -151,7 +151,7 @@ export default function TutorApplicationStatusPage() {
 
         <section className={s.card} aria-labelledby="qualification-decisions">
           <h2 id="qualification-decisions" className={s.cardTitle}>Your education review</h2>
-          <p>Each qualification is reviewed separately. A verified credential does not automatically approve its teaching subjects.</p>
+          <p>Each qualification is reviewed separately. When a credential is verified, the subjects that directly match it are approved automatically. Other subjects are reviewed separately.</p>
           {qualifications.length ? qualifications.map((qualification, index) => (
             <QualificationReviewCard key={index} qualification={qualification} index={index} />
           )) : <p>No education entries are available. <Link href="/onboarding/tutor?step=2">Complete your education and uploads</Link>.</p>}

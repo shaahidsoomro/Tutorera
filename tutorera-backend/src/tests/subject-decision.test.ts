@@ -6,7 +6,7 @@ import DisciplineSubjectMap from "../models/DisciplineSubjectMap.model";
 import Request from "../models/Request.model";
 import Booking from "../models/Booking.model";
 import { reviewQualification } from "../services/qualificationReview.service";
-import { commitSubjectDecision, subjectDecisionToken, SubjectDecisionError } from "../services/subjectDecision.service";
+import { autoApproveEligibleSubjects, commitSubjectDecision, subjectDecisionToken, SubjectDecisionError } from "../services/subjectDecision.service";
 
 async function fixture() {
   await Promise.all([AuditLog.init(), TutorApplicationStatusHistory.init()]);
@@ -80,5 +80,42 @@ describe("atomic subject decisions", () => {
     const profile = (await commitSubjectDecision(input))!.profile;
     await expect(commitSubjectDecision({ ...input, action: "revoke", reason: "",
       expectedToken: subjectDecisionToken(profile, "Physics") })).rejects.toMatchObject({ statusCode: 422 });
+  });
+});
+
+describe("auto-approval on qualification approval", () => {
+  async function autoFixture(levels: string[]) {
+    await Promise.all([AuditLog.init(), TutorApplicationStatusHistory.init()]);
+    await DisciplineSubjectMap.create({ discipline: "Science Fixture", eligibleSubjects: ["Physics"], isActive: true });
+    const profile = await TutorProfile.create({ user: new Types.ObjectId(), fullName: "Auto Tutor", levels,
+      degreeVerificationStatus: "approved", education: [{ degree: "BSc", institution: "University", year: 2020,
+        discipline: "Science Fixture", degreeDoc: "private-document" }],
+      subjectEligibility: [
+        { subject: "Physics", status: "pending", eligibilityType: "direct", matchesDiscipline: true, evidenceRequired: false, levels: [] },
+        { subject: "History", status: "pending", eligibilityType: "unmapped", matchesDiscipline: false, evidenceRequired: true, levels: [] },
+      ] });
+    reviewQualification(profile, 0, "approved", new Types.ObjectId().toString(), "Verified", "bachelors");
+    await profile.save();
+    return { profileId: profile._id.toString(), actor: { id: new Types.ObjectId().toString(), name: "Reviewer" } };
+  }
+
+  it("approves directly-eligible subjects at the declared levels and leaves off-discipline ones pending", async () => {
+    const { profileId, actor } = await autoFixture(["O-Level"]);
+    const result = await autoApproveEligibleSubjects(profileId, actor);
+    expect(result.approved).toEqual(["Physics"]);
+    const saved = (await TutorProfile.findById(profileId))!;
+    const byName = Object.fromEntries(saved.subjectEligibility!.map((e) => [e.subject, e]));
+    expect(byName.Physics.status).toBe("approved");
+    expect(byName.Physics.levels).toHaveLength(1);
+    expect(byName.Physics.levels[0]).toMatch(/^O-Level/);
+    expect(byName.History.status).toBe("pending");
+    expect(saved.approvedSubjects).toContain("Physics");
+  });
+
+  it("does nothing when the tutor declared no valid teaching levels", async () => {
+    const { profileId, actor } = await autoFixture([]);
+    const result = await autoApproveEligibleSubjects(profileId, actor);
+    expect(result.approved).toEqual([]);
+    expect((await TutorProfile.findById(profileId))!.subjectEligibility![0].status).toBe("pending");
   });
 });

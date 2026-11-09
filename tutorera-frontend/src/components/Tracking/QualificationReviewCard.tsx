@@ -89,7 +89,7 @@ export default function QualificationReviewCard({ qualification, index, onReview
             <option value="secondary">Secondary</option><option value="diploma">Diploma</option>
             <option value="bachelors">Bachelor’s</option><option value="masters">Master’s</option><option value="doctorate">Doctorate</option>
           </select>
-          <p id={`${id}-help`} className={styles.help}>Confirm the uploaded credential before selecting a level. This decision does not automatically approve teaching subjects.</p>
+          <p id={`${id}-help`} className={styles.help}>Confirm the uploaded credential before selecting a level. Approving also approves the tutor's directly-eligible subjects at their declared levels. Subjects outside this qualification stay pending for manual review.</p>
           <label htmlFor={`${id}-reason`}>Review reason — mandatory when rejecting</label>
           <textarea id={`${id}-reason`} ref={reasonRef} rows={3} value={reason} onChange={(event) => setReason(event.target.value)} aria-describedby={error ? `${id}-error` : undefined} />
           <div className={styles.actions}>

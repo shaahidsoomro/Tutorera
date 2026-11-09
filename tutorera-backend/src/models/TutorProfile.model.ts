@@ -105,9 +105,9 @@ export interface ITutorProfile extends Document {
     evidenceRequired?: boolean;
     evidence?: { url: string; publicId?: string; label?: string; uploadedAt?: Date; status?: "pending" | "approved" | "rejected"; reason?: string; reviewedBy?: Types.ObjectId; reviewedAt?: Date; reviewedPublicId?: string }[];
     // Whether this subject appears in a DisciplineSubjectMap entry matching
-    // the tutor's declared discipline at the time it was requested - shown
-    // to the admin as a hint, never used to auto-approve (tutor selections
-    // alone must never grant eligibility, per the feature spec).
+    // the tutor's declared discipline at the time it was requested. A
+    // direct match is auto-approved when the qualification is approved
+    // (autoApproveEligibleSubjects); other subjects need manual review.
     matchesDiscipline: boolean;
     qualificationIndex?: number; // index into `education[]` this request is tied to, if any
     requestedAt: Date;

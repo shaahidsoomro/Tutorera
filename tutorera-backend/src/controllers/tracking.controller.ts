@@ -51,7 +51,7 @@ import { getSignedViewUrl, uploadToCloudinary } from "../utils/uploadToCloudinar
 import { verifyFileSignature } from "../middlewares/upload.middleware";
 import { syncReviewQueueComponent } from "../services/verification.service";
 import { commitQualificationDecision, qualificationReviewToken, QualificationDecisionError } from "../services/qualificationDecision.service";
-import { commitSubjectDecision, subjectDecisionToken, SubjectDecisionError } from "../services/subjectDecision.service";
+import { autoApproveEligibleSubjects, commitSubjectDecision, subjectDecisionToken, SubjectDecisionError } from "../services/subjectDecision.service";
 import { commitSubjectEvidenceDecision, EvidenceDecisionError } from "../services/subjectEvidenceDecision.service";
 
 const TRACKING_BASE_URL = process.env.CLIENT_URL || "https://tutorera.ac.pk";
@@ -603,6 +603,17 @@ export const updateDegree = async (req: AuthRequest, res: Response): Promise<voi
       document: "Degree", ctaArgs: ctaArgs(user), title: "Qualification verified", message: `Qualification ${qualificationIndex + 1} has been verified. Overall educational review: ${profile.degreeVerificationStatus}.`, link: "/tutor/application-status", type: "verification"
     });
     syncTutorBadges(user._id.toString()).catch(() => {});
+    try {
+      const { approved } = await autoApproveEligibleSubjects(data.profile._id.toString(), { id: req.user!._id.toString(), name: actor.name });
+      if (approved.length) {
+        profile = (await TutorProfile.findById(data.profile._id)) ?? profile;
+        await NotificationService.publishEvent(user._id.toString(), "verification.subject_eligibility", {
+          title: "Subjects approved ✅", message: `You're now approved to teach ${approved.join(", ")}.`, link: "/tutor/application-status", type: "verification"
+        });
+      }
+    } catch (error) {
+      console.error("Subject auto-approval after qualification approval failed:", error);
+    }
   } else if (status === "rejected") {
     await NotificationService.publishEvent(user._id.toString(), "verification.rejected", {
       document: "Degree", reason: reason || "", ctaArgs: ctaArgs(user), title: "Action required: Educational documents", message: reason || "Please re-upload your documents.", link: "/tutor/application-status", type: "verification"
