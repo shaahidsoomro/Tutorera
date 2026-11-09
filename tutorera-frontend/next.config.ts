@@ -11,6 +11,10 @@ const IS_NON_CANONICAL_DEPLOY =
   Boolean(process.env.VERCEL_ENV) && process.env.VERCEL_ENV !== "production";
 
 const nextConfig: NextConfig = {
+  // Browser tests use a separate build directory so they can run alongside a
+  // developer's existing local Next server without sharing its lock or cache.
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
+  allowedDevOrigins: ["127.0.0.1", "localhost"],
   experimental: {
     cpus: 2,
   },

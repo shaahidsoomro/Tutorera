@@ -78,9 +78,11 @@ test.describe("Single Login Page (/login)", () => {
   });
 
   test("submits valid credentials and redirects standard user to /dashboard", async ({ page }) => {
+    let signedIn = false;
     await page.route(apiBasePattern, async (route) => {
       const url = route.request().url();
       if (url.includes("/auth/login")) {
+        signedIn = true;
         await route.fulfill({
           status: 200,
           contentType: "application/json",
@@ -99,6 +101,10 @@ test.describe("Single Login Page (/login)", () => {
         return;
       }
       if (url.includes("/auth/me")) {
+        if (!signedIn) {
+          await route.fulfill({ status: 401, contentType: "application/json", body: JSON.stringify({ success: false }) });
+          return;
+        }
         await route.fulfill({
           status: 200,
           contentType: "application/json",
@@ -133,9 +139,11 @@ test.describe("Single Login Page (/login)", () => {
   });
 
   test("honors safe ?redirect=/privacy-center after login", async ({ page }) => {
+    let signedIn = false;
     await page.route(apiBasePattern, async (route) => {
       const url = route.request().url();
       if (url.includes("/auth/login")) {
+        signedIn = true;
         await route.fulfill({
           status: 200,
           contentType: "application/json",
@@ -154,6 +162,10 @@ test.describe("Single Login Page (/login)", () => {
         return;
       }
       if (url.includes("/auth/me")) {
+        if (!signedIn) {
+          await route.fulfill({ status: 401, contentType: "application/json", body: JSON.stringify({ success: false }) });
+          return;
+        }
         await route.fulfill({
           status: 200,
           contentType: "application/json",
@@ -192,9 +204,11 @@ test.describe("Single Login Page (/login)", () => {
   });
 
   test("submits admin credentials and redirects to /admin", async ({ page }) => {
+    let signedIn = false;
     await page.route(apiBasePattern, async (route) => {
       const url = route.request().url();
       if (url.includes("/auth/login")) {
+        signedIn = true;
         await route.fulfill({
           status: 200,
           contentType: "application/json",
@@ -214,6 +228,10 @@ test.describe("Single Login Page (/login)", () => {
         return;
       }
       if (url.includes("/auth/me")) {
+        if (!signedIn) {
+          await route.fulfill({ status: 401, contentType: "application/json", body: JSON.stringify({ success: false }) });
+          return;
+        }
         await route.fulfill({
           status: 200,
           contentType: "application/json",

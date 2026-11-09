@@ -27,7 +27,7 @@ async function authenticate(page: Page, user: Record<string, unknown>, options: 
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ stats: { totalPayouts: 1, totalPayoutAmount: 1540, pendingAmount: 1540, paidAmount: 0 }, pagination: { total: 1, page: 1, pages: 1, limit: 10 }, payouts: [{ _id: "booking-1", studentName: "Test Student", subject: "Mathematics", currency: "PKR", tutorPayout: 1540, payoutStatus: "pending", createdAt: "2026-09-01T10:00:00.000Z" }] }),
+        body: JSON.stringify({ stats: { currencyTotals: [{ currency: "PKR", pendingAmount: 1540, paidAmount: 0 }] }, pagination: { total: 1, page: 1, pages: 1, limit: 10 }, payouts: [{ _id: "booking-1", studentName: "Test Student", subject: "Mathematics", currency: "PKR", tutorPayout: 1540, payoutStatus: "pending", createdAt: "2026-09-01T10:00:00.000Z" }] }),
       });
       return;
     }
