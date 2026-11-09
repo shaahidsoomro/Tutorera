@@ -29,6 +29,9 @@ async function fixture(timezone = "Asia/Karachi") {
   const student = await User.create({ name: "Calendar Student", email: nextEmail(), password: "password123", role: "student" });
   const profile = await TutorProfile.create({
     user: tutor._id, timezone, subjects: ["Mathematics"], levels: ["Matric (9th & 10th)"],
+    // Matching only considers tutors approved for the request's subject and level.
+    approvedSubjects: ["Mathematics"],
+    subjectEligibility: [{ subject: "Mathematics", levels: ["Matric (9th & 10th)"], status: "approved", matchesDiscipline: true, evidenceRequired: false }],
     hourlyRate: 1000, currency: "PKR", teachingMode: "online",
     availability: [{ day: "Sunday", slots: ["08:00-09:00"] }],
     createdAt: new Date(),

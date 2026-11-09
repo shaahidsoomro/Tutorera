@@ -30,24 +30,56 @@ export const createBlog = async (req: AuthRequest, res: Response): Promise<void>
 // @desc    Get all published blogs
 // @route   GET /api/blogs
 // @access  Public
+const WORDS_PER_MINUTE = 200;
+const DEFAULT_CATEGORY = "Guides";
+
+function readingTime(content: unknown): string {
+  const words = typeof content === "string" ? content.trim().split(/\s+/).filter(Boolean).length : 0;
+  return `${Math.max(1, Math.round(words / WORDS_PER_MINUTE))} min read`;
+}
+
 export const getAllBlogs = async (req: Request, res: Response): Promise<void> => {
-  const { page = "1", limit = "9", tag } = req.query;
+  const { page = "1", limit = "9", tag, category, featured } = req.query;
   const filter: Record<string, unknown> = { isPublished: true };
   if (tag) filter.tags = { $in: [tag] };
+  if (typeof category === "string" && category) {
+    // A category matches the category field or a tag of the same name, so the
+    // site's tag-based category pages keep working. Posts that predate the
+    // category field count as "Guides".
+    filter.$or = [{ category }, { tags: category }, ...(category === DEFAULT_CATEGORY ? [{ category: { $exists: false } }, { category: null }] : [])];
+  }
+  if (featured === "true") filter.featured = true;
 
   const pageNum = Math.max(1, Number.parseInt(String(page), 10) || 1);
   const limitNum = Math.min(100, Math.max(1, Number.parseInt(String(limit), 10) || 9));
   const skip = (pageNum - 1) * limitNum;
 
   const total = await Blog.countDocuments(filter);
-  const blogs = await Blog.find(filter)
+  const docs = await Blog.find(filter)
     .populate("author", "name avatar")
     .sort("-createdAt")
     .skip(skip)
-    .limit(limitNum)
-    .select("-content");
+    .limit(limitNum);
+
+  // Content is read only to derive the reading time and is never returned in listings.
+  const blogs = docs.map((doc) => {
+    const { content, ...rest } = doc.toJSON() as unknown as Record<string, unknown>;
+    return { ...rest, category: rest.category || DEFAULT_CATEGORY, readingTime: readingTime(content) };
+  });
 
   res.status(200).json({ success: true, total, page: pageNum, pages: Math.ceil(total / limitNum), blogs });
+};
+
+// @desc    Published categories with post counts
+// @route   GET /api/blogs/categories
+// @access  Public
+export const getBlogCategories = async (_req: Request, res: Response): Promise<void> => {
+  const rows = await Blog.aggregate<{ _id: string; count: number }>([
+    { $match: { isPublished: true } },
+    { $group: { _id: { $ifNull: ["$category", DEFAULT_CATEGORY] }, count: { $sum: 1 } } },
+    { $sort: { count: -1, _id: 1 } },
+  ]);
+  res.status(200).json({ success: true, categories: rows.map((row) => ({ category: row._id, count: row.count })) });
 };
 
 // @desc    Get single blog by slug
@@ -62,7 +94,7 @@ export const getBlogBySlug = async (req: Request, res: Response): Promise<void> 
     return;
   }
 
-  res.status(200).json({ success: true, blog });
+  res.status(200).json({ success: true, blog: { ...blog.toJSON(), readingTime: readingTime(blog.content) } });
 };
 
 // @desc    Update blog
