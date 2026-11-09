@@ -57,6 +57,8 @@ export const getPricingInsight = async (req: AuthRequest, res: Response): Promis
   const allRates = [...bookingRates, ...profileRates];
 
   const insight = {
+    // Rates are never mixed across currencies; only PKR activity is aggregated.
+    currency: "PKR",
     count: allRates.length,
     min: allRates.length ? Math.min(...allRates) : null,
     max: allRates.length ? Math.max(...allRates) : null,

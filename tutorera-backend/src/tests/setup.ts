@@ -1,6 +1,6 @@
 // src/tests/setup.ts
 // CI validation marker: current dependency graph and replica-set harness.
-import { afterAll, afterEach, beforeAll } from "@jest/globals";
+import { afterAll, afterEach, beforeAll, jest } from "@jest/globals";
 import { MongoMemoryReplSet } from "mongodb-memory-server";
 import mongoose from "mongoose";
 
@@ -8,6 +8,12 @@ import mongoose from "mongoose";
 process.env.JWT_SECRET = process.env.JWT_SECRET || "test-jwt-secret-key-at-least-32-chars-long";
 process.env.JWT_EXPIRE = process.env.JWT_EXPIRE || "7d";
 process.env.NODE_ENV = "test";
+
+// Jest ignores `testTimeout` inside `projects`, so the integration timeout set in
+// jest.config.js never applied and every test ran with the 5s default. Hashing
+// passwords and transactions against the in-memory replica set routinely exceed
+// that on slower machines. Individual suites may still call jest.setTimeout.
+jest.setTimeout(120000);
 
 // acceptBid() uses a real MongoDB session/transaction (session.withTransaction),
 // and transactions only work against a replica set — a single standalone
