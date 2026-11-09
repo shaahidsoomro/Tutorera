@@ -1,6 +1,6 @@
 import { paymentProvider } from "../services/paymentProvider.service";
 import { rapidPayProvider } from "../services/rapidPayProvider.service";
-import CheckoutGuard from "../models/CheckoutGuard.model";
+import PaymentCheckoutIntent from "../models/PaymentCheckoutIntent.model";
 import PaymentLedger from "../models/PaymentLedger.model";
 import User from "../models/User.model";
 import Request from "../models/Request.model";
@@ -32,42 +32,23 @@ describe("checkout creation safety", () => {
     const result = await first;
     expect(result).toMatchObject({ sessionId: "cs_fixture-session" });
     expect(create).toHaveBeenCalledTimes(1);
-    expect((await CheckoutGuard.findById(checkout.basketId))?.state).toBe("idle");
+    expect((await PaymentCheckoutIntent.findById(checkout.basketId))?.state).toBe("responded");
   });
 
   it("blocks retries after an ambiguous provider error", async () => {
     const create = jest.spyOn(rapidPayProvider, "createCheckout").mockRejectedValue(new Error("fixture timeout"));
     await expect(paymentProvider.createCheckout(checkout)).rejects.toMatchObject({ code: "PAYMENT_OUTCOME_UNKNOWN" });
-    expect((await CheckoutGuard.findById(checkout.basketId))?.state).toBe("uncertain");
+    expect((await PaymentCheckoutIntent.findById(checkout.basketId))?.state).toBe("unknown");
     await expect(paymentProvider.createCheckout(checkout)).rejects.toMatchObject({ code: "PAYMENT_ATTEMPT_BLOCKED" });
     expect(create).toHaveBeenCalledTimes(1);
   });
 
-  it("does not create a replacement if prior status or cancellation cannot be verified", async () => {
+  // The replacement-checkout flow was removed with the RapidPay migration:
+  // a basket that already has a checkout is never dispatched again.
+  it("never dispatches a second checkout for a basket that already has one", async () => {
     await previous();
-    jest.spyOn(rapidPayProvider, "getSessionStatus").mockResolvedValue({ status: "pending" } as never);
     const create = jest.spyOn(rapidPayProvider, "createCheckout");
-    await expect(paymentProvider.createCheckout(checkout)).rejects.toMatchObject({ code: "PAYMENT_RETRY_UNVERIFIED" });
-    expect(create).not.toHaveBeenCalled();
-    expect((await CheckoutGuard.findById(checkout.basketId))?.state).toBe("idle");
-  });
-
-  it("requires a confirmed closed session before creating the replacement", async () => {
-    await previous();
-    await PaymentLedger.updateOne({ providerTransactionId: checkout.basketId, eventType: "checkout.created" }, { $set: { status: "failed" } });
-    jest.spyOn(rapidPayProvider, "getSessionStatus").mockResolvedValueOnce({ status: "cancelled" } as never);
-    const create = jest.spyOn(rapidPayProvider, "createCheckout").mockResolvedValue(created);
-    const result = await paymentProvider.createCheckout(checkout);
-    expect(result).toMatchObject({ sessionId: "cs_fixture-session" });
-    expect(create).toHaveBeenCalledTimes(1);
-    expect((await PaymentLedger.findOne({ providerTransactionId: checkout.basketId, eventType: "checkout.created" }))?.status).toBe("pending");
-  });
-
-  it("never creates a replacement after the previous session succeeds during cancellation", async () => {
-    await previous();
-    jest.spyOn(rapidPayProvider, "getSessionStatus").mockResolvedValueOnce({ status: "success" } as never);
-    const create = jest.spyOn(rapidPayProvider, "createCheckout");
-    await expect(paymentProvider.createCheckout(checkout)).rejects.toMatchObject({ code: "PAYMENT_ALREADY_COMPLETED" });
+    await expect(paymentProvider.createCheckout(checkout)).rejects.toMatchObject({ code: "PAYMENT_ATTEMPT_BLOCKED" });
     expect(create).not.toHaveBeenCalled();
   });
 
@@ -77,15 +58,17 @@ describe("checkout creation safety", () => {
     const requirement = await Request.create({ student: student._id, subject: "Math", level: "Matric", description: "Math help", budget: 100, schedule: "Evenings", status: "awaiting_payment" });
     const bid = await Bid.create({ request: requirement._id, tutor: tutor._id, amount: 100, initialStudentRate: 100, message: "Available", status: "payment_pending", expiresAt: new Date(Date.now() + 86400000), paymentPendingExpiresAt: new Date(Date.now() - 1000) });
     await Request.updateOne({ _id: requirement._id }, { $set: { acceptedOffer: bid._id } });
-    const basket = `BID-${bid.id}`;
-    await CheckoutGuard.create({ _id: basket, state: "uncertain", owner: "fixture" });
+    // An unknown checkout outcome keeps the hold, even though it has expired.
+    await Bid.updateOne({ _id: bid._id }, { $set: { paymentOutcomeUnknown: true } });
     await releaseExpiredPaymentHold(requirement._id);
     expect((await Request.findById(requirement._id))?.status).toBe("awaiting_payment");
-    await CheckoutGuard.updateOne({ _id: basket }, { $set: { state: "idle" } });
-    await PaymentLedger.create({ provider: "rapidpay", providerTransactionId: basket, eventType: "checkout.created", status: "pending", grossAmount: 100, currency: "USD" });
+    expect((await Bid.findById(bid._id))?.status).toBe("payment_pending");
+    // So does a checkout that has started.
+    await Bid.updateOne({ _id: bid._id }, { $unset: { paymentOutcomeUnknown: "" }, $set: { checkoutStartedAt: new Date() } });
     await releaseExpiredPaymentHold(requirement._id);
     expect((await Bid.findById(bid._id))?.status).toBe("payment_pending");
-    await PaymentLedger.updateOne({ providerTransactionId: basket }, { $set: { status: "failed" } });
+    // Once neither applies, the expired hold is released.
+    await Bid.updateOne({ _id: bid._id }, { $unset: { checkoutStartedAt: "" } });
     await releaseExpiredPaymentHold(requirement._id);
     expect((await Request.findById(requirement._id))?.status).toBe("open");
     expect((await Bid.findById(bid._id))?.status).toBe("submitted");

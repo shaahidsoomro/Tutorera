@@ -57,12 +57,12 @@ describe("admin financial mutation integrity", () => {
     await record.save();
     const claim = await RefundRequest.create({ student: record.student, tutor: record.tutor, booking: record._id, amount: 1000, reason: "quality_issue", details: "Lesson was not as described", status: "pending" });
     await reviewer.patch(`/api/v1/admin/refund-requests/${claim._id}`).send({ status: "processed" }).expect(422);
-    await reviewer.patch(`/api/v1/admin/refund-requests/${claim._id}`).send({ status: "approved" }).expect(200);
+    await reviewer.patch(`/api/v1/admin/refund-requests/${claim._id}`).send({ status: "approved", adminNote: "Verified the claim against the lesson record." }).expect(200);
     const [savedClaim, savedBooking] = await Promise.all([RefundRequest.findById(claim._id), Booking.findById(record._id)]);
     expect(savedClaim?.status).toBe("approved");
     expect(savedClaim?.processedAt).toBeUndefined();
     expect(savedBooking?.paymentStatus).toBe("confirmed");
-    await reviewer.patch(`/api/v1/admin/refund-requests/${claim._id}`).send({ status: "approved" }).expect(409);
+    await reviewer.patch(`/api/v1/admin/refund-requests/${claim._id}`).send({ status: "approved", adminNote: "Second decision should be refused." }).expect(409);
   });
 
   it("uses admin-configured fee percentages rather than frozen global constants", async () => {
