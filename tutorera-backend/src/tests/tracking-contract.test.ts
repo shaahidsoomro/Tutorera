@@ -29,7 +29,8 @@ describe("tutor application status contract", () => {
 
   it("ships a frontend contract that matches the backend source of truth", () => {
     expect(fs.existsSync(FRONTEND_CONTRACT_PATH)).toBe(true);
-    expect(fs.readFileSync(FRONTEND_CONTRACT_PATH, "utf8")).toBe(renderFrontendContract());
+    const normalize = (text: string) => text.split("\r\n").join("\n");
+    expect(normalize(fs.readFileSync(FRONTEND_CONTRACT_PATH, "utf8"))).toBe(normalize(renderFrontendContract()));
   });
 
   it("exposes every status the backend can compute", () => {
