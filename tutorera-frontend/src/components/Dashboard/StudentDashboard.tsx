@@ -8,6 +8,7 @@ import OfferComparisonModal from "@/components/Dashboard/OfferComparisonModal";
 import MatchScoreBadge from "@/components/marketplace/MatchScoreBadge";
 import MatchedTutorsModal from "@/components/marketplace/MatchedTutorsModal";
 import { useCurrentTime } from "@/hooks/useCurrentTime";
+import { useSocket } from "@/context/SocketContext";
 import axiosInstance from "@/lib/axios";
 import { SUPPORT_EMAIL,formatPKR } from "@/lib/site";
 import { showError,showSuccess } from "@/lib/toast";
@@ -1177,6 +1178,19 @@ const fetchRequests = useCallback(async () => {
     } catch { setBookings([]); }
     finally { setLoadingB(false); }
   }, []);
+
+  const { notifications } = useSocket();
+  const latestBookingNotifId = notifications.find(n => n.type === "booking")?._id;
+  useEffect(() => {
+    if (!latestBookingNotifId) return;
+    axiosInstance.get("/bookings")
+      .then(res => {
+        setBookings(res.data.bookings ?? []);
+        setBookingsHasMore(res.data.pagination ? res.data.pagination.page < res.data.pagination.pages : false);
+        setBookingsPage(1);
+      })
+      .catch(() => {});
+  }, [latestBookingNotifId]);
 
   const loadMoreBookings = async () => {
     if (loadingMoreBookings) return;

@@ -12,3 +12,6 @@ cloudflare/backend/.wrangler/
 
 # CI migration script contains secrets
 scripts/ci/migrate-render-to-cloudflare.ps1
+
+.env.local
+.env*.local

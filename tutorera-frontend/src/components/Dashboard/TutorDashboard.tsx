@@ -7,6 +7,7 @@ import BookingMeetingPanel from "./BookingMeetingPanel";
 import ProgressReportPanel from "./ProgressReportPanel";
 import MatchScoreBadge from "@/components/marketplace/MatchScoreBadge";
 import { useCurrentTime } from "@/hooks/useCurrentTime";
+import { useSocket } from "@/context/SocketContext";
 import axiosInstance from "@/lib/axios";
 import { formatPKR } from "@/lib/site";
 import { showError,showSuccess } from "@/lib/toast";
@@ -710,6 +711,19 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
     } catch { setBookings([]); }
     finally { setLoadingB(false); }
   }, []);
+
+  const { notifications } = useSocket();
+  const latestBookingNotifId = notifications.find(n => n.type === "booking")?._id;
+  useEffect(() => {
+    if (!latestBookingNotifId) return;
+    axiosInstance.get("/bookings")
+      .then(res => {
+        setBookings(res.data.bookings ?? []);
+        setBookingsHasMore(res.data.pagination ? res.data.pagination.page < res.data.pagination.pages : false);
+        setBookingsPage(1);
+      })
+      .catch(() => {});
+  }, [latestBookingNotifId]);
 
   const fetchRecommended = useCallback(async () => {
     setLoadingRec(true);
