@@ -22,6 +22,7 @@ import User from "../models/User.model";
 import TuitionRequest from "../models/Request.model";
 import TutorProfile from "../models/TutorProfile.model";
 import ParentProfile from "../models/ParentProfile.model";
+import FeatureFlag from "../models/FeatureFlag.model";
 
 function tokenFor(userId: string): string {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET as string, { expiresIn: "1h" });
@@ -97,6 +98,11 @@ const validBody = (tutorId: string) => ({
 });
 
 describe("direct-booking IDOR + authorization boundaries", () => {
+  // Direct booking is off until an admin enables the flag; the test database is wiped between tests.
+  beforeEach(async () => {
+    await FeatureFlag.create({ key: "ENABLE_DIRECT_BOOKING", enabled: true, scope: "global" });
+  });
+
   it("a tutor cannot create a direct booking request (role gate → 403)", async () => {
     const impostor = await makeUser("tutor", "impostor-create");
     const target = await makeMarketplaceEligibleTutor("target-impostor");

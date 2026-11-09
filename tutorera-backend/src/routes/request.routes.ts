@@ -12,16 +12,16 @@ import {
   inviteTutorToRequest,
   previewOfferFees,
 } from "../controllers/request.controller";
-import { protect, optionalAuth, authorize } from "../middlewares/auth.middleware";
+import { protect, authorize } from "../middlewares/auth.middleware";
 import { validate, createRequestSchema, placeBidSchema, createDirectBookingRequestSchema } from "../validators/request.validator";
 
 const router = Router();
 
 router.get("/seo-facets", getRequestSeoFacets);
 router.get("/public/preview", getPublicRequestsPreview);
-// Request discovery is public. Mutating actions, including bidding, remain
-// protected and enforce the relevant role and eligibility checks.
-router.get("/", optionalAuth, getAllRequests);
+// The full demand feed (budgets, descriptions, invitations) is tutor-only. Public
+// discovery goes through the redacted GET /public/preview above.
+router.get("/", protect, authorize("tutor"), getAllRequests);
 router.post("/direct", protect, authorize("student", "parent"), validate(createDirectBookingRequestSchema), createDirectBookingRequest);
 router.get("/direct/my", protect, authorize("tutor"), getMyDirectRequests);
 router.post("/draft", protect, authorize("student", "parent"), saveRequestDraftProgress);

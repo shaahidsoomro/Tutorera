@@ -12,6 +12,8 @@ import { checkSubjectEligibility } from "../services/subjectEligibility.service"
 import { schoolOfferingIsActive } from "../services/schoolOfferingAvailability.service";
 import Booking from "../models/Booking.model";
 import User from "../models/User.model";
+import { isFeatureEnabled } from "../services/featureFlag.service";
+import ParentProfile from "../models/ParentProfile.model";
 import { sendNotification } from "../utils/socket";
 import { resolveMarketplaceFees, MarketplaceFeeQuote } from "../services/pricing.service";
 import OfferNegotiation from "../models/OfferNegotiation.model";
@@ -1169,9 +1171,40 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
 export const createDirectBookingRequest = async (req: AuthRequest, res: Response): Promise<void> => {
   const { tutorId, subject, level, description, teachingMode, city, schedule, selectedDate, selectedStartTime, selectedEndTime } = req.body;
 
+  // Direct booking is governed by the ENABLE_DIRECT_BOOKING feature flag, which an
+  // admin turns on (globally or per country) from the feature-flag console. The
+  // environment variable is only an operator kill switch: "false" disables it.
+  const flagCountry = String(req.body.countryCode || (req.user as { countryCode?: string } | undefined)?.countryCode || "").toUpperCase() || undefined;
+  if (process.env.ENABLE_DIRECT_BOOKING === "false" || !(await isFeatureEnabled("ENABLE_DIRECT_BOOKING", flagCountry))) {
+    res.status(403).json({ success: false, code: "DIRECT_BOOKING_DISABLED", message: "Direct booking is not currently available." });
+    return;
+  }
+
   if (!tutorId || !subject || !level || !description || !schedule) {
     res.status(400).json({ success: false, message: "Missing required fields." });
     return;
+  }
+
+  // A parent books for a linked child, never for themselves or for someone else's
+  // child. The child's account becomes the request's student so parental approval
+  // and spending-cap policies (which look up guardians by student) apply.
+  let studentId = req.user?._id;
+  let isGuardianBooking = false;
+  if (req.user?.role === "parent") {
+    const learnerId = req.body.learnerId;
+    if (!learnerId) {
+      res.status(422).json({ success: false, code: "LEARNER_REQUIRED", message: "Choose which child this booking is for." });
+      return;
+    }
+    const linked = mongoose.isValidObjectId(learnerId)
+      && await ParentProfile.exists({ user: req.user._id, "children.studentUser": learnerId });
+    const learner = linked ? await User.findOne({ _id: learnerId, role: "student" }).select("_id isActive") : null;
+    if (!learner || learner.isActive === false) {
+      res.status(403).json({ success: false, code: "LEARNER_NOT_LINKED", message: "You are not linked to this learner." });
+      return;
+    }
+    studentId = learner._id as typeof studentId;
+    isGuardianBooking = true;
   }
 
   const TutorProfile = (await import("../models/TutorProfile.model")).default;
@@ -1212,7 +1245,7 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
 
   // Prevent duplicate direct requests to the same tutor while one is still pending
   const existingPending = await Request.findOne({
-    student: req.user?._id,
+    student: studentId,
     targetTutor: tutorId,
     status: "open",
   });
@@ -1248,7 +1281,8 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
     }
   }
   const request = await Request.create({
-    student: req.user?._id,
+    student: studentId,
+    ...(isGuardianBooking ? { learner: studentId, learnerType: "child" as const } : {}),
     subject,
     level,
     description,
@@ -1500,7 +1534,8 @@ export const getPublicRequestsPreview = async (req: ExpressRequest, res: Respons
         countryCode: r.countryCode || (r.student as any)?.countryCode || "PK",
         countryName: r.countryName || (r.student as any)?.countryName || "Pakistan",
         schedule: r.schedule,
-        description: r.description,
+        // Free text can contain phone numbers and addresses; never expose it publicly.
+        description: "Learning goals will be shared after a tutor is selected.",
         status: r.status,
         createdAt: r.createdAt,
         expiresAt: r.expiresAt,

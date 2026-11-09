@@ -77,7 +77,8 @@ export default function BrowseRequestsPage() {
       if (teachingMode) params.teachingMode = teachingMode;
       if (curriculum) params.curriculum = curriculum;
       if (language) params.language = language;
-      const res = await api.get(`/requests?${new URLSearchParams(params).toString()}`);
+      // Only tutors may read the full demand feed; everyone else gets the redacted public preview.
+      const res = await api.get(`${isTutor ? "/requests" : "/requests/public/preview"}?${new URLSearchParams(params).toString()}`);
       setRequests(res.data.requests);
       setTotalPages(Math.max(1, Math.ceil(res.data.total / 12)));
     } catch (err) {
@@ -86,7 +87,7 @@ export default function BrowseRequestsPage() {
     } finally {
       setLoading(false);
     }
-  }, [subject, level, country, city, teachingMode, curriculum, language]);
+  }, [isTutor, subject, level, country, city, teachingMode, curriculum, language]);
 
   useEffect(() => {
     setPage(1);
