@@ -1,4 +1,5 @@
 import { Response } from "express";
+import mongoose from "mongoose";
 import { AuthRequest } from "../types";
 import Booking from "../models/Booking.model";
 import PDFDocument from "pdfkit";
@@ -269,6 +270,7 @@ export const getEligiblePayouts = async (req: AuthRequest, res: Response): Promi
 export const requestPayout = async (req: AuthRequest, res: Response): Promise<void> => {
   const { bookingId } = req.params;
   const tutorId = req.user?._id;
+  if (!mongoose.isValidObjectId(bookingId)) { res.status(404).json({ success: false, message: "Booking not found." }); return; }
 
   const booking = await Booking.findOneAndUpdate({
     _id: bookingId, tutor: tutorId, status: "completed", paymentStatus: "confirmed",
@@ -278,6 +280,9 @@ export const requestPayout = async (req: AuthRequest, res: Response): Promise<vo
   }, { new: true });
 
   if (!booking) {
+    // Another tutor's (or a nonexistent) booking looks identical: 404, never a hint that it exists.
+    const owned = await Booking.exists({ _id: bookingId, tutor: tutorId });
+    if (!owned) { res.status(404).json({ success: false, message: "Booking not found." }); return; }
     res.status(409).json({ success: false, code: "PAYOUT_NOT_ELIGIBLE", message: "Payout was already requested or the session is not eligible." });
     return;
   }
