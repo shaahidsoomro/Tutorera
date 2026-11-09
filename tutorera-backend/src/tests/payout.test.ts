@@ -148,47 +148,78 @@ describe("createPayoutRequests", () => {
 
 describe("markPayoutComplete", () => {
   let session: ReturnType<typeof makeMockSession>;
-  const mockPayout = {
+  const initiator = new mongoose.Types.ObjectId();
+  const reviewer = new mongoose.Types.ObjectId();
+  const REF = "BANK-TXN-0001";
+  const basePayout = {
     _id: payoutId,
     transferRef: "PYOUT-TEST",
     tutor: tutorId,
     bookings: [bookingId],
     currency: "USD",
     totalAmount: 50,
-    state: "requested",
+    state: "initiated",
+    initiatedBy: initiator,
+    settlementReference: REF,
     ledgerEntry: ledgerId,
-    save: jest.fn().mockResolvedValue(undefined),
   };
+  const complete = (over: Partial<Parameters<typeof markPayoutComplete>[0]> = {}) =>
+    markPayoutComplete({ transferRef: "PYOUT-TEST", evidenceRef: "STATEMENT-LINE-77", settlementReference: REF, adminId: reviewer.toString(), ...over });
 
   beforeEach(() => {
     jest.clearAllMocks();
     session = makeMockSession();
     (mongoose.startSession as jest.Mock).mockResolvedValue(session);
-    (TutorPayout.findOne as jest.Mock).mockResolvedValue({ ...mockPayout, save: jest.fn().mockResolvedValue(undefined) });
+    (TutorPayout.findOne as jest.Mock).mockResolvedValue({ ...basePayout, save: jest.fn().mockResolvedValue(undefined) });
   });
 
-  it("throws when evidenceRef is blank", async () => {
-    await expect(markPayoutComplete({ transferRef: "PYOUT-TEST", evidenceRef: "  ", adminId: "abc" }))
-      .rejects.toThrow("evidenceRef is required");
+  it("throws when evidenceRef is blank or too short", async () => {
+    await expect(complete({ evidenceRef: "  " })).rejects.toThrow("evidenceRef is required");
+    await expect(complete({ evidenceRef: "short" })).rejects.toMatchObject({ statusCode: 400, code: "PAYOUT_EVIDENCE_REQUIRED" });
     expect(session.withTransaction).not.toHaveBeenCalled();
   });
 
-  it("marks payout completed and updates bookings + ledger", async () => {
-    await markPayoutComplete({ transferRef: "PYOUT-TEST", evidenceRef: "BANK-001", adminId: tutorId.toString() });
+  it("throws when the settlement reference is missing", async () => {
+    await expect(complete({ settlementReference: "" })).rejects.toMatchObject({ statusCode: 400, code: "SETTLEMENT_REFERENCE_REQUIRED" });
+  });
+
+  it("marks payout completed and records both reviewers on the bookings + ledger", async () => {
+    await complete();
     const saved = await (TutorPayout.findOne as jest.Mock).mock.results[0].value;
     expect(saved.state).toBe("completed");
-    expect(saved.evidenceRef).toBe("BANK-001");
+    expect(saved.evidenceRef).toBe("STATEMENT-LINE-77");
     expect(Booking.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ _id: { $in: [bookingId] } }),
-      expect.objectContaining({ $set: expect.objectContaining({ payoutStatus: "paid" }) }),
+      expect.objectContaining({
+        $set: expect.objectContaining({
+          payoutStatus: "paid",
+          payoutSettlementReference: REF,
+          payoutInitiatedBy: initiator,
+          payoutVerifiedBy: reviewer,
+        }),
+      }),
       expect.anything()
     );
   });
 
+  it("rejects the same admin who recorded the transfer (second reviewer required)", async () => {
+    await expect(complete({ adminId: initiator.toString() })).rejects.toMatchObject({ statusCode: 403, code: "SECOND_REVIEWER_REQUIRED" });
+    expect(Booking.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("rejects a settlement reference that differs from the recorded transfer", async () => {
+    await expect(complete({ settlementReference: "BANK-TXN-9999" })).rejects.toMatchObject({ statusCode: 409, code: "PAYOUT_REFERENCE_MISMATCH" });
+    expect(Booking.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("rejects completing a payout whose transfer was never recorded", async () => {
+    (TutorPayout.findOne as jest.Mock).mockResolvedValue({ ...basePayout, state: "requested", initiatedBy: undefined, save: jest.fn() });
+    await expect(complete()).rejects.toMatchObject({ statusCode: 409, code: "PAYOUT_NOT_INITIATED" });
+  });
+
   it("throws when payout is already completed", async () => {
-    (TutorPayout.findOne as jest.Mock).mockResolvedValue({ ...mockPayout, state: "completed", save: jest.fn() });
-    await expect(markPayoutComplete({ transferRef: "PYOUT-TEST", evidenceRef: "X", adminId: "abc" }))
-      .rejects.toThrow("already completed");
+    (TutorPayout.findOne as jest.Mock).mockResolvedValue({ ...basePayout, state: "completed", save: jest.fn() });
+    await expect(complete()).rejects.toThrow("already completed");
   });
 });
 

@@ -22,6 +22,16 @@ const MINIMUM_BY_CURRENCY: Record<string, number> = {
 const DEFAULT_MINIMUM = 10;
 const AUTO_PAYOUT_MAX_BATCH = 50;
 
+/** Operational error carrying an HTTP status and a stable machine-readable code. */
+export class PayoutError extends Error {
+  constructor(public statusCode: number, public code: string, message: string) {
+    super(message);
+    this.name = "PayoutError";
+  }
+}
+
+const MIN_REFERENCE_LENGTH = 8;
+
 function minimumForCurrency(currency: string): number {
   return MINIMUM_BY_CURRENCY[currency.toUpperCase()] ?? DEFAULT_MINIMUM;
 }
@@ -64,15 +74,20 @@ export async function createPayoutRequests(): Promise<PayoutCreationResult> {
   try {
     // Exclude bookings already under an in-flight payout
     const inFlightPayouts = await TutorPayout.find({
-      state: { $in: ["pending", "requested"] },
+      state: { $in: ["pending", "requested", "initiated"] },
     }).select("bookings").lean();
     const inFlightBookingIds = new Set(
       inFlightPayouts.flatMap((p) => p.bookings.map((id) => id.toString()))
     );
 
+    // Same eligibility as the booking payout flow: the lesson is completed, payment is
+    // confirmed and the tutor has asked to be paid. Held, disputed or unrequested
+    // bookings are never swept into a batch.
     const eligibleBookings = await Booking.find({
+      status: "completed",
       paymentStatus: "confirmed",
       payoutStatus: "pending",
+      payoutRequestedAt: { $exists: true },
     })
       .select("_id tutor tutorPayout currency")
       .limit(AUTO_PAYOUT_MAX_BATCH)
@@ -183,57 +198,110 @@ export async function createPayoutRequests(): Promise<PayoutCreationResult> {
   return result;
 }
 
+export interface PayoutInitiationInput {
+  transferRef: string;
+  adminId: string;
+  /** External transaction reference of the transfer the admin just made. */
+  settlementReference: string;
+}
+
+/**
+ * Step 1 of 2: the first finance admin records that they made the external transfer and
+ * the reference of that transfer. This does NOT mark anything paid.
+ */
+export async function initiatePayoutTransfer(input: PayoutInitiationInput): Promise<void> {
+  const settlementReference = input.settlementReference?.trim() ?? "";
+  if (settlementReference.length < MIN_REFERENCE_LENGTH) {
+    throw new PayoutError(400, "SETTLEMENT_REFERENCE_REQUIRED", `settlementReference is required (at least ${MIN_REFERENCE_LENGTH} characters)`);
+  }
+  const updated = await TutorPayout.findOneAndUpdate(
+    { transferRef: input.transferRef, state: "requested" },
+    { $set: { state: "initiated", initiatedBy: new mongoose.Types.ObjectId(input.adminId), dispatchedAt: new Date(), settlementReference } },
+    { new: true }
+  );
+  if (!updated) {
+    const exists = await TutorPayout.exists({ transferRef: input.transferRef });
+    if (!exists) throw new PayoutError(404, "PAYOUT_NOT_FOUND", `Payout ${input.transferRef} not found`);
+    throw new PayoutError(409, "PAYOUT_NOT_REQUESTED", `Payout ${input.transferRef} is not awaiting an external transfer`);
+  }
+  logger.info({ transferRef: input.transferRef, adminId: input.adminId, settlementReference }, "Payout transfer recorded; awaiting second reviewer");
+}
+
 export interface PayoutCompletionInput {
   transferRef: string;
+  /** Independently checked proof (statement line, provider receipt, ...). */
   evidenceRef: string;
+  /** Must equal the reference recorded at initiation. */
+  settlementReference: string;
   adminId: string;
   adminNote?: string;
 }
 
 /**
- * Mark a payout as completed.  Only callable by an admin who supplies an
- * external evidence reference (bank transaction id, provider receipt, etc.).
+ * Step 2 of 2: a DIFFERENT finance admin confirms the transfer. Requires that the payout was
+ * initiated, that the reviewer is not the initiator, that the settlement reference matches
+ * the one recorded at initiation, and that written evidence is supplied.
  *
- * Never marks a payout paid based on the existence of a report alone.
+ * Never marks a payout paid from a report or a single actor alone.
  */
 export async function markPayoutComplete(input: PayoutCompletionInput): Promise<void> {
-  if (!input.evidenceRef?.trim()) {
-    throw new Error("evidenceRef is required to mark a payout complete");
+  if ((input.evidenceRef?.trim().length ?? 0) < MIN_REFERENCE_LENGTH) {
+    throw new PayoutError(400, "PAYOUT_EVIDENCE_REQUIRED", `evidenceRef is required (at least ${MIN_REFERENCE_LENGTH} characters)`);
+  }
+  if ((input.settlementReference?.trim().length ?? 0) < MIN_REFERENCE_LENGTH) {
+    throw new PayoutError(400, "SETTLEMENT_REFERENCE_REQUIRED", `settlementReference is required (at least ${MIN_REFERENCE_LENGTH} characters)`);
   }
 
   const session = await mongoose.startSession();
   try {
     await session.withTransaction(async () => {
       const payout = await TutorPayout.findOne({ transferRef: input.transferRef }, null, { session });
-      if (!payout) throw new Error(`Payout ${input.transferRef} not found`);
-      if (payout.state === "completed") throw new Error(`Payout ${input.transferRef} is already completed`);
-      if (!["pending", "requested"].includes(payout.state)) {
-        throw new Error(`Payout ${input.transferRef} cannot be completed from state ${payout.state}`);
+      if (!payout) throw new PayoutError(404, "PAYOUT_NOT_FOUND", `Payout ${input.transferRef} not found`);
+      if (payout.state === "completed") throw new PayoutError(409, "PAYOUT_ALREADY_COMPLETED", `Payout ${input.transferRef} is already completed`);
+      if (payout.state !== "initiated" || !payout.initiatedBy) {
+        throw new PayoutError(409, "PAYOUT_NOT_INITIATED", `Payout ${input.transferRef} cannot be completed from state ${payout.state}; the transfer must be recorded first`);
+      }
+      if (payout.initiatedBy.toString() === input.adminId) {
+        throw new PayoutError(403, "SECOND_REVIEWER_REQUIRED", "Completion must be performed by a different finance reviewer than the one who recorded the transfer.");
+      }
+      if (payout.settlementReference !== input.settlementReference.trim()) {
+        throw new PayoutError(409, "PAYOUT_REFERENCE_MISMATCH", "The settlement reference must match the transfer that was recorded.");
       }
 
       const now = new Date();
+      const reviewer = new mongoose.Types.ObjectId(input.adminId);
       payout.state = "completed";
       payout.completedAt = now;
       payout.evidenceRef = input.evidenceRef.trim();
-      payout.actionedBy = new mongoose.Types.ObjectId(input.adminId);
+      payout.actionedBy = reviewer;
       payout.adminNote = input.adminNote?.trim();
       await payout.save({ session });
 
       await Booking.updateMany(
         { _id: { $in: payout.bookings } },
-        { $set: { payoutStatus: "paid", payoutPaidAt: now } },
+        {
+          $set: {
+            payoutStatus: "paid",
+            payoutPaidAt: now,
+            payoutSettlementReference: payout.settlementReference,
+            payoutSettlementMethod: "manual",
+            payoutEvidenceReference: input.evidenceRef.trim().slice(0, 300),
+            payoutInitiatedBy: payout.initiatedBy,
+            payoutVerifiedBy: reviewer,
+          },
+        },
         { session }
       );
 
       await PaymentLedger.findByIdAndUpdate(
         payout.ledgerEntry,
-        { $set: { eventType: "payout.completed", status: "succeeded", settlementStatus: "settled", "metadata.evidenceRef": input.evidenceRef } },
+        { $set: { eventType: "payout.completed", status: "succeeded", settlementStatus: "settled", "metadata.evidenceRef": input.evidenceRef.trim(), "metadata.settlementReference": payout.settlementReference } },
         { session }
       );
 
       logger.info(
-        { transferRef: input.transferRef, evidenceRef: input.evidenceRef, adminId: input.adminId, tutorId: payout.tutor, amount: payout.totalAmount, currency: payout.currency },
-        "Payout marked complete by admin"
+        { transferRef: input.transferRef, initiatedBy: payout.initiatedBy, verifiedBy: input.adminId, tutorId: payout.tutor, amount: payout.totalAmount, currency: payout.currency },
+        "Payout completed with two finance reviewers"
       );
     });
   } finally {
@@ -249,23 +317,22 @@ export interface PayoutFailureInput {
 
 /**
  * Mark a payout as failed and return bookings to payoutStatus=pending so they
- * will be picked up on the next scan.
+ * will be picked up on the next scan. Allowed before completion, by any authorised admin.
  */
 export async function markPayoutFailed(input: PayoutFailureInput): Promise<void> {
   if (!input.adminNote?.trim()) {
-    throw new Error("adminNote is required when marking a payout failed");
+    throw new PayoutError(400, "ADMIN_NOTE_REQUIRED", "adminNote is required when marking a payout failed");
   }
 
   const session = await mongoose.startSession();
   try {
     await session.withTransaction(async () => {
       const payout = await TutorPayout.findOne({ transferRef: input.transferRef }, null, { session });
-      if (!payout) throw new Error(`Payout ${input.transferRef} not found`);
-      if (!["pending", "requested"].includes(payout.state)) {
-        throw new Error(`Payout ${input.transferRef} cannot be failed from state ${payout.state}`);
+      if (!payout) throw new PayoutError(404, "PAYOUT_NOT_FOUND", `Payout ${input.transferRef} not found`);
+      if (!["pending", "requested", "initiated"].includes(payout.state)) {
+        throw new PayoutError(409, "PAYOUT_NOT_FAILABLE", `Payout ${input.transferRef} cannot be failed from state ${payout.state}`);
       }
 
-      const now = new Date();
       payout.state = "failed";
       payout.actionedBy = new mongoose.Types.ObjectId(input.adminId);
       payout.adminNote = input.adminNote.trim();

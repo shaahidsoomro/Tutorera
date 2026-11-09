@@ -2,7 +2,8 @@ import mongoose, { Document, Schema, Types } from "mongoose";
 
 export type PayoutState =
   | "pending"      // Identified as eligible; not yet sent to admin
-  | "requested"    // Admin notified / manual transfer in progress
+  | "requested"    // Admin notified; external transfer not yet recorded
+  | "initiated"    // First admin recorded the external transfer; awaiting a second reviewer
   | "completed"    // Admin confirmed transfer with evidence reference
   | "failed"       // Transfer failed; booking returns to payoutStatus=pending
   | "cancelled";   // Voided before transfer (e.g. booking disputed)
@@ -18,8 +19,12 @@ export interface ITutorPayout extends Document {
   state: PayoutState;
   /** ISO 4217 currency code — must match totalAmount denomination. */
   requestedAt: Date;
-  /** Set by admin when they initiate the manual transfer. */
+  /** Set when the first admin records the external transfer (state -> initiated). */
   dispatchedAt?: Date;
+  /** Admin who recorded the external transfer. Must differ from the admin who completes it. */
+  initiatedBy?: Types.ObjectId;
+  /** External transaction reference recorded at initiation; completion must repeat it exactly. */
+  settlementReference?: string;
   /** Set only when admin supplies evidence of receipt. */
   completedAt?: Date;
   /** External reference the admin supplies (bank txn id, provider ref, etc.). */
@@ -43,13 +48,15 @@ const tutorPayoutSchema = new Schema<ITutorPayout>(
     totalAmount: { type: Number, required: true, min: 0 },
     state: {
       type: String,
-      enum: ["pending", "requested", "completed", "failed", "cancelled"],
+      enum: ["pending", "requested", "initiated", "completed", "failed", "cancelled"],
       required: true,
       default: "pending",
       index: true,
     },
     requestedAt: { type: Date, required: true },
     dispatchedAt: { type: Date },
+    initiatedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    settlementReference: { type: String, trim: true },
     completedAt: { type: Date },
     evidenceRef: { type: String, trim: true },
     actionedBy: { type: Schema.Types.ObjectId, ref: "User" },
