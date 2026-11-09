@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 // src/tests/booking.test.ts
 //
 // Covers BE-02 (arbitrary booking-state transitions) from the audit report:
@@ -6,6 +7,7 @@
 // eligibility) — only an admin/system flow should do that. Students may
 // only cancel; tutors may start (ongoing) or cancel.
 
+import TutorProfile from "../models/TutorProfile.model";
 import User from "../models/User.model";
 import Booking from "../models/Booking.model";
 import RequestModel from "../models/Request.model";
@@ -41,10 +43,13 @@ function mockAuthRequest(overrides: Partial<AuthRequest>): AuthRequest {
   } as unknown as AuthRequest;
 }
 
-async function makeBooking(studentId: any, tutorId: any) {
+async function makeBooking(studentId: any, tutorId: any, extra: Record<string, unknown> = {}) {
+  // bid/request references are required: bookings without them are rejected as a data-integrity error.
   return Booking.create({
     student: studentId,
     tutor: tutorId,
+    bid: new mongoose.Types.ObjectId(),
+    request: new mongoose.Types.ObjectId(),
     amount: 1000,
     finalAgreedRate: 1000,
     subtotal: 1000,
@@ -53,6 +58,7 @@ async function makeBooking(studentId: any, tutorId: any) {
     feeConfig: { version: 1 },
     schedule: "Mon 5pm",
     status: "upcoming",
+    ...extra,
   });
 }
 
@@ -117,7 +123,7 @@ describe("BE-02: booking state-transition authorization", () => {
   it("a tutor CAN mark a booking as ongoing, but not a student", async () => {
     const student = await User.create({ name: "S4", email: "s4@test.com", password: "password123", role: "student" });
     const tutor = await User.create({ name: "T4", email: "t4@test.com", password: "password123", role: "tutor" });
-    const booking = await makeBooking(student._id, tutor._id);
+    const booking = await makeBooking(student._id, tutor._id, { paymentStatus: "confirmed" });
 
     // Student attempts "ongoing" — should be rejected.
     const studentReq = mockAuthRequest({
@@ -204,6 +210,11 @@ describe("Phase 2: direct-booking payment reservation and tutor session integrit
       { name: "Direct Student", email: `direct-s-${salt}@example.test`, password: "password123", role: "student" },
       { name: "Direct Tutor", email: `direct-t-${salt}@example.test`, password: "password123", role: "tutor" },
     ]);
+    // Accepting an offer requires approved subject eligibility for the request's subject and level.
+    await TutorProfile.create({ user: tutor._id, fullName: "Direct Tutor", subjects: ["Mathematics"],
+      levels: ["O-Level (Cambridge / Edexcel)"], approvedSubjects: ["Mathematics"],
+      subjectEligibility: [{ subject: "Mathematics", levels: ["O-Level (Cambridge / Edexcel)"], status: "approved",
+        matchesDiscipline: true, evidenceRequired: false }] });
     const when = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     when.setUTCHours(startHour, 0, 0, 0);
     const ends = new Date(when.getTime() + 60 * 60 * 1000);
